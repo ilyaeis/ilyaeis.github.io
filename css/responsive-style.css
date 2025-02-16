@@ -1,0 +1,23 @@
+@media (max-width: 600px) {
+    .left-section {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 250px;
+        height: 100vh;
+        transform: translateX(-100%);
+        z-index: 1000;
+    }
+
+    .left-section.active {
+        transform: translateX(0);
+    }
+
+    .right-section {
+        width: 100%;
+    }
+
+    .toggle-btn {
+        display: block;
+    }
+}

@@ -1,0 +1,198 @@
+.switcher {
+    display: inline-block;
+    position: relative;
+}
+
+.switcher__input {
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    width: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+}
+
+.switcher__label {
+    position: relative;
+    display: inline-block;
+    width: 60px; /* was 120px */
+    height: 30px; /* was 60px */
+    background-color: #2B2B2B;
+    border: 2.5px solid #5B5B5B; /* was 5px */
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(.46,.03,.52,.96);
+}
+
+.switcher__indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translateX(-72%);
+    display: block;
+    width: 20px; /* was 40px */
+    height: 20px; /* was 40px */
+    background-color: #7B7B7B;
+    border-radius: 9999px;
+    box-shadow: 5px 0px 0 0 rgba(0, 0, 0, 0.2) inset; /* was 10px */
+
+    &::before,
+    &::after {
+        position: absolute;
+        content: '';
+        display: block;
+        background-color: #FFFFFF;
+        border-radius: 9999px;
+    }
+
+    &::before {
+        top: 3.5px; /* was 7px */
+        left: 3.5px; /* was 7px */
+        width: 4.5px; /* was 9px */
+        height: 4.5px; /* was 9px */
+        background-color: #FFFFFF;
+        opacity: 0.6;
+    }
+
+    &::after {
+        bottom: 4px; /* was 8px */
+        right: 3px; /* was 6px */
+        width: 7px; /* was 14px */
+        height: 7px; /* was 14px */
+        background-color: #FFFFFF;
+        opacity: 0.8;
+    }
+}
+
+.switcher__decoration {
+    position: absolute;
+    top: 65%;
+    left: 50%;
+    display: block;
+    width: 2.5px; /* was 5px */
+    height: 2.5px; /* was 5px */
+    background-color: #FFFFFF;
+    border-radius: 9999px;
+    animation: twinkle 0.8s infinite -0.6s;
+
+    &::before,
+    &::after {
+        position: absolute;
+        display: block;
+        content: '';
+        width: 2.5px; /* was 5px */
+        height: 2.5px; /* was 5px */
+        background-color: #FFFFFF;
+        border-radius: 9999px;
+    }
+
+    &::before {
+        top: -10px; /* was -20px */
+        left: 5px; /* was 10px */
+        opacity: 1;
+        animation: twinkle 0.6s infinite;
+    }
+
+    &::after {
+        top: -3.5px; /* was -7px */
+        left: 15px; /* was 30px */
+        animation: twinkle 0.6s infinite -0.2s;
+    }
+}
+
+@keyframes twinkle {
+    50% { opacity: 0.2; }
+}
+
+.switcher__indicator {
+    &,
+    &::before,
+    &::after {
+        transition: all 0.4s cubic-bezier(.46,.03,.52,.96);
+    }
+}
+
+.switcher__input:checked + .switcher__label {
+    background-color: #8FB5F5;
+    border-color: #347CF8;
+
+    .switcher__indicator {
+        background-color: #ECD21F;
+        box-shadow: none;
+        transform: translate(-50%, -50%) translateX(72%);
+
+        &::before,
+        &::after {
+            display: none;
+        }
+    }
+
+    .switcher__decoration {
+        top: 50%;
+        transform: translate(0%, -50%);
+        animation: cloud 8s linear infinite;
+
+        width: 10px; /* was 20px */
+        height: 10px; /* was 20px */
+
+        &::before {
+            width: 5px; /* was 10px */
+            height: 5px; /* was 10px */
+            top: auto;
+            bottom: 0;
+            left: -4px; /* was -8px */
+            animation: none;
+        }
+
+        &::after {
+            width: 7.5px; /* was 15px */
+            height: 7.5px; /* was 15px */
+            top: auto;
+            bottom: 0;
+            left: 8px; /* was 16px */
+            animation: none;
+        }
+
+        &,
+        &::before,
+        &::after {
+            border-radius: 9999px 9999px 0 0;
+        }
+
+        &::after {
+            border-bottom-right-radius: 9999px;
+        }
+    }
+}
+
+@keyframes cloud {
+    0% {
+        transform: translate(0%, -50%);
+    }
+    50% {
+        transform: translate(-50%, -50%);
+    }
+    100% {
+        transform: translate(0%, -50%);
+    }
+}
+
+
+.theme-switch-container input:checked+.theme-switch+body {
+    --background: #121212;
+    --left-section-background: #282828;
+    --text: #f0f0f0;
+    --border: #555;
+    --skill-item-background: #333;
+    --button-background: #000;
+    --button-checked-background: #64b5f6;
+    --scrollbar-thumb: #555;
+
+    /* Specific dark theme adjustments that are different */
+    /* Skill item image inversion for dark theme */
+    .skill-item img {
+        filter: grayscale(100%) saturate(100%) contrast(50%) invert(100%);
+    }
+}

@@ -1,0 +1,103 @@
+/* Color Palette Variables */
+:root {
+    /* Light Theme Default Values */
+    --background: #f9f9f9;
+    --left-section-background: #e9e9e9;
+    --text: #333;
+    --border: #030303;
+    --skill-item-background: #f4f4f4;
+    --skill-tag-background: #f4f4f4;
+    --button-background: #fff;
+    --button-checked-background: #2196F3;
+    --scrollbar-thumb: #ccc;
+}
+
+body.dark-theme
+    {
+    --background: #121212;
+    --left-section-background: #282828;
+    --text: #f0f0f0;
+    --border: #555;
+    --skill-item-background: #333;
+    --button-background: #000;
+    --button-checked-background: #64b5f6;
+    --scrollbar-thumb: #555;
+
+    .skill-item img,
+    .social-links img {
+        filter: grayscale(100%) invert(100%);
+    }
+}
+
+
+/* Apply Theme Variables */
+body {
+    background-color: var(--background);
+    color: var(--text);
+}
+
+.left-section {
+    background-color: var(--left-section-background);
+}
+
+.social-links a {
+    color: var(--text);
+}
+
+.social-links p {
+    color: var(--left-section-background);
+    background-color: var(--text);
+}
+
+.right-section {
+    background-color: var(--background);
+}
+
+.toggle-btn {
+    border: 1px solid var(--tex);
+    /* Corrected typo here to --text */
+    color: var(--text);
+}
+
+.block-header {
+    color: var(--text);
+    border-bottom: 2px solid var(--border);
+}
+
+.skill-item img,
+.social-links img {
+    filter: grayscale(100%);
+    /* Light theme filter */
+}
+
+.project {
+    border: 2px solid var(--text);
+}
+
+.skill-tag {
+    background-color: var(--skill-item-background);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.skill-card-front,
+.skill-card-back {
+    color: var(--text);
+}
+
+.right-section::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+}
+
+
+.filter-btn {
+    border: 1px solid var(--border);
+    background-color: var(--button-background);
+    color: var(--light-text);
+
+}
+
+.filter-btn.active {
+    background-color: var(--button-checked-background);
+    color: var(--button-background);
+}

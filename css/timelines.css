@@ -1,0 +1,71 @@
+.timeline-page-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 100%;
+    overflow-y: auto;
+    padding-top: 20px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    overflow-y: auto;
+}
+
+.filter-btns-container {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.filter-btn {
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#education-btn {
+    border-bottom-left-radius: 20px;
+    border-top-left-radius: 20px;
+}
+
+#training-btn {
+    border-bottom-right-radius: 20px;
+    border-top-right-radius: 20px;
+}
+
+.timelines-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    width: 100%;
+}
+
+.timeline.half-width {
+    width: 50%;
+}
+
+.timeline.full-width {
+    width: 70%;
+}
+
+.timeline.hidden {
+    display: none;
+}
+
+.skills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.skill-tag {
+    flex: 1 1 auto;
+    max-width: calc(50% - 10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    border-radius: 8px;
+    transition: transform 0.2s;
+}

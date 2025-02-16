@@ -6,199 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ilja Safronovs Portfolio</title>
     <style>
-        /* Color Palette Variables */
-        :root {
-            /* Light Theme */
-            --light-background: #f9f9f9;
-            --light-left-section-background: #e9e9e9;
-            --light-text: #333;
-            --light-border: #030303;
-            --light-skill-item-background: #f4f4f4;
-            --light-skill-tag-background: #f4f4f4;
-            --light-button-background: #fff;
-            --light-button-checked-background: #2196F3;
-            --light-scrollbar-thumb: #ccc;
-
-            /* Dark Theme */
-            --dark-background: #121212;
-            --dark-left-section-background: #282828;
-            --dark-text: #f0f0f0;
-            --dark-border: #555;
-            --dark-skill-item-background: #333;
-            --dark-button-background: #000;
-            --dark-button-checked-background: #64b5f6;
-            --dark-scrollbar-thumb: #555;
-        }
-
-        /* Apply Light Theme by Default */
-        body {
-            background-color: var(--light-background);
-            color: var(--light-text);
-        }
-
-        .left-section {
-            background-color: var(--light-left-section-background);
-        }
-
-        .social-links a {
-            color: var(--light-text);
-        }
-
-        .social-links p {
-            color: var(--light-left-section-background);
-            background-color: var(--light-border);
-        }
-
-        .right-section {
-            background-color: var(--light-background);
-        }
-
-        .toggle-btn {
-            border: 1px solid var(--light-tex);
-            color: var(--light-text);
-        }
-
-        .block-header {
-            color: var(--light-text);
-            border-bottom: 2px solid var(--light-border);
-        }
-
-        .skill-item {
-            background-color: var(--light-skill-item-background);
-            border: 1px solid var(--light-border);
-        }
-
-        .skill-item img {
-            filter: grayscale(100%) contrast(50%) saturate(100%);
-        }
-
-        .project {
-            border: 5px solid var(--light-text);
-        }
-
-        .skill-tag {
-            background-color: var(--light-skill-item-background);
-            color: var(--light-text);
-            border: 1px solid var(--light-border);
-        }
-
-        .skill-card-front,
-        .skill-card-back {
-            background-color: var(--light-skill-item-background);
-            color: var(--light-text);
-        }
-
-        .right-section::-webkit-scrollbar-thumb {
-            background-color: var(--light-scrollbar-thumb);
-        }
-
-        /* Dark Theme Class */
-        body.dark-theme {
-            background-color: var(--dark-background);
-            color: var(--dark-text);
-        }
-
-        body.dark-theme .left-section {
-            background-color: var(--dark-left-section-background);
-        }
-
-        body.dark-theme .social-links a {
-            color: var(--dark-text);
-        }
-
-        body.dark-theme .social-links p {
-            color: var(--dark-left-section-background);
-            background-color: var(--dark-border);
-        }
-
-        body.dark-theme .right-section {
-            background-color: var(--dark-background);
-        }
-
-        body.dark-theme .toggle-btn {
-            border: 1px solid var(--dark-tex);
-            color: var(--dark-text);
-        }
-
-        body.dark-theme .block-header {
-            color: var(--dark-text);
-            border-bottom: 2px solid var(--dark-border);
-        }
-
-        body.dark-theme .skill-item {
-            background-color: var(--dark-skill-item-background);
-            border: 1px solid var(--dark-border);
-        }
-
-        body.dark-theme .skill-item img {
-            filter: grayscale(100%) saturate(100%) contrast(50%) invert(100%);
-            /* Optional: Remove grayscale in dark theme */
-        }
-
-        body.dark-theme .skill-card-front,
-        body.dark-theme .skill-card-back {
-            background-color: var(--dark-skill-item-background);
-            /* Dark theme background */
-            color: var(--dark-text);
-            /* Dark theme text color */
-        }
-
-        body.dark-theme .project {
-            border: 5px solid var(--dark-text);
-        }
-
-        body.dark-theme .skill-tag {
-            background-color: var(--dark-skill-item-background);
-            color: var(--dark-text);
-            border: 1px solid var(--dark-border);
-        }
-
-        body.dark-theme .right-section::-webkit-scrollbar-thumb {
-            background-color: var(--dark-scrollbar-thumb);
-        }
-
-        /*----------------------------------------
-        Global Reset & Base Styles
-        -----------------------------------------*/
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body,
-        html {
-            height: 100%;
-            font-family: Arial, sans-serif;
-            overflow-x: hidden;
-        }
-
-        /*----------------------------------------
-        Layout: Container & Sections
-        -----------------------------------------*/
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-
-        /* Left Section (Navigation & Profile) */
-        .left-section {
-            width: 30%;
-            padding: 20px;
-            overflow: hidden;
-            position: relative;
-            transition: transform 0.3s ease-in-out;
-        }
-
-        /* Right Section (Main Content) */
-        .right-section {
-            width: 70%;
-            overflow-y: auto;
-            scroll-snap-type: y mandatory;
-            scroll-behavior: smooth;
-        }
-
-        /* Toggle Button for Mobile Navigation */
         .toggle-btn {
             display: none;
             position: fixed;
@@ -212,382 +19,6 @@
             font-size: 1rem;
         }
 
-        /*----------------------------------------
-        Page Sections
-        -----------------------------------------*/
-        .page {
-            height: 100vh;
-            scroll-snap-align: start;
-            padding: 20px;
-        }
-
-        .home {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-        }
-
-        /*----------------------------------------
-        Left Section Components
-        -----------------------------------------*/
-        /* Profile Section */
-        .whoami {
-            width: 100%;
-            height: 30%;
-            padding-top: 10%;
-        }
-
-        .main-info {
-            width: 100%;
-            display: flex;
-            justify-content: left;
-            align-items: center;
-        }
-
-        .main-info img {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-        }
-
-        .main-info h1 {
-            width: calc(100% - 100px);
-            margin-left: 10px;
-            font-size: calc(0.5rem + 2vw);
-        }
-
-        .additional-info {
-            font-size: 15px;
-            margin-top: 10px;
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: left;
-            margin: 5px 0;
-        }
-
-        .social-links img {
-            width: 30px;
-            height: 30px;
-            margin-right: 10px;
-        }
-
-        .social-links a {
-            text-decoration: none;
-            margin-right: 10px;
-            cursor: pointer;
-        }
-
-        .social-links p {
-            text-decoration: none;
-            border-radius: 15px;
-            height: 30px;
-            padding: 8px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        /* Navigation Links */
-        .switch-container {
-            display: flex;
-            justify-content: left;
-            align-items: center;
-            width: 100%;
-            height: 60%;
-        }
-
-        .nav-link {
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-
-        /*----------------------------------------
-        Home Page Components
-        -----------------------------------------*/
-
-        .block-header {
-            font-weight: bold;
-            padding: 1px;
-            margin-bottom: 15px;
-        }
-
-        .upper-block {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            height: 50%;
-            width: 80%;
-            margin-bottom: 20px;
-        }
-
-        .upper-block .block-header {
-            padding-right: 10px;
-        }
-
-        .moreaboutme {
-            text-align: right;
-            max-width: 100%;
-        }
-
-        .explanation {
-            text-align: justify;
-            padding-left: 30%;
-        }
-
-        .lower-block {
-            justify-content: flex-start;
-            align-items: center;
-            height: 50%;
-            width: 80%;
-        }
-
-        .lower-block .block-header {
-            padding-left: 10px;
-        }
-
-        /* Skills Section */
-        .skills-container {
-            display: flex;
-            text-align: center;
-            width: 100%;
-        }
-
-        .skills-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .skill-item {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 80px;
-            height: 80px;
-            padding: 10px;
-            border-radius: 10px;
-            transition: transform 0.2s;
-
-        }
-
-        .skill-item:hover {
-            transform: scale(1.1);
-        }
-
-        .skill-item img {
-            width: 50px;
-            height: 50px;
-        }
-
-        .skill-card-container {
-            position: relative;
-            /* For absolute positioning of faces */
-            width: 100%;
-            height: 100%;
-            transition: transform 0.6s;
-            transform-style: preserve-3d;
-            /* Enable 3D transformations */
-            cursor: pointer;
-            /* Indicate it's interactive */
-        }
-
-        .skill-item:hover .skill-card-container {
-            transform: rotateY(180deg);
-            /* Flip on hover */
-        }
-
-        .skill-card-front,
-        .skill-card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            /* Hide back face when not flipped */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 10px;
-        }
-
-        .skill-card-back {
-            transform: rotateY(180deg);
-            /* Initially rotate back face to hide it */
-            /* Make skill name stand out */
-        }
-
-        .skill-card-back .skill-name {
-            font-size: 15px;
-            /* Adjust as needed */
-            padding: 10px;
-            text-align: center;
-        }
-
-        /*----------------------------------------
-        Project Page Components
-        -----------------------------------------*/
-        .project-page {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-        }
-
-        .project-container {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            grid-template-rows: repeat(5, 1fr);
-            width: 90%;
-            height: 90%;
-            gap: 10px;
-        }
-
-        .project {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-            border-radius: 10px;
-        }
-
-        .project .info {
-            text-align: center;
-        }
-
-        /* Project Boxes with specific grid areas */
-        #project1 {
-            grid-area: 1 / 1 / 4 / 3;
-        }
-
-        #project2 {
-            grid-area: 4 / 1 / 6 / 4;
-        }
-
-        #project3 {
-            grid-area: 3 / 4 / 6 / 6;
-        }
-
-        #project4 {
-            grid-area: 1 / 3 / 3 / 6;
-        }
-
-        .text-block {
-            text-align: center;
-            grid-area: 3 / 3 / 4 / 4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /*----------------------------------------
-        Timeline Page Components
-        -----------------------------------------*/
-        .timeline-page-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            height: 100%;
-            overflow-y: auto;
-            padding-top: 20px;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-            overflow-y: auto;
-        }
-
-        /* Add these styles to replace toggle switches */
-        .filter-btns-container {
-            display: flex;
-            margin-bottom: 20px;
-        }
-
-        .filter-btn {
-            padding: 8px 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        #education-btn {
-            border-bottom-left-radius: 20px;
-            border-top-left-radius: 20px;
-        }
-
-        #training-btn {
-            border-bottom-right-radius: 20px;
-            border-top-right-radius: 20px;
-        }
-
-        .filter-btn {
-            border: 1px solid var(--light-border);
-            background-color: var(--light-button-background);
-            color: var(--light-text);
-
-        }
-
-        .filter-btn.active {
-            background-color: var(--light-button-checked-background);
-            color: var(--light-button-background);
-        }
-
-        .dark-theme .filter-btn {
-            border-color: var(--dark-border);
-            background-color: var(--dark-button-background);
-            color: var(--dark-text);
-        }
-
-        .dark-theme .filter-btn.active {
-            background-color: var(--dark-button-checked-background);
-            border-color: var(--dark-button-checked-background);
-        }
-
-        /* Timelines */
-        .timelines-container {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            gap: 50px;
-            width: 100%;
-        }
-
-        .timeline.half-width {
-            width: 50%;
-        }
-
-        .timeline.full-width {
-            width: 70%;
-        }
-
-        .timeline.hidden {
-            display: none;
-        }
-
-        /* Additional styles for timeline cards & skill tags */
-        .skills-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 10px 0;
-        }
-
-        .skill-tag {
-            flex: 1 1 auto;
-            max-width: calc(50% - 10px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 5px;
-            border-radius: 8px;
-            transition: transform 0.2s;
-        }
-
-        /*----------------------------------------
-        Scrollbar Styling (for Right Section)
-        -----------------------------------------*/
         .right-section::-webkit-scrollbar {
             width: 8px;
         }
@@ -595,34 +26,15 @@
         .right-section::-webkit-scrollbar-thumb {
             border-radius: 4px;
         }
-
-        /*----------------------------------------
-        Responsive Styles
-        -----------------------------------------*/
-        @media (max-width: 600px) {
-            .left-section {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 250px;
-                height: 100vh;
-                transform: translateX(-100%);
-                z-index: 1000;
-            }
-
-            .left-section.active {
-                transform: translateX(0);
-            }
-
-            .right-section {
-                width: 100%;
-            }
-
-            .toggle-btn {
-                display: block;
-            }
-        }
     </style>
+    <link rel="stylesheet" href="css\home.css">
+    <link rel="stylesheet" href="css\layout.css">
+    <link rel="stylesheet" href="css\left-section.css">
+    <link rel="stylesheet" href="css\projects.css">
+    <link rel="stylesheet" href="css\responsive-style.css">
+    <link rel="stylesheet" href="css\theme-switch.css">
+    <link rel="stylesheet" href="css\theme-values.css">
+    <link rel="stylesheet" href="css\timelines.css">
 </head>
 
 <!-- <body class="dark-theme"> -->
@@ -663,6 +75,17 @@
                     <div class="nav-link" onclick="scrollToSection('timeline-page')">Timelines</div>
                 </div>
             </div>
+
+            <div class="theme-switch-container">
+                <div class="switcher">
+                    <input type="checkbox" class="switcher__input" id="Switch" checked>
+                    <label class="switcher__label" for="Switch">
+                        <span class="switcher__indicator"></span>
+                        <span class="switcher__decoration"></span>
+                    </label>
+                </div>
+
+            </div>
         </div>
 
         <!-- Right Section: Main Content -->
@@ -691,7 +114,7 @@
                                         <img src="svg\python.svg" alt="Python">
                                     </div>
                                     <div class="skill-card-back">
-                                        <p class="skill-name">Python</p>
+                                        <p class="skill-name">python</p>
                                     </div>
                                 </div>
                             </div>
@@ -702,7 +125,7 @@
                                         <img src="svg\java.svg" alt="Java">
                                     </div>
                                     <div class="skill-card-back">
-                                        <p class="skill-name">Java</p>
+                                        <p class="skill-name">java</p>
                                     </div>
                                 </div>
                             </div>
@@ -713,7 +136,7 @@
                                         <img src="svg\cpp.svg" alt="C++">
                                     </div>
                                     <div class="skill-card-back">
-                                        <p class="skill-name">C++</p>
+                                        <p class="skill-name">cpp<p>
                                     </div>
                                 </div>
                             </div>
@@ -724,7 +147,7 @@
                                         <img src="svg\js.svg" alt="JavaScript">
                                     </div>
                                     <div class="skill-card-back">
-                                        <p class="skill-name">JavaScript</p>
+                                        <p class="skill-name">js</p>
                                     </div>
                                 </div>
                             </div>
@@ -735,7 +158,7 @@
                                         <img src="svg\database.svg" alt="Database">
                                     </div>
                                     <div class="skill-card-back">
-                                        <p class="skill-name">Database</p>
+                                        <p class="skill-name">sql</p>
                                     </div>
                                 </div>
                             </div>
@@ -746,7 +169,7 @@
                                         <img src="svg\excel.svg" alt="Excel">
                                     </div>
                                     <div class="skill-card-back">
-                                        <p class="skill-name">Excel</p>
+                                        <p class="skill-name">excel</p>
                                     </div>
                                 </div>
                             </div>
@@ -757,7 +180,7 @@
                                         <img src="svg\docker.svg" alt="Docker">
                                     </div>
                                     <div class="skill-card-back">
-                                        <p class="skill-name">Docker</p>
+                                        <p class="skill-name">docker</p>
                                     </div>
                                 </div>
                             </div>
@@ -768,7 +191,7 @@
                                         <img src="svg\git.svg" alt="Git">
                                     </div>
                                     <div class="skill-card-back">
-                                        <p class="skill-name">Git</p>
+                                        <p class="skill-name">git</p>
                                     </div>
                                 </div>
                             </div>
@@ -953,12 +376,9 @@
             </div>
         </div>
     </div>
-
-    <!------------------------------------------
-        JavaScript: Toggle & Timeline Filter Logic
-    ------------------------------------------->
+    <script src="js/theme-switch.js"></script>
+    <script src="js/timelines.js"></script>
     <script>
-        // Toggle left section (for mobile navigation)
         const toggleBtn = document.querySelector('.toggle-btn');
         const leftSection = document.querySelector('.left-section');
 
@@ -966,60 +386,6 @@
             leftSection.classList.toggle('active');
         });
 
-        // Timeline filters
-        const educationBtn = document.getElementById('education-btn');
-        const trainingBtn = document.getElementById('training-btn');
-        const educationTimeline = document.getElementById('education-timeline');
-        const trainingTimeline = document.getElementById('training-timeline');
-
-        // Initial state
-        let educationVisible = true;
-        let trainingVisible = true;
-
-        function updateTimelines() {
-            // Update Education timeline
-            educationTimeline.classList.toggle('hidden', !educationVisible);
-            educationBtn.classList.toggle('active', educationVisible);
-
-            // Update Training timeline
-            trainingTimeline.classList.toggle('hidden', !trainingVisible);
-            trainingBtn.classList.toggle('active', trainingVisible);
-
-            // Handle layout
-            if (educationVisible && trainingVisible) {
-                educationTimeline.classList.remove('hidden', 'full-width');
-                trainingTimeline.classList.remove('hidden', 'full-width');
-                educationTimeline.classList.add('half-width');
-                trainingTimeline.classList.add('half-width');
-            } else if (educationVisible) {
-                educationTimeline.classList.remove('hidden', 'half-width');
-                trainingTimeline.classList.add('hidden');
-                educationTimeline.classList.add('full-width');
-
-            } else if (trainingVisible) {
-                trainingTimeline.classList.remove('hidden', 'half-width');
-                educationTimeline.classList.add('hidden');
-                trainingTimeline.classList.add('full-width');
-            } else {
-                educationTimeline.classList.add('hidden');
-                trainingTimeline.classList.add('hidden');
-            }
-        }
-
-        educationBtn.addEventListener('click', () => {
-            educationVisible = !educationVisible;
-            updateTimelines();
-        });
-
-        trainingBtn.addEventListener('click', () => {
-            trainingVisible = !trainingVisible;
-            updateTimelines();
-        });
-
-        // Initial setup
-        updateTimelines();
-
-        // Smooth scroll to sections when clicking nav links
         function scrollToSection(id) {
             document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
         }

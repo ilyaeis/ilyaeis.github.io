@@ -1,0 +1,110 @@
+.block-header {
+    font-weight: bold;
+    padding: 1px;
+    margin-bottom: 15px;
+}
+
+.upper-block {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    height: 50%;
+    width: 80%;
+}
+
+.upper-block .block-header {
+    padding-right: 10px;
+}
+
+.moreaboutme {
+    text-align: right;
+    max-width: 100%;
+}
+
+.explanation {
+    text-align: justify;
+    padding-left: 30%;
+}
+
+.lower-block {
+    justify-content: flex-start;
+    align-items: center;
+    height: 50%;
+    width: 80%;
+    position: relative;
+    padding-top: 10%;
+}
+
+.lower-block .block-header {
+    padding-left: 10px;
+}
+
+/* Skills Section */
+.skills-container {
+    display: flex;
+    text-align: center;
+    width: 100%;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.skill-item {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 10px;
+    border-radius: 10px;
+    transition: transform 0.2s;
+
+}
+
+.skill-item img {
+    width: 30px;
+    height: 30px;
+}
+
+.skill-card-container {
+    position: relative;
+    /* For absolute positioning of faces */
+    width: 100%;
+    height: 100%;
+    transition: transform 1s;
+    transform-style: preserve-3d;
+    /* Enable 3D transformations */
+    cursor: pointer;
+    /* Indicate it's interactive */
+}
+
+.skill-item:hover .skill-card-container {
+    transform: rotateY(180deg);
+}
+
+.skill-card-front,
+.skill-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    /* Hide back face when not flipped */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+}
+
+.skill-card-back {
+    transform: rotateY(180deg);
+}
+
+.skill-card-back .skill-name {
+    font-size: 15px;
+    padding: 10px;
+    text-align: center;
+}
