@@ -31,6 +31,12 @@ h1 {
     font-weight: 300;
     color: #888;
     letter-spacing: 0.06em;
+    margin-bottom: 0.4rem;
+}
+
+.description.sub {
+    font-size: 0.85rem;
+    color: #555;
     margin-bottom: 1.8rem;
 }
 
