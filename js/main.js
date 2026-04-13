@@ -31,15 +31,6 @@
         drawingCanvas.style.width = size + 'px';
         drawingCanvas.style.height = size + 'px';
         drawingCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        positionDrawingCanvas();
-    }
-
-    function positionDrawingCanvas() {
-        // Place drawing canvas just below the centered container
-        const container = document.querySelector('.container');
-        const rect = container.getBoundingClientRect();
-        const top = rect.bottom + 10; // 10px gap below the block
-        drawingCanvas.style.top = top + 'px';
     }
 
     // ── Stars ──────────────────────────────────────────────────
@@ -204,8 +195,29 @@
         currentState = State.PAGE_2;
         colorMode = 'color';
         colorTransitionTime = 0;
+
+        // FLIP: capture LinkedIn position before change
+        const firstRect = socialEl.getBoundingClientRect();
+
+        // Hide text + move LinkedIn to corner
+        document.body.classList.add('page2');
+
+        // FLIP: animate LinkedIn from old position to corner
+        const lastRect = socialEl.getBoundingClientRect();
+        const dx = firstRect.left - lastRect.left;
+        const dy = firstRect.top - lastRect.top;
+        socialEl.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+        socialEl.getBoundingClientRect(); // force reflow
+        socialEl.style.transition = 'transform 0.6s ease';
+        socialEl.style.transform = 'translate(0, 0)';
+
         window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
-        setTimeout(function () { snapping = false; }, 800);
+
+        setTimeout(function () {
+            socialEl.style.transition = '';
+            socialEl.style.transform = '';
+            snapping = false;
+        }, 800);
     }
 
     function snapToReturn() {
@@ -215,23 +227,8 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         setTimeout(function () {
-            // FLIP technique for LinkedIn button
-            const firstRect = socialEl.getBoundingClientRect();
             document.body.classList.add('returned');
-            const lastRect = socialEl.getBoundingClientRect();
-
-            const dx = firstRect.left - lastRect.left;
-            const dy = firstRect.top - lastRect.top;
-            socialEl.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
-            socialEl.getBoundingClientRect(); // force reflow
-            socialEl.style.transition = 'transform 0.6s ease';
-            socialEl.style.transform = 'translate(0, 0)';
-
-            setTimeout(function () {
-                socialEl.style.transition = '';
-                socialEl.style.transform = '';
-                snapping = false;
-            }, 700);
+            snapping = false;
         }, 600);
     }
 
