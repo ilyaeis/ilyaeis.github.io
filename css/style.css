@@ -50,6 +50,7 @@ h1 {
     font-weight: 300;
     letter-spacing: 0.04em;
     margin-bottom: 0.6rem;
+    transition: opacity 0.5s ease;
 }
 
 .description {
@@ -61,10 +62,13 @@ h1 {
     transition: opacity 0.5s ease;
 }
 
-/* Drawing canvas */
+/* Drawing canvas — fixed, stays in place during scroll */
 #drawing {
-    display: block;
-    margin: 0 auto 1.5rem;
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    pointer-events: none;
 }
 
 /* Social links */
@@ -88,7 +92,8 @@ h1 {
     filter: invert(1);
 }
 
-/* RETURNED state — description hidden */
+/* RETURNED state — name and description hidden */
+body.returned h1,
 body.returned .description {
     opacity: 0;
     pointer-events: none;

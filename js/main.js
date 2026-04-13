@@ -31,6 +31,15 @@
         drawingCanvas.style.width = size + 'px';
         drawingCanvas.style.height = size + 'px';
         drawingCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        positionDrawingCanvas();
+    }
+
+    function positionDrawingCanvas() {
+        // Place drawing canvas just below the centered container
+        const container = document.querySelector('.container');
+        const rect = container.getBoundingClientRect();
+        const top = rect.bottom + 10; // 10px gap below the block
+        drawingCanvas.style.top = top + 'px';
     }
 
     // ── Stars ──────────────────────────────────────────────────
