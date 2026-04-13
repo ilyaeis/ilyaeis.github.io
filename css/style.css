@@ -62,11 +62,12 @@ h1 {
     transition: opacity 0.5s ease;
 }
 
-/* Drawing canvas — fixed, stays in place during scroll */
+/* Drawing canvas — fixed, centered behind text */
 #drawing {
     position: fixed;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
     z-index: 1;
     pointer-events: none;
 }
@@ -92,27 +93,25 @@ h1 {
     filter: invert(1);
 }
 
-/* RETURNED state — name and description hidden */
-body.returned h1,
-body.returned .description {
+/* PAGE_2 state — text hidden, social in corner */
+body.page2 h1,
+body.page2 .description {
     opacity: 0;
     pointer-events: none;
 }
 
-/* RETURNED state — social in corner */
-body.returned .social {
+body.page2 .social {
     position: fixed;
     bottom: 1.5rem;
     right: 1.5rem;
     z-index: 10;
 }
 
-/* RETURNED state — page 2 gone */
+/* RETURNED state — page 2 gone, no scrolling */
 body.returned .page-2 {
     display: none;
 }
 
-/* RETURNED state — no scrolling */
 body.returned {
     overflow: hidden;
     height: 100vh;
