@@ -31,6 +31,7 @@ body {
     width: 100%;
     height: 100vh;
     z-index: 1;
+    pointer-events: none;
 }
 
 .page-1 {
@@ -62,14 +63,14 @@ h1 {
     transition: opacity 0.5s ease;
 }
 
-/* Drawing canvas — fixed, centered behind text */
-#drawing {
+/* Attractor canvas — fixed, fullscreen behind text */
+#attractor {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     z-index: 1;
-    pointer-events: none;
 }
 
 /* Social links */
@@ -81,6 +82,7 @@ h1 {
     display: inline-block;
     opacity: 0.5;
     transition: opacity 0.2s ease;
+    pointer-events: auto;
 }
 
 .social a:hover {
@@ -115,4 +117,11 @@ body.returned .page-2 {
 body.returned {
     overflow: hidden;
     height: 100vh;
+}
+
+/* On touch devices, let touches pass through for scrolling (auto-rotate is enough) */
+@media (pointer: coarse) {
+    #attractor {
+        pointer-events: none;
+    }
 }

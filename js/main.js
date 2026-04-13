@@ -1,3 +1,11 @@
+import {
+    init as initAttractor,
+    update as updateAttractor,
+    resize as resizeAttractor,
+    pause as pauseAttractor,
+    resume as resumeAttractor
+} from './attractors.js';
+
 (function () {
     'use strict';
 
@@ -9,8 +17,6 @@
     // ── DOM refs ───────────────────────────────────────────────
     const starsCanvas = document.getElementById('stars');
     const starsCtx = starsCanvas.getContext('2d');
-    const drawingCanvas = document.getElementById('drawing');
-    const drawingCtx = drawingCanvas.getContext('2d');
     const page2 = document.querySelector('.page-2');
     const descEl = document.querySelector('.description');
     const socialEl = document.querySelector('.social');
@@ -22,15 +28,6 @@
         starsCanvas.width = window.innerWidth * dpr;
         starsCanvas.height = window.innerHeight * dpr;
         starsCtx.scale(dpr, dpr);
-    }
-
-    function sizeDrawingCanvas() {
-        const size = 200;
-        drawingCanvas.width = size * dpr;
-        drawingCanvas.height = size * dpr;
-        drawingCanvas.style.width = size + 'px';
-        drawingCanvas.style.height = size + 'px';
-        drawingCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     // ── Stars ──────────────────────────────────────────────────
@@ -116,61 +113,6 @@
         }
     }
 
-    // ── Circle Drawing ─────────────────────────────────────────
-    const segments = [];
-    let drawAngle = -Math.PI / 2; // start from top
-    const DRAW_SPEED = 0.4; // radians per second
-    const CIRCLE_RADIUS = 70;
-    const CIRCLE_CX = 100;
-    const CIRCLE_CY = 100;
-    const STROKE_WIDTH = 1.5;
-
-    let colorMode = 'grayscale'; // or 'color'
-    let colorTransitionTime = 0; // time since entering color mode
-    let globalTime = 0;
-
-    function getSegmentColor() {
-        if (colorMode === 'grayscale') {
-            // Oscillate lightness between 55% and 100% (gray to white)
-            const t = (Math.sin(globalTime * 0.5) + 1) / 2;
-            const lightness = 55 + t * 45;
-            return 'hsl(0, 0%, ' + lightness.toFixed(1) + '%)';
-        } else {
-            // Warm tones: gradually introduce saturation
-            // Saturation ramps from 0 to 70 over ~8 seconds
-            const saturation = Math.min(70, colorTransitionTime * 8.75);
-            // Hue shifts slowly in warm range (0-45 degrees)
-            const hue = (colorTransitionTime * 3) % 45;
-            // Lightness oscillates 50-80%
-            const t = (Math.sin(globalTime * 0.5) + 1) / 2;
-            const lightness = 50 + t * 30;
-            return 'hsl(' + hue.toFixed(1) + ', ' + saturation.toFixed(1) + '%, ' + lightness.toFixed(1) + '%)';
-        }
-    }
-
-    function updateDrawing(dt) {
-        const advance = DRAW_SPEED * dt;
-        const startAngle = drawAngle;
-        drawAngle += advance;
-        segments.push({
-            start: startAngle,
-            end: drawAngle,
-            color: getSegmentColor(),
-        });
-    }
-
-    function renderDrawing() {
-        drawingCtx.clearRect(0, 0, 200, 200);
-        drawingCtx.lineWidth = STROKE_WIDTH;
-        drawingCtx.lineCap = 'round';
-        for (const seg of segments) {
-            drawingCtx.beginPath();
-            drawingCtx.arc(CIRCLE_CX, CIRCLE_CY, CIRCLE_RADIUS, seg.start, seg.end);
-            drawingCtx.strokeStyle = seg.color;
-            drawingCtx.stroke();
-        }
-    }
-
     // ── Scroll Handling ────────────────────────────────────────
     const SNAP_THRESHOLD = window.innerHeight * 0.25;
 
@@ -193,8 +135,6 @@
         if (snapping || currentState !== State.INITIAL) return;
         snapping = true;
         currentState = State.PAGE_2;
-        colorMode = 'color';
-        colorTransitionTime = 0;
 
         // FLIP: capture LinkedIn position before change
         const firstRect = socialEl.getBoundingClientRect();
@@ -239,27 +179,42 @@
         if (!lastTime) lastTime = timestamp;
         const dt = Math.min((timestamp - lastTime) / 1000, 0.1); // seconds, capped
         lastTime = timestamp;
-        globalTime += dt;
-        if (colorMode === 'color') colorTransitionTime += dt;
 
         // Update & render stars
         for (const s of stars) updateStar(s, dt * 1000);
         renderStars();
 
-        // Update & render drawing
-        updateDrawing(dt);
-        renderDrawing();
+        // Update & render attractor
+        updateAttractor(dt);
 
         requestAnimationFrame(loop);
+    }
+
+    // ── Visibility ─────────────────────────────────────────────
+    function setupVisibilityObserver() {
+        const attractorCanvas = document.getElementById('attractor');
+        if (!attractorCanvas) return;
+        const observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) {
+                    resumeAttractor();
+                } else {
+                    pauseAttractor();
+                }
+            });
+        }, { threshold: 0.1 });
+        observer.observe(attractorCanvas);
     }
 
     // ── Init ───────────────────────────────────────────────────
     function init() {
         sizeStarsCanvas();
-        sizeDrawingCanvas();
         initStars();
+        initAttractor(document.getElementById('attractor'));
 
         window.addEventListener('scroll', onScroll, { passive: true });
+
+        let resizeTimer;
         window.addEventListener('resize', function () {
             sizeStarsCanvas();
             // Reposition stars to new viewport
@@ -267,8 +222,13 @@
                 s.x = Math.random() * window.innerWidth;
                 s.y = Math.random() * window.innerHeight;
             }
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                resizeAttractor(window.innerWidth, window.innerHeight);
+            }, 150);
         });
 
+        setupVisibilityObserver();
         requestAnimationFrame(loop);
     }
 
