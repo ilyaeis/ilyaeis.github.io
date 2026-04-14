@@ -10,7 +10,7 @@ import {
     rk4Step, addJourneyTime, render, isPaused
 } from './attractors.js';
 import * as cam from './camera.js';
-import { generateTextLines } from './strokeFont.js';
+import { generateTextLines, generateRockWithLabel } from './strokeFont.js';
 
 // ── Phase enum ─────────────────────────────────────────────────────
 export const Phase = {
@@ -23,7 +23,9 @@ export const Phase = {
     TEXT_DRAW: 9,
     FLIGHT: 3,
     ATTRACTOR_DRAW: 4,
-    LAUNCH_FROM_ATTRACTOR: 5
+    LAUNCH_FROM_ATTRACTOR: 5,
+    ROCK_FLIGHT: 10,
+    ROCK_DRAW: 11
 };
 
 // ── State ──────────────────────────────────────────────────────────
@@ -38,8 +40,6 @@ let trail = null;
 
 const worldPos = new THREE.Vector3();
 const _vec3 = new THREE.Vector3();
-const _right = new THREE.Vector3();
-const _up = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _startPos = new THREE.Vector3();
 const _targetPos = new THREE.Vector3();
@@ -70,6 +70,19 @@ const textUp = new THREE.Vector3();      // camera-aligned up axis
 const textDepartDir = new THREE.Vector3(); // saved departure direction
 const textLastPoint = new THREE.Vector3();
 let flightCameraDelay = 0;  // seconds to wait before camera follows flight
+const textFacePos = new THREE.Vector3(); // reused for camera face-on target
+
+// Constellation state
+let constellationDone = false;
+let rockIdx = 0;
+let rockDataArray = [];     // { center: Vector3, points: [{x,y}], outlineCount }
+let rockPoints = null;
+let rockPointIdx = 0;
+let greyRockLines = [];     // THREE.Line objects for grey previews
+const constellationDir = new THREE.Vector3();
+const rockRight = new THREE.Vector3();
+const rockUp = new THREE.Vector3();
+let rockFlightDuration = 0;
 
 // ── Tuning ─────────────────────────────────────────────────────────
 
@@ -93,10 +106,20 @@ const ATTRACTOR_MIN_DRAW = 5.0;
 
 // Text overlay
 const TEXT_FLIGHT_DURATION = 2.5;     // flight to text center
-const TEXT_POINTS_PER_FRAME = 35;     // drawing speed (3 reps ≈ 10k points → ~5s draw)
+const TEXT_POINTS_PER_FRAME = 170;    // drawing speed (high density letters)
 const TEXT_SCALE = 0.22;              // world-space size of text (fits 3 lines in view)
 const TEXT_LINGER_CAMERA = 1.0;       // camera stays on text this long after drawing
 const TEXT_LINES = ['CREATIVE.', 'ADAPTIVE.', 'CURIOUS.'];
+
+// Constellation (milestone rocks after Lorenz)
+const ROCK_SCALE = 0.4;              // world units per 2D unit
+const ROCK_DRAW_PTS = 110;           // points per frame when drawing rock + label
+const ROCK_FLIGHT_SPEED = 2.5;       // world units per second
+const MILESTONES = [
+    { label: 'GYMNASIUM', sublabel: 'RIGA', sizeFactor: 1.0,  seed: 42, distance: 8.0 },
+    { label: 'BACHELOR IN', sublabel: 'FINANCIAL ENGINEERING', sizeFactor: 0.55, seed: 73, distance: 7.0 },
+    { label: 'GIRAFFE360', sublabel: null,  sizeFactor: 0.35, seed: 17, distance: 5.0 },
+];
 
 // Rocket hint
 const ROCKET_FLY_DURATION = 3.0;   // matches CSS animation duration
@@ -200,6 +223,8 @@ export function update(dt) {
         case Phase.FLIGHT:          updateFlight(dt); break;
         case Phase.ATTRACTOR_DRAW:  updateAttractorDraw(dt); break;
         case Phase.LAUNCH_FROM_ATTRACTOR: updateLaunchFromAttractor(dt); break;
+        case Phase.ROCK_FLIGHT: updateRockFlight(dt); break;
+        case Phase.ROCK_DRAW:   updateRockDraw(dt); break;
     }
 
     phaseTime += dt;
@@ -263,12 +288,10 @@ function updateRocketHint(dt) {
         bubble.style.opacity = '';
         rocketHintEl.style.visibility = '';
         rocketHintEl.style.opacity = '';
-        // Rocket icon is ~2rem wide, bubble starts at left:3rem from rocket
+        // Center rocket + bubble on screen
         const rocketW = 32; // ~2rem
-        const needed = rocketW + 48 + bubbleW + 16; // icon + 3rem gap + bubble + padding
-        const halfScreen = window.innerWidth / 2;
-        const fromRight = Math.max(needed, halfScreen);
-        const landLeft = window.innerWidth - fromRight;
+        const totalW = rocketW + 48 + bubbleW; // icon + 3rem gap + bubble
+        const landLeft = (window.innerWidth - totalW) / 2;
         rocketHintEl.style.setProperty('--land-left', landLeft + 'px');
         rocketHintEl.classList.add('flying');
     }
@@ -427,14 +450,24 @@ function updateFlightToText(dt) {
     }
 }
 
-// ── TEXT_DRAW (trace "CREATIVE" then launch to attractor) ─────────
+// ── TEXT_DRAW (trace "CREATIVE" with camera aligning during draw) ──
 function updateTextDraw(dt) {
-    // All points drawn → set up flight to attractor
+    // Compute face-on camera target on first frame
+    if (phaseFirstFrame) {
+        phaseFirstFrame = false;
+        const dist = camera.position.distanceTo(textCenter);
+        textFacePos.copy(textCenter).addScaledVector(textDepartDir, -dist);
+    }
+
+    // Smoothly align camera to face text DURING drawing
+    const camSpeed = 2.0;
+    const camFactor = 1 - Math.exp(-camSpeed * dt);
+    camera.position.lerp(textFacePos, camFactor);
+
+    // All points drawn → launch to attractor
     if (!textPoints || textPointIdx >= textPoints.length) {
-        // Freeze current trail colors before switching to attractor flight
         trail.colorFreezeIdx = trail.pointCount;
 
-        // Remember last text point in world space
         if (textPoints && textPoints.length > 0) {
             const lp = textPoints[textPoints.length - 1];
             textLastPoint.set(
@@ -446,7 +479,6 @@ function updateTextDraw(dt) {
             textLastPoint.copy(textCenter);
         }
 
-        // Place Lorenz attractor further along the original departure direction
         attractorOffset.copy(textCenter).addScaledVector(textDepartDir, FLIGHT_DISTANCE);
 
         const attr = ATTRACTORS[attractorIndex];
@@ -454,11 +486,9 @@ function updateTextDraw(dt) {
         trail.attractorIdx = attractorIndex;
         trail.drawTime = 0;
 
-        // Bezier from last text point to attractor center
         setupFlightCurve(textLastPoint, textDepartDir, attractorOffset);
         worldPos.copy(textLastPoint);
 
-        // Camera stays on text for TEXT_LINGER_CAMERA seconds, then follows
         flightCameraDelay = TEXT_LINGER_CAMERA;
         enterPhase(Phase.FLIGHT);
         return;
@@ -476,7 +506,6 @@ function updateTextDraw(dt) {
     }
     textPointIdx = end;
 
-    // Camera stays centered on text
     worldPos.copy(textCenter);
 }
 
@@ -536,7 +565,12 @@ function updateAttractorDraw(dt) {
     if (tapPending && phaseTime >= ATTRACTOR_MIN_DRAW) {
         tapPending = false;
         hideTapPrompt();
-        enterPhase(Phase.LAUNCH_FROM_ATTRACTOR);
+        if (attractorIndex === 0 && !constellationDone) {
+            setupConstellation();
+            enterPhase(Phase.ROCK_FLIGHT);
+        } else {
+            enterPhase(Phase.LAUNCH_FROM_ATTRACTOR);
+        }
     }
 }
 
@@ -581,4 +615,237 @@ function updateLaunchFromAttractor(dt) {
     flightCameraDelay = 0; // no delay for normal attractor transitions
     cam.setMode(cam.Mode.FOLLOW, controls);
     enterPhase(Phase.FLIGHT);
+}
+
+// ── CONSTELLATION: setup ──────────────────────────────────────────
+function setupConstellation() {
+    const attr = ATTRACTORS[attractorIndex];
+    const s = attractorState;
+
+    // Departure direction from attractor tip
+    const derivs = attr.derivatives(s[0], s[1], s[2], attr.params);
+    constellationDir.set(
+        derivs[0] * attr.scale,
+        derivs[1] * attr.scale,
+        derivs[2] * attr.scale
+    ).normalize();
+
+    // Start position = attractor tip in world space
+    _startPos.set(
+        (s[0] - attr.center[0]) * attr.scale + attractorOffset.x,
+        (s[1] - attr.center[1]) * attr.scale + attractorOffset.y,
+        (s[2] - attr.center[2]) * attr.scale + attractorOffset.z
+    );
+
+    // Freeze trail colors
+    trail.colorFreezeIdx = trail.pointCount;
+
+    // Orient rock plane perpendicular to flight direction
+    rockRight.crossVectors(constellationDir, camera.up).normalize();
+    rockUp.crossVectors(rockRight, constellationDir).normalize();
+
+    // Pre-generate all rock data — triangle layout (not a straight line)
+    // Offsets perpendicular to flight direction for each rock
+    const triOffsets = [
+        { right: -1.5, up:  0.8 },   // top-left
+        { right:  1.8, up:  0.3 },   // right
+        { right: -0.5, up: -1.2 },   // bottom-left
+    ];
+    rockDataArray = [];
+    let cumDist = 0;
+    for (let mi = 0; mi < MILESTONES.length; mi++) {
+        const ms = MILESTONES[mi];
+        cumDist += ms.distance;
+        const off = triOffsets[mi];
+        const center = _startPos.clone()
+            .addScaledVector(constellationDir, cumDist)
+            .addScaledVector(rockRight, off.right)
+            .addScaledVector(rockUp, off.up);
+        const { points, outlineCount } = generateRockWithLabel(
+            ms.sizeFactor, ms.seed, ms.label, ms.sublabel
+        );
+        rockDataArray.push({ center, points, outlineCount });
+    }
+
+    // Create grey preview outlines for all rocks
+    greyRockLines = [];
+    for (const rd of rockDataArray) {
+        const pts = rd.points;
+        const n = rd.outlineCount;
+        const positions = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) {
+            const p = pts[i];
+            positions[i * 3]     = rd.center.x + (p.x * rockRight.x + p.y * rockUp.x) * ROCK_SCALE;
+            positions[i * 3 + 1] = rd.center.y + (p.x * rockRight.y + p.y * rockUp.y) * ROCK_SCALE;
+            positions[i * 3 + 2] = rd.center.z + (p.x * rockRight.z + p.y * rockUp.z) * ROCK_SCALE;
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const mat = new THREE.LineBasicMaterial({
+            color: 0x444444, transparent: true, opacity: 0.3
+        });
+        const line = new THREE.Line(geo, mat);
+        line.frustumCulled = false;
+        scene.add(line);
+        greyRockLines.push(line);
+    }
+
+    // Set up flight to first rock (curved)
+    rockIdx = 0;
+    rockFlightDuration = MILESTONES[0].distance / ROCK_FLIGHT_SPEED;
+    setupCurvedRockFlight(_startPos, rockDataArray[0].center, 0);
+    worldPos.copy(_startPos);
+
+    cam.setMode(cam.Mode.FOLLOW, controls);
+}
+
+// ── Curved Bezier for rock-to-rock flights ────────────────────────
+function setupCurvedRockFlight(startPos, targetPos, curveIdx) {
+    bezP0.copy(startPos);
+    bezP3.copy(targetPos);
+
+    const dist = startPos.distanceTo(targetPos);
+    const sign = (curveIdx % 2 === 0) ? 1 : -1;
+
+    // P1: depart forward with sideways arc
+    bezP1.copy(constellationDir).multiplyScalar(dist * 0.35).add(startPos);
+    bezP1.addScaledVector(rockRight, sign * dist * 0.3);
+    bezP1.addScaledVector(rockUp, dist * 0.12);
+
+    // P2: approach target from opposite side
+    _vec3.copy(targetPos).sub(startPos).normalize();
+    bezP2.copy(_vec3).multiplyScalar(-dist * 0.3).add(targetPos);
+    bezP2.addScaledVector(rockRight, -sign * dist * 0.15);
+    bezP2.addScaledVector(rockUp, -dist * 0.08);
+}
+
+// ── ROCK_FLIGHT (Bezier to next rock) ─────────────────────────────
+function updateRockFlight(dt) {
+    const t = Math.min(phaseTime / rockFlightDuration, 1);
+    const prevT = Math.max(0, (phaseTime - dt) / rockFlightDuration);
+
+    for (let i = 0; i < FLIGHT_POINTS_PER_FRAME; i++) {
+        const frac = i / FLIGHT_POINTS_PER_FRAME;
+        const subT = prevT + (t - prevT) * frac;
+        bezierPoint(subT, _vec3);
+        pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
+    }
+
+    bezierPoint(t, worldPos);
+
+    if (t >= 1) {
+        // Arrived at rock
+        const rd = rockDataArray[rockIdx];
+        rockPoints = rd.points;
+        rockPointIdx = 0;
+
+        // Camera orbits rock center
+        cam.setMode(cam.Mode.ORBIT, controls);
+        cam.setOrbitCenter(rd.center.x, rd.center.y, rd.center.z);
+        controls.autoRotateSpeed = 0.3;
+
+        enterPhase(Phase.ROCK_DRAW);
+    }
+}
+
+// ── ROCK_DRAW (trace rock outline + label, camera aligns during) ──
+function updateRockDraw(dt) {
+    const rd = rockDataArray[rockIdx];
+
+    // Compute face-on camera target on first frame
+    if (phaseFirstFrame) {
+        phaseFirstFrame = false;
+        const dist = camera.position.distanceTo(rd.center);
+        textFacePos.copy(rd.center).addScaledVector(constellationDir, -dist);
+    }
+
+    // Smoothly align camera to face rock DURING drawing
+    const camSpeed = 2.5;
+    const camFactor = 1 - Math.exp(-camSpeed * dt);
+    camera.position.lerp(textFacePos, camFactor);
+
+    // Fade grey preview as colored outline is drawn
+    if (greyRockLines[rockIdx]) {
+        if (rockPointIdx < rd.outlineCount) {
+            const progress = rockPointIdx / rd.outlineCount;
+            greyRockLines[rockIdx].material.opacity = 0.3 * (1 - progress);
+        } else {
+            scene.remove(greyRockLines[rockIdx]);
+            greyRockLines[rockIdx].geometry.dispose();
+            greyRockLines[rockIdx].material.dispose();
+            greyRockLines[rockIdx] = null;
+        }
+    }
+
+    // All points drawn → advance
+    if (!rockPoints || rockPointIdx >= rockPoints.length) {
+        trail.colorFreezeIdx = trail.pointCount;
+        rockIdx++;
+
+        if (rockIdx < rockDataArray.length) {
+            // Curved flight to next rock
+            const prevRock = rockDataArray[rockIdx - 1];
+            const lastPt = rockPoints[rockPoints.length - 1];
+            _startPos.set(
+                prevRock.center.x + (lastPt.x * rockRight.x + lastPt.y * rockUp.x) * ROCK_SCALE,
+                prevRock.center.y + (lastPt.x * rockRight.y + lastPt.y * rockUp.y) * ROCK_SCALE,
+                prevRock.center.z + (lastPt.x * rockRight.z + lastPt.y * rockUp.z) * ROCK_SCALE
+            );
+
+            rockFlightDuration = MILESTONES[rockIdx].distance / ROCK_FLIGHT_SPEED;
+            setupCurvedRockFlight(_startPos, rockDataArray[rockIdx].center, rockIdx);
+            worldPos.copy(_startPos);
+
+            cam.setMode(cam.Mode.FOLLOW, controls);
+            enterPhase(Phase.ROCK_FLIGHT);
+        } else {
+            // All rocks done — fly to next attractor
+            constellationDone = true;
+
+            // Clean up remaining grey rocks
+            for (const gl of greyRockLines) {
+                if (gl) { scene.remove(gl); gl.geometry.dispose(); gl.material.dispose(); }
+            }
+            greyRockLines = [];
+
+            // Advance to next attractor (Rössler)
+            attractorIndex = (attractorIndex + 1) % ATTRACTORS.length;
+            const nextAttr = ATTRACTORS[attractorIndex];
+            attractorState = [...nextAttr.initialCondition];
+            trail.attractorIdx = attractorIndex;
+            trail.drawTime = 0;
+
+            // Depart from last drawn point
+            const lastRock = rockDataArray[rockDataArray.length - 1];
+            const lp = rockPoints[rockPoints.length - 1];
+            _startPos.set(
+                lastRock.center.x + (lp.x * rockRight.x + lp.y * rockUp.x) * ROCK_SCALE,
+                lastRock.center.y + (lp.x * rockRight.y + lp.y * rockUp.y) * ROCK_SCALE,
+                lastRock.center.z + (lp.x * rockRight.z + lp.y * rockUp.z) * ROCK_SCALE
+            );
+
+            attractorOffset.copy(_startPos).addScaledVector(constellationDir, FLIGHT_DISTANCE);
+            setupFlightCurve(_startPos, constellationDir, attractorOffset);
+            worldPos.copy(_startPos);
+
+            flightCameraDelay = 0;
+            cam.setMode(cam.Mode.FOLLOW, controls);
+            enterPhase(Phase.FLIGHT);
+        }
+        return;
+    }
+
+    // Push rock + label points this frame
+    const end = Math.min(rockPointIdx + ROCK_DRAW_PTS, rockPoints.length);
+    for (let i = rockPointIdx; i < end; i++) {
+        const p = rockPoints[i];
+        pushPointWorld(trail,
+            rd.center.x + (p.x * rockRight.x + p.y * rockUp.x) * ROCK_SCALE,
+            rd.center.y + (p.x * rockRight.y + p.y * rockUp.y) * ROCK_SCALE,
+            rd.center.z + (p.x * rockRight.z + p.y * rockUp.z) * ROCK_SCALE
+        );
+    }
+    rockPointIdx = end;
+
+    worldPos.copy(rd.center);
 }
