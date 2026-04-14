@@ -37,6 +37,7 @@ const ATTRACTORS = [
         ],
         dt: 0.005,
         scale: 0.05,
+        center: [-0.08, -0.08, 23.56],
         initialCondition: [0.1, 0, 0],
         palette: [new THREE.Color(0xffbf00), new THREE.Color(0xff8800), new THREE.Color(0xdd3300)],
         camera: { radius: 2.8, elevation: 0.5, azimuthSpeed: 0.7 }
@@ -51,6 +52,7 @@ const ATTRACTORS = [
         ],
         dt: 0.008,
         scale: 0.08,
+        center: [0.17, -0.88, 0.86],
         initialCondition: [0.1, 0, 0],
         palette: [new THREE.Color(0x2266cc), new THREE.Color(0x00aacc), new THREE.Color(0x00ddbb)],
         camera: { radius: 3.2, elevation: 1.0, azimuthSpeed: 0.5 }
@@ -65,6 +67,7 @@ const ATTRACTORS = [
         ],
         dt: 0.05,
         scale: 0.35,
+        center: [1.89, 1.89, 1.91],
         initialCondition: [1.1, 1.1, -0.01],
         palette: [new THREE.Color(0x8833cc), new THREE.Color(0xcc33aa), new THREE.Color(0xff44cc)],
         camera: { radius: 2.5, elevation: 0.4, azimuthSpeed: 0.6 }
@@ -79,6 +82,7 @@ const ATTRACTORS = [
         ],
         dt: 0.005,
         scale: 0.6,
+        center: [0.0, 0.0, 0.70],
         initialCondition: [0.1, 0, 0],
         palette: [new THREE.Color(0x22aa44), new THREE.Color(0x00ccaa), new THREE.Color(0x00eedd)],
         camera: { radius: 2.6, elevation: 0.6, azimuthSpeed: 0.5 }
@@ -93,6 +97,7 @@ const ATTRACTORS = [
         ],
         dt: 0.004,
         scale: 0.06,
+        center: [-2.64, -2.64, -2.64],
         initialCondition: [-1.48, -1.51, 2.04],
         palette: [new THREE.Color(0xccaa00), new THREE.Color(0xeecc44), new THREE.Color(0xffffff)],
         camera: { radius: 3.0, elevation: 0.5, azimuthSpeed: 0.6 }
@@ -314,10 +319,10 @@ function clearTrail(trail) {
     trail.geometry.setDrawRange(0, 0);
 }
 
-function pushPoint(trail, x, y, z, scale) {
-    const sx = x * scale;
-    const sy = y * scale;
-    const sz = z * scale;
+function pushPoint(trail, x, y, z, scale, center) {
+    const sx = (x - center[0]) * scale;
+    const sy = (y - center[1]) * scale;
+    const sz = (z - center[2]) * scale;
 
     if (trail.pointCount < MAX_POINTS) {
         const i3 = trail.pointCount * 3;
@@ -367,7 +372,7 @@ function integrateTrail(trail, frameDt) {
             attr.dt, attr.params
         );
         clampTrailState(trail);
-        pushPoint(trail, trail.state[0], trail.state[1], trail.state[2], attr.scale);
+        pushPoint(trail, trail.state[0], trail.state[1], trail.state[2], attr.scale, attr.center);
     }
 }
 
