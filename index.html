@@ -5,11 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ilja Safronovs</title>
     <link rel="stylesheet" href="css/style.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+        }
+    }
+    </script>
 </head>
 <body>
     <canvas id="stars"></canvas>
-
-    <canvas id="drawing" width="200" height="200"></canvas>
+    <canvas id="attractor"></canvas>
 
     <section class="page-1">
         <div class="container">
@@ -25,6 +32,6 @@
 
     <section class="page-2"></section>
 
-    <script src="js/main.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
