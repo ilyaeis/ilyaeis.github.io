@@ -231,6 +231,23 @@ function updateTransitionOut(dt) {
 function updateRocketHint(dt) {
     if (phaseFirstFrame) {
         phaseFirstFrame = false;
+        // Measure bubble to compute landing position
+        const bubble = rocketHintEl.querySelector('.rocket-bubble');
+        // Temporarily make visible to measure
+        rocketHintEl.style.visibility = 'visible';
+        rocketHintEl.style.opacity = '0';
+        bubble.style.opacity = '1';
+        const bubbleW = bubble.offsetWidth;
+        bubble.style.opacity = '';
+        rocketHintEl.style.visibility = '';
+        rocketHintEl.style.opacity = '';
+        // Rocket icon is ~2rem wide, bubble starts at left:3rem from rocket
+        const rocketW = 32; // ~2rem
+        const needed = rocketW + 48 + bubbleW + 16; // icon + 3rem gap + bubble + padding
+        const halfScreen = window.innerWidth / 2;
+        const fromRight = Math.max(needed, halfScreen);
+        const landLeft = window.innerWidth - fromRight;
+        rocketHintEl.style.setProperty('--land-left', landLeft + 'px');
         rocketHintEl.classList.add('flying');
     }
 
