@@ -9,8 +9,9 @@ body {
     color: #e0e0e0;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
+    height: 100vh;
+    touch-action: none;
 }
 
 /* Stars canvas — fixed behind everything */
@@ -24,17 +25,25 @@ body {
     pointer-events: none;
 }
 
-/* Page sections */
-.page-1,
-.page-2 {
+/* Attractor canvas — fixed, fullscreen behind text.
+   mix-blend-mode: screen makes black transparent so stars show through. */
+#attractor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    mix-blend-mode: screen;
+}
+
+/* Page section */
+.page-1 {
     position: relative;
     width: 100%;
     height: 100vh;
     z-index: 1;
     pointer-events: none;
-}
-
-.page-1 {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -51,7 +60,7 @@ h1 {
     font-weight: 300;
     letter-spacing: 0.04em;
     margin-bottom: 0.6rem;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.8s ease;
 }
 
 .description {
@@ -60,19 +69,7 @@ h1 {
     color: #888;
     letter-spacing: 0.06em;
     margin-bottom: 1.2rem;
-    transition: opacity 0.5s ease;
-}
-
-/* Attractor canvas — fixed, fullscreen behind text.
-   mix-blend-mode: screen makes black transparent so stars show through. */
-#attractor {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 1;
-    mix-blend-mode: screen;
+    transition: opacity 0.8s ease;
 }
 
 /* Social links */
@@ -97,33 +94,44 @@ h1 {
     filter: invert(1);
 }
 
-/* PAGE_2 state — text hidden, social in corner */
-body.page2 h1,
-body.page2 .description {
+/* TRANSITION_OUT — text fades, LinkedIn glides to corner */
+.page-1.fade-out h1,
+.page-1.fade-out .description {
     opacity: 0;
     pointer-events: none;
 }
 
-body.page2 .social {
+.social.corner {
     position: fixed;
     bottom: 1.5rem;
     right: 1.5rem;
     z-index: 10;
 }
 
-/* RETURNED state — page 2 gone, no scrolling */
-body.returned .page-2 {
-    display: none;
+/* Tap prompt */
+.tap-prompt {
+    position: fixed;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #888;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 10;
+    pointer-events: none;
+    user-select: none;
 }
 
-body.returned {
-    overflow: hidden;
-    height: 100vh;
+.tap-prompt.visible {
+    opacity: 1;
+    animation: pulse-prompt 2s ease-in-out infinite;
 }
 
-/* On touch devices, let touches pass through for scrolling (auto-rotate is enough) */
-@media (pointer: coarse) {
-    #attractor {
-        pointer-events: none;
-    }
+@keyframes pulse-prompt {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
 }
