@@ -8,7 +8,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 // ── Constants ──────────────────────────────────────────────────────
-const DRAW_DURATION = 60;       // seconds per attractor
+const DRAW_DURATION = 30;       // seconds per attractor
 const TRANSITION_DURATION = 15; // seconds per transition
 const DECAY_RATE = 4.0;         // exponential alpha falloff
 const POINTS_PER_FRAME_MIN = 50;
