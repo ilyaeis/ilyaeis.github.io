@@ -10,6 +10,7 @@ import {
     rk4Step, addJourneyTime, render, isPaused
 } from './attractors.js';
 import * as cam from './camera.js';
+import { generateTextLines } from './strokeFont.js';
 
 // ── Phase enum ─────────────────────────────────────────────────────
 export const Phase = {
@@ -18,6 +19,8 @@ export const Phase = {
     ROCKET_HINT: 6,
     ROCKET_EXIT: 7,
     VORTEX: 2,
+    FLIGHT_TO_TEXT: 8,
+    TEXT_DRAW: 9,
     FLIGHT: 3,
     ATTRACTOR_DRAW: 4,
     LAUNCH_FROM_ATTRACTOR: 5
@@ -58,6 +61,16 @@ const bezP3 = new THREE.Vector3(); // end (next attractor center)
 // Attractor integration state
 let attractorState = [0, 0, 0];
 
+// Text overlay state
+let textPoints = null;      // pre-generated 2D point array
+let textPointIdx = 0;       // index into textPoints
+const textCenter = new THREE.Vector3();
+const textRight = new THREE.Vector3();   // camera-aligned right axis
+const textUp = new THREE.Vector3();      // camera-aligned up axis
+const textDepartDir = new THREE.Vector3(); // saved departure direction
+const textLastPoint = new THREE.Vector3();
+let flightCameraDelay = 0;  // seconds to wait before camera follows flight
+
 // ── Tuning ─────────────────────────────────────────────────────────
 
 // Vortex — growing spiral whose plane precesses (tilts) each revolution
@@ -77,6 +90,13 @@ const BLEND_RAMP = 0.20;            // blend over last 20% of flight
 
 // Attractor draw
 const ATTRACTOR_MIN_DRAW = 5.0;
+
+// Text overlay
+const TEXT_FLIGHT_DURATION = 2.5;     // flight to text center
+const TEXT_POINTS_PER_FRAME = 35;     // drawing speed (3 reps ≈ 10k points → ~5s draw)
+const TEXT_SCALE = 0.22;              // world-space size of text (fits 3 lines in view)
+const TEXT_LINGER_CAMERA = 1.0;       // camera stays on text this long after drawing
+const TEXT_LINES = ['CREATIVE.', 'ADAPTIVE.', 'CURIOUS.'];
 
 // Rocket hint
 const ROCKET_FLY_DURATION = 3.0;   // matches CSS animation duration
@@ -175,6 +195,8 @@ export function update(dt) {
         case Phase.ROCKET_HINT:     updateRocketHint(dt); break;
         case Phase.ROCKET_EXIT:     updateRocketExit(dt); break;
         case Phase.VORTEX:          updateVortex(dt); break;
+        case Phase.FLIGHT_TO_TEXT:  updateFlightToText(dt); break;
+        case Phase.TEXT_DRAW:       updateTextDraw(dt); break;
         case Phase.FLIGHT:          updateFlight(dt); break;
         case Phase.ATTRACTOR_DRAW:  updateAttractorDraw(dt); break;
         case Phase.LAUNCH_FROM_ATTRACTOR: updateLaunchFromAttractor(dt); break;
@@ -354,25 +376,118 @@ function updateVortex(dt) {
         const p1 = spiralPos(t + eps);
         _dir.set(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]).normalize();
 
-        // Target: fly FLIGHT_DISTANCE in departure direction
-        _targetPos.copy(worldPos).addScaledVector(_dir, FLIGHT_DISTANCE);
-        attractorOffset.copy(_targetPos); // next attractor draws here
+        // Save direction for later flight to attractor
+        textDepartDir.copy(_dir);
 
-        setupFlightCurve(worldPos, _dir, _targetPos);
+        // Text center: halfway to where the attractor will be
+        textCenter.copy(worldPos).addScaledVector(_dir, FLIGHT_DISTANCE * 0.5);
 
-        // Prepare attractor state for blend-in at end of flight
+        // Set up Bezier from vortex tip to text center
+        setupFlightCurve(worldPos, _dir, textCenter);
+
+        // Pre-generate text points (3 lines with return curves)
+        const { points } = generateTextLines(TEXT_LINES);
+        textPoints = points;
+        textPointIdx = 0;
+
+        trail.attractorIdx = attractorIndex; // use Lorenz palette for text
+        trail.drawTime = 0;
+
+        cam.setMode(cam.Mode.FOLLOW, controls);
+        enterPhase(Phase.FLIGHT_TO_TEXT);
+    }
+}
+
+// ── FLIGHT_TO_TEXT (Bezier to text center, no attractor blend) ─────
+function updateFlightToText(dt) {
+    const t = Math.min(phaseTime / TEXT_FLIGHT_DURATION, 1);
+    const prevT = Math.max(0, (phaseTime - dt) / TEXT_FLIGHT_DURATION);
+
+    for (let i = 0; i < FLIGHT_POINTS_PER_FRAME; i++) {
+        const frac = i / FLIGHT_POINTS_PER_FRAME;
+        const subT = prevT + (t - prevT) * frac;
+        bezierPoint(subT, _vec3);
+        pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
+    }
+
+    bezierPoint(t, worldPos);
+
+    if (t >= 1) {
+        // Orient text plane perpendicular to the flight path
+        _dir.copy(textDepartDir);
+        textRight.crossVectors(_dir, camera.up).normalize();
+        textUp.crossVectors(textRight, _dir).normalize();
+
+        // Camera orbits text center with no rotation
+        cam.setMode(cam.Mode.ORBIT, controls);
+        cam.setOrbitCenter(textCenter.x, textCenter.y, textCenter.z);
+        controls.autoRotateSpeed = 0;
+
+        enterPhase(Phase.TEXT_DRAW);
+    }
+}
+
+// ── TEXT_DRAW (trace "CREATIVE" then launch to attractor) ─────────
+function updateTextDraw(dt) {
+    // All points drawn → set up flight to attractor
+    if (!textPoints || textPointIdx >= textPoints.length) {
+        // Freeze current trail colors before switching to attractor flight
+        trail.colorFreezeIdx = trail.pointCount;
+
+        // Remember last text point in world space
+        if (textPoints && textPoints.length > 0) {
+            const lp = textPoints[textPoints.length - 1];
+            textLastPoint.set(
+                textCenter.x + (lp.x * textRight.x + lp.y * textUp.x) * TEXT_SCALE,
+                textCenter.y + (lp.x * textRight.y + lp.y * textUp.y) * TEXT_SCALE,
+                textCenter.z + (lp.x * textRight.z + lp.y * textUp.z) * TEXT_SCALE
+            );
+        } else {
+            textLastPoint.copy(textCenter);
+        }
+
+        // Place Lorenz attractor further along the original departure direction
+        attractorOffset.copy(textCenter).addScaledVector(textDepartDir, FLIGHT_DISTANCE);
+
         const attr = ATTRACTORS[attractorIndex];
         attractorState = [...attr.initialCondition];
         trail.attractorIdx = attractorIndex;
         trail.drawTime = 0;
 
-        cam.setMode(cam.Mode.FOLLOW, controls);
+        // Bezier from last text point to attractor center
+        setupFlightCurve(textLastPoint, textDepartDir, attractorOffset);
+        worldPos.copy(textLastPoint);
+
+        // Camera stays on text for TEXT_LINGER_CAMERA seconds, then follows
+        flightCameraDelay = TEXT_LINGER_CAMERA;
         enterPhase(Phase.FLIGHT);
+        return;
     }
+
+    // Push the next batch of text points
+    const end = Math.min(textPointIdx + TEXT_POINTS_PER_FRAME, textPoints.length);
+    for (let i = textPointIdx; i < end; i++) {
+        const p = textPoints[i];
+        pushPointWorld(trail,
+            textCenter.x + (p.x * textRight.x + p.y * textUp.x) * TEXT_SCALE,
+            textCenter.y + (p.x * textRight.y + p.y * textUp.y) * TEXT_SCALE,
+            textCenter.z + (p.x * textRight.z + p.y * textUp.z) * TEXT_SCALE
+        );
+    }
+    textPointIdx = end;
+
+    // Camera stays centered on text
+    worldPos.copy(textCenter);
 }
 
 // ── FLIGHT (Bezier curve with attractor blend-in at end) ───────────
 function updateFlight(dt) {
+    // Delayed camera follow (after text phase — camera lingers on text)
+    if (flightCameraDelay > 0 && phaseTime >= flightCameraDelay) {
+        cam.setMode(cam.Mode.FOLLOW, controls);
+        flightCameraDelay = 0;
+    }
+
     const t = Math.min(phaseTime / FLIGHT_DURATION, 1);
     const prevT = Math.max(0, (phaseTime - dt) / FLIGHT_DURATION);
 
@@ -463,6 +578,7 @@ function updateLaunchFromAttractor(dt) {
     setupFlightCurve(_startPos, _dir, _targetPos);
     worldPos.copy(_startPos);
 
+    flightCameraDelay = 0; // no delay for normal attractor transitions
     cam.setMode(cam.Mode.FOLLOW, controls);
     enterPhase(Phase.FLIGHT);
 }
