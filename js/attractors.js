@@ -1,5 +1,7 @@
 // ── Strange Attractor Journey ──────────────────────────────────────
 // Fullscreen Three.js visualization: Lorenz → Rössler → Thomas → Aizawa → Halvorsen, looping.
+// Transitions use dual-trail cross-fade: both attractors run pure dynamics,
+// one fades out while the next fades in. No blended vector fields.
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -9,7 +11,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 // ── Constants ──────────────────────────────────────────────────────
 const DRAW_DURATION = 30;       // seconds per attractor
-const TRANSITION_DURATION = 15; // seconds per transition
+const TRANSITION_DURATION = 10; // seconds for cross-fade
 const DECAY_RATE = 4.0;         // exponential alpha falloff
 const POINTS_PER_FRAME_MIN = 50;
 const POINTS_PER_FRAME_MAX = 300;
@@ -34,7 +36,8 @@ const ATTRACTORS = [
             x * y - p.beta * z
         ],
         dt: 0.005,
-        scale: 0.05,
+        scale: 0.042,
+        center: [-0.08, -0.08, 23.56],
         initialCondition: [0.1, 0, 0],
         palette: [new THREE.Color(0xffbf00), new THREE.Color(0xff8800), new THREE.Color(0xdd3300)],
         camera: { radius: 2.8, elevation: 0.5, azimuthSpeed: 0.7 }
@@ -48,10 +51,11 @@ const ATTRACTORS = [
             p.b + z * (x - p.c)
         ],
         dt: 0.008,
-        scale: 0.08,
+        scale: 0.066,
+        center: [0.17, -0.88, 0.86],
         initialCondition: [0.1, 0, 0],
         palette: [new THREE.Color(0x2266cc), new THREE.Color(0x00aacc), new THREE.Color(0x00ddbb)],
-        camera: { radius: 3.2, elevation: 1.0, azimuthSpeed: 0.5 }
+        camera: { radius: 2.8, elevation: 1.0, azimuthSpeed: 0.5 }
     },
     {
         name: 'thomas',
@@ -62,10 +66,11 @@ const ATTRACTORS = [
             Math.sin(x) - p.b * z
         ],
         dt: 0.05,
-        scale: 0.35,
+        scale: 0.301,
+        center: [1.89, 1.89, 1.91],
         initialCondition: [1.1, 1.1, -0.01],
         palette: [new THREE.Color(0x8833cc), new THREE.Color(0xcc33aa), new THREE.Color(0xff44cc)],
-        camera: { radius: 2.5, elevation: 0.4, azimuthSpeed: 0.6 }
+        camera: { radius: 2.8, elevation: 0.4, azimuthSpeed: 0.6 }
     },
     {
         name: 'aizawa',
@@ -76,10 +81,11 @@ const ATTRACTORS = [
             p.c + p.a * z - (z * z * z) / 3 - (x * x + y * y) * (1 + p.e * z) + p.f * z * x * x * x
         ],
         dt: 0.005,
-        scale: 0.6,
+        scale: 0.776,
+        center: [0.0, 0.0, 0.70],
         initialCondition: [0.1, 0, 0],
         palette: [new THREE.Color(0x22aa44), new THREE.Color(0x00ccaa), new THREE.Color(0x00eedd)],
-        camera: { radius: 2.6, elevation: 0.6, azimuthSpeed: 0.5 }
+        camera: { radius: 2.8, elevation: 0.6, azimuthSpeed: 0.5 }
     },
     {
         name: 'halvorsen',
@@ -90,10 +96,11 @@ const ATTRACTORS = [
             -p.a * z - 4 * x - 4 * y - x * x
         ],
         dt: 0.004,
-        scale: 0.06,
+        scale: 0.092,
+        center: [-2.64, -2.64, -2.64],
         initialCondition: [-1.48, -1.51, 2.04],
         palette: [new THREE.Color(0xccaa00), new THREE.Color(0xeecc44), new THREE.Color(0xffffff)],
-        camera: { radius: 3.0, elevation: 0.5, azimuthSpeed: 0.6 }
+        camera: { radius: 2.8, elevation: 0.5, azimuthSpeed: 0.6 }
     }
 ];
 
@@ -158,56 +165,88 @@ function cubicEaseInOut(t) {
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+// ── Trail System ───────────────────────────────────────────────────
+// Two independent trail systems enable smooth cross-fade transitions.
+// Each has its own buffer, geometry, line, glow, and integration state.
+
+function createTrailSystem() {
+    const positions = new Float32Array(MAX_POINTS * 3);
+    const alphas = new Float32Array(MAX_POINTS);
+    const colors = new Float32Array(MAX_POINTS * 3);
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setDrawRange(0, 0);
+
+    const material = new THREE.ShaderMaterial({
+        vertexShader: VERTEX_SHADER,
+        fragmentShader: FRAGMENT_SHADER,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+
+    const line = new THREE.Line(geometry, material);
+    line.frustumCulled = false;
+
+    const glowGeometry = new THREE.BufferGeometry();
+    glowGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3), 3));
+
+    const glowMaterial = new THREE.ShaderMaterial({
+        vertexShader: GLOW_VERTEX_SHADER,
+        fragmentShader: GLOW_FRAGMENT_SHADER,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        uniforms: {
+            uSize: { value: 0.15 },
+            uColor: { value: new THREE.Color(1, 1, 1) },
+            uOpacity: { value: 1.0 }
+        }
+    });
+
+    const glowPoint = new THREE.Points(glowGeometry, glowMaterial);
+    glowPoint.frustumCulled = false;
+
+    return {
+        positions, alphas, colors,
+        pointCount: 0,
+        geometry, material, line,
+        glowGeometry, glowMaterial, glowPoint,
+        state: [0, 0, 0],
+        attractorIdx: 0,
+        fade: 1.0,       // cross-fade multiplier: 0 = invisible, 1 = full
+        inScene: false,   // whether line/glow are added to the scene
+        drawTime: 0       // how long this trail has been drawing (for ramp)
+    };
+}
+
 // ── Module State ───────────────────────────────────────────────────
 let scene, camera, renderer, composer, controls, bloomPass;
-let trailLine, trailGeometry, trailMaterial;
-let glowPoint, glowGeometry, glowMaterial;
 let paused = false;
 
-// Trail buffer
-const positions = new Float32Array(MAX_POINTS * 3);
-const alphas = new Float32Array(MAX_POINTS);
-const colors = new Float32Array(MAX_POINTS * 3);
-let pointCount = 0;
+const trails = [null, null]; // two trail systems
+let activeIdx = 0;           // which trail is currently the "live" one
 
-// Integration state
-let state = [0, 0, 0]; // current x, y, z
-let journeyTime = 0;   // total elapsed journey time
-let phaseTime = 0;      // time within current phase
-let currentIndex = 0;   // current attractor index
+// Timing
+let journeyTime = 0;
+let phaseTime = 0;
+let currentIndex = 0;
 let isTransitioning = false;
 let lastInteractionTime = 0;
 
 // ── Color Helpers ──────────────────────────────────────────────────
 const _tmpColor = new THREE.Color();
-const _tmpColor2 = new THREE.Color();
 const _white = new THREE.Color(1, 1, 1);
 const _tipColor = new THREE.Color();
 
 function getPaletteColor(palette, t) {
-    // t in [0, 1] → interpolate through palette stops
     const n = palette.length - 1;
     const i = Math.min(Math.floor(t * n), n - 1);
     const f = t * n - i;
     _tmpColor.copy(palette[i]).lerp(palette[Math.min(i + 1, n)], f);
-    return _tmpColor;
-}
-
-function getJourneyColor(t) {
-    // t is fractional age [0=newest, 1=oldest]
-    // Newest points get end of palette, oldest get start
-    const palT = 1.0 - t;
-    if (!isTransitioning) {
-        return getPaletteColor(ATTRACTORS[currentIndex].palette, palT);
-    }
-    // During transition, blend between two palettes (zero allocations)
-    const blend = cubicEaseInOut(Math.min(phaseTime / TRANSITION_DURATION, 1));
-    const nextIndex = (currentIndex + 1) % ATTRACTORS.length;
-    getPaletteColor(ATTRACTORS[currentIndex].palette, palT);
-    _tmpColor2.copy(_tmpColor);
-    getPaletteColor(ATTRACTORS[nextIndex].palette, palT);
-    _tmpColor2.lerp(_tmpColor, blend);
-    _tmpColor.copy(_tmpColor2);
     return _tmpColor;
 }
 
@@ -257,135 +296,128 @@ function initScene(canvas) {
     });
 }
 
-// ── Trail Line ─────────────────────────────────────────────────────
-function initTrail() {
-    trailGeometry = new THREE.BufferGeometry();
-    trailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    trailGeometry.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
-    trailGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    trailGeometry.setDrawRange(0, 0);
-
-    trailMaterial = new THREE.ShaderMaterial({
-        vertexShader: VERTEX_SHADER,
-        fragmentShader: FRAGMENT_SHADER,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    });
-
-    trailLine = new THREE.Line(trailGeometry, trailMaterial);
-    trailLine.frustumCulled = false;
-    scene.add(trailLine);
-}
-
-// ── Head Glow ──────────────────────────────────────────────────────
-function initGlow() {
-    glowGeometry = new THREE.BufferGeometry();
-    glowGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3), 3));
-
-    glowMaterial = new THREE.ShaderMaterial({
-        vertexShader: GLOW_VERTEX_SHADER,
-        fragmentShader: GLOW_FRAGMENT_SHADER,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        uniforms: {
-            uSize: { value: 0.15 },
-            uColor: { value: new THREE.Color(1, 1, 1) },
-            uOpacity: { value: 1.0 }
-        }
-    });
-
-    glowPoint = new THREE.Points(glowGeometry, glowMaterial);
-    glowPoint.frustumCulled = false;
-    scene.add(glowPoint);
-}
-
-// ── Integration & Buffer ───────────────────────────────────────────
-function getDerivativeFn() {
-    if (!isTransitioning) {
-        return ATTRACTORS[currentIndex].derivatives;
+// ── Trail helpers ──────────────────────────────────────────────────
+function addTrailToScene(trail) {
+    if (!trail.inScene) {
+        scene.add(trail.line);
+        scene.add(trail.glowPoint);
+        trail.inScene = true;
     }
-    const blend = cubicEaseInOut(Math.min(phaseTime / TRANSITION_DURATION, 1));
-    const a = ATTRACTORS[currentIndex];
-    const b = ATTRACTORS[(currentIndex + 1) % ATTRACTORS.length];
-    return (x, y, z) => {
-        const da = a.derivatives(x, y, z, a.params);
-        const db = b.derivatives(x, y, z, b.params);
-        return [
-            da[0] * (1 - blend) + db[0] * blend,
-            da[1] * (1 - blend) + db[1] * blend,
-            da[2] * (1 - blend) + db[2] * blend
-        ];
-    };
 }
 
-function getCurrentDt() {
-    if (!isTransitioning) {
-        return ATTRACTORS[currentIndex].dt;
+function removeTrailFromScene(trail) {
+    if (trail.inScene) {
+        scene.remove(trail.line);
+        scene.remove(trail.glowPoint);
+        trail.inScene = false;
     }
-    // Adaptive: blend dt and halve during transition for stability
-    const blend = cubicEaseInOut(Math.min(phaseTime / TRANSITION_DURATION, 1));
-    const a = ATTRACTORS[currentIndex];
-    const b = ATTRACTORS[(currentIndex + 1) % ATTRACTORS.length];
-    return (a.dt * (1 - blend) + b.dt * blend) * 0.5;
 }
 
-function getCurrentScale() {
-    if (!isTransitioning) {
-        return ATTRACTORS[currentIndex].scale;
-    }
-    const blend = cubicEaseInOut(Math.min(phaseTime / TRANSITION_DURATION, 1));
-    const a = ATTRACTORS[currentIndex];
-    const b = ATTRACTORS[(currentIndex + 1) % ATTRACTORS.length];
-    return a.scale * (1 - blend) + b.scale * blend;
+function clearTrail(trail) {
+    trail.pointCount = 0;
+    trail.drawTime = 0;
+    trail.geometry.setDrawRange(0, 0);
 }
 
-function pushPoint(x, y, z) {
-    const scale = getCurrentScale();
-    const sx = x * scale;
-    const sy = y * scale;
-    const sz = z * scale;
+function pushPoint(trail, x, y, z, scale, center) {
+    const sx = (x - center[0]) * scale;
+    const sy = (y - center[1]) * scale;
+    const sz = (z - center[2]) * scale;
 
-    if (pointCount < MAX_POINTS) {
-        // Buffer growing — just append
-        const i3 = pointCount * 3;
-        positions[i3] = sx;
-        positions[i3 + 1] = sy;
-        positions[i3 + 2] = sz;
-        pointCount++;
+    if (trail.pointCount < MAX_POINTS) {
+        const i3 = trail.pointCount * 3;
+        trail.positions[i3] = sx;
+        trail.positions[i3 + 1] = sy;
+        trail.positions[i3 + 2] = sz;
+        trail.pointCount++;
     } else {
-        // Buffer full — shift by tailShift, write new point at end
-        const shift = isTransitioning ? 3 : 1;
-        const actualShift = Math.min(shift, pointCount);
-        if (actualShift > 0) {
-            positions.copyWithin(0, actualShift * 3, pointCount * 3);
-            colors.copyWithin(0, actualShift * 3, pointCount * 3);
-            alphas.copyWithin(0, actualShift, pointCount);
-            pointCount -= (actualShift - 1); // net: removed (shift-1) points
-            const i3 = (pointCount - 1) * 3;
-            positions[i3] = sx;
-            positions[i3 + 1] = sy;
-            positions[i3 + 2] = sz;
-        }
+        // Buffer full — shift oldest point out, append new one
+        trail.positions.copyWithin(0, 3, trail.pointCount * 3);
+        trail.colors.copyWithin(0, 3, trail.pointCount * 3);
+        trail.alphas.copyWithin(0, 1, trail.pointCount);
+        const i3 = (trail.pointCount - 1) * 3;
+        trail.positions[i3] = sx;
+        trail.positions[i3 + 1] = sy;
+        trail.positions[i3 + 2] = sz;
     }
 }
 
-function clampState() {
+function clampTrailState(trail) {
     const limit = 150;
     for (let i = 0; i < 3; i++) {
-        if (Math.abs(state[i]) > limit) {
-            state[i] *= limit / Math.abs(state[i]);
+        if (Math.abs(trail.state[i]) > limit) {
+            trail.state[i] *= limit / Math.abs(trail.state[i]);
         }
-        if (!isFinite(state[i])) {
-            // Reset to target attractor's initial condition
-            const target = isTransitioning
-                ? ATTRACTORS[(currentIndex + 1) % ATTRACTORS.length]
-                : ATTRACTORS[currentIndex];
-            state = [...target.initialCondition];
+        if (!isFinite(trail.state[i])) {
+            const attr = ATTRACTORS[trail.attractorIdx];
+            trail.state = [...attr.initialCondition];
             return;
         }
     }
+}
+
+function integrateTrail(trail, frameDt) {
+    const attr = ATTRACTORS[trail.attractorIdx];
+    trail.drawTime += frameDt;
+
+    const rampT = Math.min(trail.drawTime / RAMP_DURATION, 1);
+    const pointsThisFrame = Math.floor(
+        POINTS_PER_FRAME_MIN + (POINTS_PER_FRAME_MAX - POINTS_PER_FRAME_MIN) * rampT
+    );
+
+    for (let i = 0; i < pointsThisFrame; i++) {
+        trail.state = rk4Step(
+            attr.derivatives,
+            trail.state[0], trail.state[1], trail.state[2],
+            attr.dt, attr.params
+        );
+        clampTrailState(trail);
+        pushPoint(trail, trail.state[0], trail.state[1], trail.state[2], attr.scale, attr.center);
+    }
+}
+
+function updateTrailAttributes(trail) {
+    const palette = ATTRACTORS[trail.attractorIdx].palette;
+    const fade = trail.fade;
+
+    for (let i = 0; i < trail.pointCount; i++) {
+        const age = (trail.pointCount - 1 - i) / Math.max(trail.pointCount - 1, 1);
+        trail.alphas[i] = Math.exp(-age * DECAY_RATE) * fade;
+
+        const palT = 1.0 - age;
+        const col = getPaletteColor(palette, palT);
+        const i3 = i * 3;
+        trail.colors[i3] = col.r;
+        trail.colors[i3 + 1] = col.g;
+        trail.colors[i3 + 2] = col.b;
+    }
+
+    trail.geometry.attributes.position.needsUpdate = true;
+    trail.geometry.attributes.alpha.needsUpdate = true;
+    trail.geometry.attributes.color.needsUpdate = true;
+    trail.geometry.setDrawRange(0, trail.pointCount);
+}
+
+function updateTrailGlow(trail) {
+    if (trail.pointCount === 0 || trail.fade < 0.01) {
+        trail.glowMaterial.uniforms.uOpacity.value = 0;
+        return;
+    }
+
+    const i3 = (trail.pointCount - 1) * 3;
+    const pos = trail.glowGeometry.attributes.position;
+    pos.array[0] = trail.positions[i3];
+    pos.array[1] = trail.positions[i3 + 1];
+    pos.array[2] = trail.positions[i3 + 2];
+    pos.needsUpdate = true;
+
+    const pulse = 0.12 + 0.04 * Math.sin(journeyTime * 3.0);
+    trail.glowMaterial.uniforms.uSize.value = pulse;
+    trail.glowMaterial.uniforms.uOpacity.value = trail.fade;
+
+    const palette = ATTRACTORS[trail.attractorIdx].palette;
+    _tipColor.copy(palette[palette.length - 1]).lerp(_white, 0.5);
+    trail.glowMaterial.uniforms.uColor.value.copy(_tipColor);
 }
 
 // ── Per-Frame Update ───────────────────────────────────────────────
@@ -393,95 +425,68 @@ function updateIntegration(dt) {
     journeyTime += dt;
     phaseTime += dt;
 
-    // Phase transitions
+    const active = trails[activeIdx];
+    const incoming = trails[1 - activeIdx];
+
+    // ── Check for transition start ──
     if (!isTransitioning && phaseTime >= DRAW_DURATION) {
-        // Start transition to next attractor
         isTransitioning = true;
         phaseTime = 0;
-    } else if (isTransitioning && phaseTime >= TRANSITION_DURATION) {
-        // Transition complete — advance to next attractor
-        currentIndex = (currentIndex + 1) % ATTRACTORS.length;
-        isTransitioning = false;
-        phaseTime = 0;
-        // Set state to new attractor's initial condition to avoid lingering instability
-        state = [...ATTRACTORS[currentIndex].initialCondition];
+
+        // Initialize incoming trail with next attractor
+        const nextIdx = (currentIndex + 1) % ATTRACTORS.length;
+        incoming.attractorIdx = nextIdx;
+        incoming.state = [...ATTRACTORS[nextIdx].initialCondition];
+        incoming.fade = 0;
+        clearTrail(incoming);
+        addTrailToScene(incoming);
     }
 
-    // Compute how many points to generate this frame (ramp up)
-    const rampT = Math.min(phaseTime / RAMP_DURATION, 1);
-    const pointsThisFrame = Math.floor(
-        POINTS_PER_FRAME_MIN + (POINTS_PER_FRAME_MAX - POINTS_PER_FRAME_MIN) * rampT
-    );
+    // ── Transition: cross-fade two independent trails ──
+    if (isTransitioning) {
+        const blend = cubicEaseInOut(Math.min(phaseTime / TRANSITION_DURATION, 1));
+        active.fade = 1 - blend;
+        incoming.fade = blend;
 
-    const derivFn = getDerivativeFn();
-    const stepDt = getCurrentDt();
+        // Both trails run their own pure attractor dynamics
+        integrateTrail(active, dt);
+        integrateTrail(incoming, dt);
 
-    for (let i = 0; i < pointsThisFrame; i++) {
-        state = rk4Step(derivFn, state[0], state[1], state[2], stepDt,
-            isTransitioning ? {} : ATTRACTORS[currentIndex].params);
-        clampState();
-        pushPoint(state[0], state[1], state[2]);
+        // Transition complete
+        if (phaseTime >= TRANSITION_DURATION) {
+            currentIndex = incoming.attractorIdx;
+            isTransitioning = false;
+            phaseTime = 0;
+
+            // Deactivate old trail (its fade is 0, so removal is invisible)
+            removeTrailFromScene(active);
+            clearTrail(active);
+            active.fade = 0;
+
+            incoming.fade = 1;
+            activeIdx = 1 - activeIdx;
+        }
+    } else {
+        // ── Normal: single trail, pure dynamics ──
+        active.fade = 1;
+        integrateTrail(active, dt);
     }
-}
-
-function updateAttributes() {
-    // Update alpha (age-based exponential falloff) and color
-    for (let i = 0; i < pointCount; i++) {
-        const age = (pointCount - 1 - i) / Math.max(pointCount - 1, 1); // 0=newest, 1=oldest
-        alphas[i] = Math.exp(-age * DECAY_RATE);
-
-        const col = getJourneyColor(age);
-        const i3 = i * 3;
-        colors[i3] = col.r;
-        colors[i3 + 1] = col.g;
-        colors[i3 + 2] = col.b;
-    }
-
-    trailGeometry.attributes.position.needsUpdate = true;
-    trailGeometry.attributes.alpha.needsUpdate = true;
-    trailGeometry.attributes.color.needsUpdate = true;
-    trailGeometry.setDrawRange(0, pointCount);
-}
-
-function updateGlow() {
-    if (pointCount === 0) return;
-    const i3 = (pointCount - 1) * 3;
-    const pos = glowGeometry.attributes.position;
-    pos.array[0] = positions[i3];
-    pos.array[1] = positions[i3 + 1];
-    pos.array[2] = positions[i3 + 2];
-    pos.needsUpdate = true;
-
-    // Pulse size
-    const pulse = 0.12 + 0.04 * Math.sin(journeyTime * 3.0);
-    glowMaterial.uniforms.uSize.value = pulse;
-
-    // Color: brightest palette color shifted toward white
-    const palette = isTransitioning
-        ? ATTRACTORS[(currentIndex + 1) % ATTRACTORS.length].palette
-        : ATTRACTORS[currentIndex].palette;
-    _tipColor.copy(palette[palette.length - 1]).lerp(_white, 0.5);
-    glowMaterial.uniforms.uColor.value.copy(_tipColor);
 }
 
 function updateCamera(dt) {
-    // Auto-rotate pause/resume on user interaction
     const now = performance.now();
     const userActive = (now - lastInteractionTime) < AUTO_ROTATE_RESUME_DELAY;
     controls.autoRotate = !userActive;
 
-    // Blend auto-rotate speed during transitions
     if (isTransitioning) {
         const blend = cubicEaseInOut(Math.min(phaseTime / TRANSITION_DURATION, 1));
         const a = ATTRACTORS[currentIndex].camera;
         const b = ATTRACTORS[(currentIndex + 1) % ATTRACTORS.length].camera;
         controls.autoRotateSpeed = a.azimuthSpeed * (1 - blend) + b.azimuthSpeed * blend;
 
-        // Smoothly interpolate camera distance and elevation
         const radius = a.radius * (1 - blend) + b.radius * blend;
         const elevation = a.elevation * (1 - blend) + b.elevation * blend;
         if (!userActive) {
-            // Only animate camera position when user isn't controlling
             const theta = controls.getAzimuthalAngle();
             camera.position.set(
                 radius * Math.cos(elevation) * Math.sin(theta),
@@ -497,21 +502,33 @@ function updateCamera(dt) {
 // ── Exported API ───────────────────────────────────────────────────
 export function init(canvas) {
     initScene(canvas);
-    initTrail();
-    initGlow();
 
-    // Set initial integration state
-    state = [...ATTRACTORS[0].initialCondition];
+    // Create both trail systems
+    trails[0] = createTrailSystem();
+    trails[1] = createTrailSystem();
+
+    // Start first trail
+    activeIdx = 0;
+    trails[0].attractorIdx = 0;
+    trails[0].state = [...ATTRACTORS[0].initialCondition];
+    trails[0].fade = 1;
+    addTrailToScene(trails[0]);
 }
 
 export function update(dt) {
     if (paused) return;
 
     updateIntegration(dt);
-    updateAttributes();
-    updateGlow();
-    updateCamera(dt);
 
+    // Update attributes for all visible trails
+    for (const trail of trails) {
+        if (trail && trail.inScene) {
+            updateTrailAttributes(trail);
+            updateTrailGlow(trail);
+        }
+    }
+
+    updateCamera(dt);
     composer.render();
 }
 
