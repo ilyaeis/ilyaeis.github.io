@@ -63,7 +63,8 @@ h1 {
     transition: opacity 0.5s ease;
 }
 
-/* Attractor canvas — fixed, fullscreen behind text */
+/* Attractor canvas — fixed, fullscreen behind text.
+   mix-blend-mode: screen makes black transparent so stars show through. */
 #attractor {
     position: fixed;
     top: 0;
@@ -71,6 +72,7 @@ h1 {
     width: 100vw;
     height: 100vh;
     z-index: 1;
+    mix-blend-mode: screen;
 }
 
 /* Social links */
