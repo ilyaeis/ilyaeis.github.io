@@ -162,6 +162,7 @@ function cubicEaseInOut(t) {
 let scene, camera, renderer, composer, controls, bloomPass;
 let trailLine, trailGeometry, trailMaterial;
 let glowPoint, glowGeometry, glowMaterial;
+let trailGroup; // group for trail + glow, offset to keep centroid at origin
 let paused = false;
 
 // Trail buffer
@@ -177,6 +178,10 @@ let phaseTime = 0;      // time within current phase
 let currentIndex = 0;   // current attractor index
 let isTransitioning = false;
 let lastInteractionTime = 0;
+
+// Centering — smooth offset so all points stay visually centered
+const smoothCenter = new THREE.Vector3();
+const CENTER_SPEED = 3.0; // how fast the center tracks (higher = snappier)
 
 // ── Color Helpers ──────────────────────────────────────────────────
 const _tmpColor = new THREE.Color();
@@ -264,6 +269,9 @@ function initScene(canvas) {
 
 // ── Trail Line ─────────────────────────────────────────────────────
 function initTrail() {
+    trailGroup = new THREE.Group();
+    scene.add(trailGroup);
+
     trailGeometry = new THREE.BufferGeometry();
     trailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     trailGeometry.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
@@ -280,7 +288,7 @@ function initTrail() {
 
     trailLine = new THREE.Line(trailGeometry, trailMaterial);
     trailLine.frustumCulled = false;
-    scene.add(trailLine);
+    trailGroup.add(trailLine);
 }
 
 // ── Head Glow ──────────────────────────────────────────────────────
@@ -303,7 +311,7 @@ function initGlow() {
 
     glowPoint = new THREE.Points(glowGeometry, glowMaterial);
     glowPoint.frustumCulled = false;
-    scene.add(glowPoint);
+    trailGroup.add(glowPoint);
 }
 
 // ── Integration & Buffer ───────────────────────────────────────────
@@ -469,6 +477,30 @@ function updateGlow() {
     glowMaterial.uniforms.uColor.value.copy(_tipColor);
 }
 
+function updateCentering(dt) {
+    if (pointCount === 0) return;
+    // Compute centroid of all visible points
+    let cx = 0, cy = 0, cz = 0;
+    for (let i = 0; i < pointCount; i++) {
+        const i3 = i * 3;
+        cx += positions[i3];
+        cy += positions[i3 + 1];
+        cz += positions[i3 + 2];
+    }
+    cx /= pointCount;
+    cy /= pointCount;
+    cz /= pointCount;
+
+    // Smoothly lerp toward the centroid (frame-rate independent)
+    const lerpFactor = 1 - Math.exp(-CENTER_SPEED * dt);
+    smoothCenter.x += (cx - smoothCenter.x) * lerpFactor;
+    smoothCenter.y += (cy - smoothCenter.y) * lerpFactor;
+    smoothCenter.z += (cz - smoothCenter.z) * lerpFactor;
+
+    // Offset the group so the centroid sits at the origin
+    trailGroup.position.set(-smoothCenter.x, -smoothCenter.y, -smoothCenter.z);
+}
+
 function updateCamera(dt) {
     // Auto-rotate pause/resume on user interaction
     const now = performance.now();
@@ -515,6 +547,7 @@ export function update(dt) {
     updateIntegration(dt);
     updateAttributes();
     updateGlow();
+    updateCentering(dt);
     updateCamera(dt);
 
     composer.render();
