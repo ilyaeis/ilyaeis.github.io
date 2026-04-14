@@ -179,9 +179,12 @@ let currentIndex = 0;   // current attractor index
 let isTransitioning = false;
 let lastInteractionTime = 0;
 
-// Centering — smooth offset so all points stay visually centered
+// Centering & auto-scaling — keep all points centered and consistently sized
 const smoothCenter = new THREE.Vector3();
 const CENTER_SPEED = 3.0; // how fast the center tracks (higher = snappier)
+const TARGET_RADIUS = 1.5; // desired bounding radius in world units
+const SCALE_SPEED = 2.0;   // how fast scale adapts
+let smoothScale = 1.0;
 
 // ── Color Helpers ──────────────────────────────────────────────────
 const _tmpColor = new THREE.Color();
@@ -479,7 +482,8 @@ function updateGlow() {
 
 function updateCentering(dt) {
     if (pointCount === 0) return;
-    // Compute centroid of all visible points
+
+    // Pass 1: compute centroid of all visible points
     let cx = 0, cy = 0, cz = 0;
     for (let i = 0; i < pointCount; i++) {
         const i3 = i * 3;
@@ -491,14 +495,32 @@ function updateCentering(dt) {
     cy /= pointCount;
     cz /= pointCount;
 
-    // Smoothly lerp toward the centroid (frame-rate independent)
+    // Pass 2: compute max distance from centroid (bounding radius)
+    let maxR2 = 0;
+    for (let i = 0; i < pointCount; i++) {
+        const i3 = i * 3;
+        const dx = positions[i3] - cx;
+        const dy = positions[i3 + 1] - cy;
+        const dz = positions[i3 + 2] - cz;
+        const r2 = dx * dx + dy * dy + dz * dz;
+        if (r2 > maxR2) maxR2 = r2;
+    }
+    const boundingRadius = Math.sqrt(maxR2);
+
+    // Smoothly lerp center (frame-rate independent)
     const lerpFactor = 1 - Math.exp(-CENTER_SPEED * dt);
     smoothCenter.x += (cx - smoothCenter.x) * lerpFactor;
     smoothCenter.y += (cy - smoothCenter.y) * lerpFactor;
     smoothCenter.z += (cz - smoothCenter.z) * lerpFactor;
 
-    // Offset the group so the centroid sits at the origin
-    trailGroup.position.set(-smoothCenter.x, -smoothCenter.y, -smoothCenter.z);
+    // Smoothly lerp scale so bounding radius matches TARGET_RADIUS
+    const targetScale = boundingRadius > 0.001 ? TARGET_RADIUS / boundingRadius : 1.0;
+    const scaleLerp = 1 - Math.exp(-SCALE_SPEED * dt);
+    smoothScale += (targetScale - smoothScale) * scaleLerp;
+
+    // Apply centering offset and uniform scale to the group
+    trailGroup.position.set(-smoothCenter.x * smoothScale, -smoothCenter.y * smoothScale, -smoothCenter.z * smoothScale);
+    trailGroup.scale.setScalar(smoothScale);
 }
 
 function updateCamera(dt) {
