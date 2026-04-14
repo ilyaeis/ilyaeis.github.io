@@ -36,7 +36,7 @@ const ATTRACTORS = [
             x * y - p.beta * z
         ],
         dt: 0.005,
-        scale: 0.05,
+        scale: 0.042,
         center: [-0.08, -0.08, 23.56],
         initialCondition: [0.1, 0, 0],
         palette: [new THREE.Color(0xffbf00), new THREE.Color(0xff8800), new THREE.Color(0xdd3300)],
@@ -51,11 +51,11 @@ const ATTRACTORS = [
             p.b + z * (x - p.c)
         ],
         dt: 0.008,
-        scale: 0.08,
+        scale: 0.066,
         center: [0.17, -0.88, 0.86],
         initialCondition: [0.1, 0, 0],
         palette: [new THREE.Color(0x2266cc), new THREE.Color(0x00aacc), new THREE.Color(0x00ddbb)],
-        camera: { radius: 3.2, elevation: 1.0, azimuthSpeed: 0.5 }
+        camera: { radius: 2.8, elevation: 1.0, azimuthSpeed: 0.5 }
     },
     {
         name: 'thomas',
@@ -66,11 +66,11 @@ const ATTRACTORS = [
             Math.sin(x) - p.b * z
         ],
         dt: 0.05,
-        scale: 0.35,
+        scale: 0.301,
         center: [1.89, 1.89, 1.91],
         initialCondition: [1.1, 1.1, -0.01],
         palette: [new THREE.Color(0x8833cc), new THREE.Color(0xcc33aa), new THREE.Color(0xff44cc)],
-        camera: { radius: 2.5, elevation: 0.4, azimuthSpeed: 0.6 }
+        camera: { radius: 2.8, elevation: 0.4, azimuthSpeed: 0.6 }
     },
     {
         name: 'aizawa',
@@ -81,11 +81,11 @@ const ATTRACTORS = [
             p.c + p.a * z - (z * z * z) / 3 - (x * x + y * y) * (1 + p.e * z) + p.f * z * x * x * x
         ],
         dt: 0.005,
-        scale: 0.6,
+        scale: 0.776,
         center: [0.0, 0.0, 0.70],
         initialCondition: [0.1, 0, 0],
         palette: [new THREE.Color(0x22aa44), new THREE.Color(0x00ccaa), new THREE.Color(0x00eedd)],
-        camera: { radius: 2.6, elevation: 0.6, azimuthSpeed: 0.5 }
+        camera: { radius: 2.8, elevation: 0.6, azimuthSpeed: 0.5 }
     },
     {
         name: 'halvorsen',
@@ -96,11 +96,11 @@ const ATTRACTORS = [
             -p.a * z - 4 * x - 4 * y - x * x
         ],
         dt: 0.004,
-        scale: 0.06,
+        scale: 0.092,
         center: [-2.64, -2.64, -2.64],
         initialCondition: [-1.48, -1.51, 2.04],
         palette: [new THREE.Color(0xccaa00), new THREE.Color(0xeecc44), new THREE.Color(0xffffff)],
-        camera: { radius: 3.0, elevation: 0.5, azimuthSpeed: 0.6 }
+        camera: { radius: 2.8, elevation: 0.5, azimuthSpeed: 0.6 }
     }
 ];
 
