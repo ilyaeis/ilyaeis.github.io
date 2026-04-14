@@ -260,10 +260,11 @@ function initScene(canvas) {
 
     camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 1000);
     const cam0 = ATTRACTORS[0].camera;
+    const initTheta = Math.PI / 4;
     camera.position.set(
-        cam0.radius * Math.cos(cam0.elevation),
+        cam0.radius * Math.cos(cam0.elevation) * Math.sin(initTheta),
         cam0.radius * Math.sin(cam0.elevation),
-        cam0.radius * Math.cos(cam0.elevation)
+        cam0.radius * Math.cos(cam0.elevation) * Math.cos(initTheta)
     );
 
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -492,6 +493,17 @@ function updateCamera(dt) {
                 radius * Math.cos(elevation) * Math.sin(theta),
                 radius * Math.sin(elevation),
                 radius * Math.cos(elevation) * Math.cos(theta)
+            );
+        }
+    } else {
+        const a = ATTRACTORS[currentIndex].camera;
+        controls.autoRotateSpeed = a.azimuthSpeed;
+        if (!userActive) {
+            const theta = controls.getAzimuthalAngle();
+            camera.position.set(
+                a.radius * Math.cos(a.elevation) * Math.sin(theta),
+                a.radius * Math.sin(a.elevation),
+                a.radius * Math.cos(a.elevation) * Math.cos(theta)
             );
         }
     }
