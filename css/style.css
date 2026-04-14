@@ -108,6 +108,164 @@ h1 {
     z-index: 10;
 }
 
+/* Rocket hint */
+.rocket-hint {
+    position: fixed;
+    z-index: 15;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.rocket-hint.flying {
+    visibility: visible;
+    opacity: 1;
+    animation: rocket-path 3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+.rocket-hint.arrived .rocket-icon {
+    animation: rocket-bob 2s ease-in-out infinite;
+}
+
+.rocket-icon {
+    font-size: 2rem;
+    display: inline-block;
+    position: relative;
+    transform: rotate(45deg);
+    filter: drop-shadow(0 0 6px rgba(255, 160, 50, 0.5));
+}
+
+
+
+.rocket-hint.flying .rocket-icon {
+    animation: rocket-spin 3s ease-in-out forwards;
+}
+
+.rocket-bubble {
+    position: absolute;
+    left: 3rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ccc;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    padding: 0.6rem 1rem;
+    border-radius: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+}
+
+.rocket-bubble::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.rocket-hint.arrived .rocket-bubble {
+    opacity: 1;
+}
+
+@keyframes rocket-path {
+    0%   { left: -3rem;  bottom: -3rem; }
+    12%  { left: 10vw;   bottom: 30vh;  }
+    /* swoops up high */
+    24%  { left: 18vw;   bottom: 58vh;  }
+    /* dips back down */
+    36%  { left: 26vw;   bottom: 35vh;  }
+    /* curves up again */
+    50%  { left: 34vw;   bottom: 55vh;  }
+    /* levels out approaching center */
+    65%  { left: 42vw;   bottom: 48vh;  }
+    /* overshoot past center */
+    82%  { left: calc(50vw - 3rem); bottom: 52vh; }
+    /* bounce back to land */
+    92%  { left: calc(50vw - 6rem); bottom: 49vh; }
+    100% { left: calc(50vw - 5rem); bottom: 50vh; }
+}
+
+@keyframes rocket-spin {
+    0%   { transform: rotate(45deg); }
+    12%  { transform: rotate(30deg); }
+    24%  { transform: rotate(-15deg); }
+    36%  { transform: rotate(20deg); }
+    50%  { transform: rotate(-10deg); }
+    65%  { transform: rotate(5deg); }
+    82%  { transform: rotate(-5deg); }
+    92%  { transform: rotate(3deg); }
+    100% { transform: rotate(0deg); }
+}
+
+/* Idle — playful wiggle + float */
+@keyframes rocket-bob {
+    0%   { transform: translateY(0) rotate(0deg); }
+    15%  { transform: translateY(-5px) rotate(3deg); }
+    30%  { transform: translateY(-2px) rotate(-2deg); }
+    50%  { transform: translateY(-8px) rotate(2deg); }
+    70%  { transform: translateY(-3px) rotate(-3deg); }
+    85%  { transform: translateY(-6px) rotate(1deg); }
+    100% { transform: translateY(0) rotate(0deg); }
+}
+
+/* Rocket exit — smooth accelerating loop then fly away */
+.rocket-hint.exiting {
+    visibility: visible;
+    opacity: 1;
+    animation: rocket-exit-path 2.5s ease-in forwards;
+}
+
+.rocket-hint.exiting .rocket-icon {
+    animation: rocket-exit-spin 2.5s ease-in forwards;
+}
+
+.rocket-hint.exiting .rocket-bubble {
+    opacity: 0;
+}
+
+@keyframes rocket-exit-path {
+    /* Little nod — "okay bye!" */
+    0%   { left: calc(50vw - 5rem); bottom: 50vh; opacity: 1; }
+    5%   { left: calc(50vw - 5rem); bottom: 49vh; }
+    10%  { left: calc(50vw - 4rem); bottom: 52vh; }
+    /* Playful loop */
+    22%  { left: calc(50vw + 8vw);  bottom: 60vh; }
+    34%  { left: calc(50vw + 14vw); bottom: 50vh; }
+    46%  { left: calc(50vw + 6vw);  bottom: 38vh; }
+    56%  { left: calc(50vw - 3rem); bottom: 40vh; opacity: 1; }
+    /* Accelerate away */
+    70%  { left: 22vw;  bottom: 28vh; opacity: 1; }
+    82%  { left: 6vw;   bottom: 10vh; opacity: 0.6; }
+    100% { left: -5rem; bottom: -5rem; opacity: 0; }
+}
+
+@keyframes rocket-exit-spin {
+    0%   { transform: rotate(0deg); }
+    /* Little nod */
+    5%   { transform: rotate(10deg); }
+    10%  { transform: rotate(-15deg); }
+    /* Spin through the loop */
+    22%  { transform: rotate(-80deg); }
+    34%  { transform: rotate(-180deg); }
+    46%  { transform: rotate(-280deg); }
+    56%  { transform: rotate(-370deg); }
+    /* Lock toward bottom-left exit */
+    70%  { transform: rotate(-490deg); }
+    100% { transform: rotate(-585deg); }
+}
+
 /* Tap prompt */
 .tap-prompt {
     position: fixed;

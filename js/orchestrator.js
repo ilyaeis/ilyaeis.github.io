@@ -15,6 +15,8 @@ import * as cam from './camera.js';
 export const Phase = {
     INTRO: 0,
     TRANSITION_OUT: 1,
+    ROCKET_HINT: 6,
+    ROCKET_EXIT: 7,
     VORTEX: 2,
     FLIGHT: 3,
     ATTRACTOR_DRAW: 4,
@@ -35,6 +37,9 @@ const worldPos = new THREE.Vector3();
 const _vec3 = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _up = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _startPos = new THREE.Vector3();
+const _targetPos = new THREE.Vector3();
 
 // Frozen camera basis for vortex (captured once at vortex start)
 const vortexRight = new THREE.Vector3();
@@ -73,16 +78,22 @@ const BLEND_RAMP = 0.20;            // blend over last 20% of flight
 // Attractor draw
 const ATTRACTOR_MIN_DRAW = 5.0;
 
+// Rocket hint
+const ROCKET_FLY_DURATION = 3.0;   // matches CSS animation duration
+const ROCKET_EXIT_DURATION = 2.5;  // smooth loop + fly away
+
 // DOM refs
 let tapPromptEl = null;
 let page1El = null;
 let socialEl = null;
+let rocketHintEl = null;
 
 // ── Init ───────────────────────────────────────────────────────────
 export function init() {
     tapPromptEl = document.querySelector('.tap-prompt');
     page1El = document.querySelector('.page-1');
     socialEl = document.querySelector('.social');
+    rocketHintEl = document.getElementById('rocket-hint');
     trail = createTrailSystem();
     cam.init(controls);
     showTapPrompt();
@@ -161,6 +172,8 @@ export function update(dt) {
     switch (phase) {
         case Phase.INTRO:           updateIntro(dt); break;
         case Phase.TRANSITION_OUT:  updateTransitionOut(dt); break;
+        case Phase.ROCKET_HINT:     updateRocketHint(dt); break;
+        case Phase.ROCKET_EXIT:     updateRocketExit(dt); break;
         case Phase.VORTEX:          updateVortex(dt); break;
         case Phase.FLIGHT:          updateFlight(dt); break;
         case Phase.ATTRACTOR_DRAW:  updateAttractorDraw(dt); break;
@@ -202,10 +215,55 @@ function updateTransitionOut(dt) {
         socialEl.getBoundingClientRect();
         socialEl.style.transition = 'transform 0.6s ease';
         socialEl.style.transform = 'translate(0, 0)';
-        setTimeout(() => { socialEl.style.transition = ''; socialEl.style.transform = ''; }, 800);
+        socialEl.addEventListener('transitionend', function cleanup() {
+            socialEl.removeEventListener('transitionend', cleanup);
+            socialEl.style.transition = '';
+            socialEl.style.transform = '';
+        });
     }
 
     if (phaseTime >= 0.8) {
+        enterPhase(Phase.ROCKET_HINT);
+    }
+}
+
+// ── ROCKET_HINT ───────────────────────────────────────────────────
+function updateRocketHint(dt) {
+    if (phaseFirstFrame) {
+        phaseFirstFrame = false;
+        rocketHintEl.classList.add('flying');
+    }
+
+    // After flight animation completes, show the bubble
+    if (phaseTime >= ROCKET_FLY_DURATION && !rocketHintEl.classList.contains('arrived')) {
+        rocketHintEl.classList.add('arrived');
+        showTapPrompt();
+    }
+
+    // Wait for tap after bubble is visible
+    const canAdvance = phaseTime >= ROCKET_FLY_DURATION + 0.5;
+    if (tapPending && canAdvance) {
+        tapPending = false;
+        hideTapPrompt();
+        enterPhase(Phase.ROCKET_EXIT);
+    }
+}
+
+// ── ROCKET_EXIT ───────────────────────────────────────────────────
+function updateRocketExit(dt) {
+    if (phaseFirstFrame) {
+        phaseFirstFrame = false;
+        rocketHintEl.classList.remove('arrived', 'flying');
+        void rocketHintEl.offsetWidth;
+        rocketHintEl.classList.add('exiting');
+    }
+
+    if (phaseTime >= ROCKET_EXIT_DURATION) {
+        rocketHintEl.classList.remove('exiting');
+        rocketHintEl.style.visibility = 'hidden';
+        rocketHintEl.style.opacity = '';
+
+        // Set up vortex
         worldPos.set(0, 0, 0);
         attractorOffset.set(0, 0, 0);
         trail.attractorIdx = 0;
@@ -277,15 +335,13 @@ function updateVortex(dt) {
         const eps = 0.001;
         const p0 = spiralPos(t - eps);
         const p1 = spiralPos(t + eps);
-        const dir = new THREE.Vector3(
-            p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
-        ).normalize();
+        _dir.set(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]).normalize();
 
         // Target: fly FLIGHT_DISTANCE in departure direction
-        const target = new THREE.Vector3().copy(worldPos).addScaledVector(dir, FLIGHT_DISTANCE);
-        attractorOffset.copy(target); // next attractor draws here
+        _targetPos.copy(worldPos).addScaledVector(_dir, FLIGHT_DISTANCE);
+        attractorOffset.copy(_targetPos); // next attractor draws here
 
-        setupFlightCurve(worldPos, dir, target);
+        setupFlightCurve(worldPos, _dir, _targetPos);
 
         // Prepare attractor state for blend-in at end of flight
         const attr = ATTRACTORS[attractorIndex];
@@ -359,36 +415,36 @@ function updateLaunchFromAttractor(dt) {
 
     // Get the direction the attractor point was last heading
     const derivs = attr.derivatives(s[0], s[1], s[2], attr.params);
-    const dir = new THREE.Vector3(
+    _dir.set(
         derivs[0] * attr.scale,
         derivs[1] * attr.scale,
         derivs[2] * attr.scale
     ).normalize();
 
     // Start position = attractor tip in world space
-    const startPos = new THREE.Vector3(
+    _startPos.set(
         (s[0] - attr.center[0]) * attr.scale + attractorOffset.x,
         (s[1] - attr.center[1]) * attr.scale + attractorOffset.y,
         (s[2] - attr.center[2]) * attr.scale + attractorOffset.z
     );
 
     // Target = fly FLIGHT_DISTANCE away in the departure direction
-    const targetPos = new THREE.Vector3().copy(startPos).addScaledVector(dir, FLIGHT_DISTANCE);
+    _targetPos.copy(_startPos).addScaledVector(_dir, FLIGHT_DISTANCE);
 
     // Freeze existing trail colors before switching palette
     trail.colorFreezeIdx = trail.pointCount;
 
     // Set up the next attractor
     attractorIndex = (attractorIndex + 1) % ATTRACTORS.length;
-    attractorOffset.copy(targetPos);
+    attractorOffset.copy(_targetPos);
     const nextAttr = ATTRACTORS[attractorIndex];
     attractorState = [...nextAttr.initialCondition];
     trail.attractorIdx = attractorIndex;
     trail.drawTime = 0;
 
     // Build the Bezier curve
-    setupFlightCurve(startPos, dir, targetPos);
-    worldPos.copy(startPos);
+    setupFlightCurve(_startPos, _dir, _targetPos);
+    worldPos.copy(_startPos);
 
     cam.setMode(cam.Mode.FOLLOW, controls);
     enterPhase(Phase.FLIGHT);

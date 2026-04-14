@@ -23,7 +23,7 @@ import {
     function sizeStarsCanvas() {
         starsCanvas.width = window.innerWidth * dpr;
         starsCanvas.height = window.innerHeight * dpr;
-        starsCtx.scale(dpr, dpr);
+        starsCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     // ── Stars ──────────────────────────────────────────────────
@@ -110,6 +110,10 @@ import {
         if (Math.sqrt(dx * dx + dy * dy) < TAP_THRESHOLD) {
             onTap();
         }
+        pointerDownPos = null;
+    });
+
+    document.body.addEventListener('pointercancel', () => {
         pointerDownPos = null;
     });
 

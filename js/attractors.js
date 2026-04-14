@@ -230,6 +230,7 @@ const _tmpColor = new THREE.Color();
 const _white = new THREE.Color(1, 1, 1);
 const _tipColor = new THREE.Color();
 
+// Returns a shared Color instance — do not store the reference across calls.
 export function getPaletteColor(palette, t) {
     const n = palette.length - 1;
     const i = Math.min(Math.floor(t * n), n - 1);
@@ -268,7 +269,7 @@ export function initScene(canvas) {
     bloomPass = new UnrealBloomPass(new THREE.Vector2(bloomW, bloomH), 1.2, 0.5, 0.1);
     composer.addPass(bloomPass);
 
-    // Controls — rotation only, no zoom, no pan. Always available.
+    // Controls — rotation and zoom, no pan. Always available.
     controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
