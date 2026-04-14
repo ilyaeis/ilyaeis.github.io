@@ -217,7 +217,7 @@ function initScene(canvas) {
     const h = window.innerHeight;
 
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0a0a0f, 0.12);
+    scene.fog = new THREE.FogExp2(0x000000, 0.1);
 
     camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 1000);
     const cam0 = ATTRACTORS[0].camera;
@@ -227,15 +227,20 @@ function initScene(canvas) {
         cam0.radius * Math.cos(cam0.elevation)
     );
 
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
     renderer.setSize(w, h);
-    renderer.setClearColor(0x0a0a0f, 1);
+    renderer.setClearColor(0x000000, 0);
 
-    // Post-processing
+    // Post-processing — render target with alpha for transparency
     const bloomW = Math.floor(w * BLOOM_RES_SCALE);
     const bloomH = Math.floor(h * BLOOM_RES_SCALE);
-    composer = new EffectComposer(renderer);
+    const rtParams = {
+        format: THREE.RGBAFormat,
+        type: THREE.HalfFloatType
+    };
+    const renderTarget = new THREE.WebGLRenderTarget(w, h, rtParams);
+    composer = new EffectComposer(renderer, renderTarget);
     composer.addPass(new RenderPass(scene, camera));
     bloomPass = new UnrealBloomPass(new THREE.Vector2(bloomW, bloomH), 1.2, 0.5, 0.1);
     composer.addPass(bloomPass);
