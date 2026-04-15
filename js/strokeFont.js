@@ -331,25 +331,34 @@ export function generateRockWithLabel(sizeFactor, seed, label, sublabel, density
     }
 
     // ── 3 tilted rings (wireframe sphere) ─────────────────────────
+    // Generate a shared bumpy radius profile so all rings sit on the same
+    // irregular surface, then rotate each ring into a near-orthogonal plane.
+    const BASE_VERTS = 10 + Math.floor(srand(0) * 3); // same vertex count for all rings
+    const baseRadii = [];
+    for (let i = 0; i < BASE_VERTS; i++) {
+        baseRadii.push(sizeFactor * (0.7 + srand(i + 100) * 0.5));
+    }
+
+    // Near-orthogonal planes: XY, XZ (90° around X), YZ (90° around Y)
     const ringRotations = [
-        null,                             // Ring 0: XY plane (no rotation)
-        { axis: 'x', angle: Math.PI / 3 }, // Ring 1: tilted 60° around X
-        { axis: 'y', angle: Math.PI / 3 }, // Ring 2: tilted 60° around Y
+        null,                                  // Ring 0: XY plane — face-on circle
+        { axis: 'x', angle: Math.PI / 2 },    // Ring 1: XZ plane — vertical ring
+        { axis: 'y', angle: Math.PI / 2 },    // Ring 2: YZ plane — side ring
     ];
 
     for (let ri = 0; ri < 3; ri++) {
         const rot = ringRotations[ri];
-        const nVerts = 8 + Math.floor(srand(ri * 20) * 5); // 8-12 vertices per ring
         const ringVerts = [];
 
-        for (let i = 0; i < nVerts; i++) {
-            const angle = (i / nVerts) * Math.PI * 2;
-            const r = sizeFactor * (0.65 + srand(ri * 100 + i + 100) * 0.65);
+        for (let i = 0; i < BASE_VERTS; i++) {
+            const angle = (i / BASE_VERTS) * Math.PI * 2;
+            // Shared base radius + small per-ring wobble for organic feel
+            const r = baseRadii[i] + sizeFactor * 0.08 * (srand(ri * 200 + i + 500) - 0.5);
             let px = Math.cos(angle) * r;
             let py = Math.sin(angle) * r;
             let pz = 0;
 
-            // Apply rotation for this ring's plane
+            // Rotate into this ring's plane
             if (rot) {
                 if (rot.axis === 'x') [px, py, pz] = rotX(px, py, pz, rot.angle);
                 else                  [px, py, pz] = rotY(px, py, pz, rot.angle);
