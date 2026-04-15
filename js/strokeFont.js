@@ -320,105 +320,44 @@ export function generateRockWithLabel(sizeFactor, seed, label, sublabel, density
         return x - Math.floor(x);
     }
 
-    // Rotation helpers
-    function rotX(px, py, pz, a) {
-        const c = Math.cos(a), s = Math.sin(a);
-        return [px, c * py - s * pz, s * py + c * pz];
+    // ── Asteroid outline vertices ──────────────────────────────────
+    const nVerts = 8 + Math.floor(srand(0) * 5); // 8-12 vertices
+    const outline = [];
+    for (let i = 0; i < nVerts; i++) {
+        const angle = (i / nVerts) * Math.PI * 2;
+        const r = sizeFactor * (0.65 + srand(i + 100) * 0.65);
+        outline.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
     }
-    function rotY(px, py, pz, a) {
-        const c = Math.cos(a), s = Math.sin(a);
-        return [c * px + s * pz, py, -s * px + c * pz];
+    outline.push({ x: outline[0].x, y: outline[0].y }); // close
+
+    // Approach line: center (0,0) → first vertex
+    const first = outline[0];
+    const approachDist = Math.sqrt(first.x * first.x + first.y * first.y);
+    const approachN = Math.max(3, Math.round(approachDist * density * 0.3));
+    for (let j = 1; j <= approachN; j++) {
+        const t = j / approachN;
+        allPoints.push({ x: first.x * t, y: first.y * t, z: 0 });
     }
 
-    // ── 3 tilted rings (wireframe sphere) ─────────────────────────
-    // Generate a shared bumpy radius profile so all rings sit on the same
-    // irregular surface, then rotate each ring into a near-orthogonal plane.
-    const BASE_VERTS = 10 + Math.floor(srand(0) * 3); // same vertex count for all rings
-    const baseRadii = [];
-    for (let i = 0; i < BASE_VERTS; i++) {
-        baseRadii.push(sizeFactor * (0.7 + srand(i + 100) * 0.5));
-    }
-
-    // Near-orthogonal planes: XY, XZ (90° around X), YZ (90° around Y)
-    const ringRotations = [
-        null,                                  // Ring 0: XY plane — face-on circle
-        { axis: 'x', angle: Math.PI / 2 },    // Ring 1: XZ plane — vertical ring
-        { axis: 'y', angle: Math.PI / 2 },    // Ring 2: YZ plane — side ring
-    ];
-
-    for (let ri = 0; ri < 3; ri++) {
-        const rot = ringRotations[ri];
-        const ringVerts = [];
-
-        for (let i = 0; i < BASE_VERTS; i++) {
-            const angle = (i / BASE_VERTS) * Math.PI * 2;
-            // Shared base radius + small per-ring wobble for organic feel
-            const r = baseRadii[i] + sizeFactor * 0.08 * (srand(ri * 200 + i + 500) - 0.5);
-            let px = Math.cos(angle) * r;
-            let py = Math.sin(angle) * r;
-            let pz = 0;
-
-            // Rotate into this ring's plane
-            if (rot) {
-                if (rot.axis === 'x') [px, py, pz] = rotX(px, py, pz, rot.angle);
-                else                  [px, py, pz] = rotY(px, py, pz, rot.angle);
-            }
-            ringVerts.push({ x: px, y: py, z: pz });
-        }
-        ringVerts.push({ x: ringVerts[0].x, y: ringVerts[0].y, z: ringVerts[0].z }); // close
-
-        // Transition: center→first vertex (ring 0) or prev ring end→this ring start
-        const first = ringVerts[0];
-        if (ri === 0) {
-            // Approach line from (0,0,0) to first vertex
-            const dist = Math.sqrt(first.x ** 2 + first.y ** 2 + first.z ** 2);
-            const n = Math.max(3, Math.round(dist * density * 0.3));
-            for (let j = 1; j <= n; j++) {
-                const t = j / n;
-                allPoints.push({ x: first.x * t, y: first.y * t, z: first.z * t });
-            }
-        } else {
-            // Smooth Bezier transition from previous ring end to this ring start
-            const prev = allPoints[allPoints.length - 1];
-            const dx = first.x - prev.x, dy = first.y - prev.y, dz = first.z - prev.z;
-            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            const n = Math.max(5, Math.round(dist * density * 0.08));
-            // Quadratic Bezier with midpoint pulled toward center
-            const mx = (prev.x + first.x) * 0.3;
-            const my = (prev.y + first.y) * 0.3;
-            const mz = (prev.z + first.z) * 0.3;
-            for (let j = 1; j <= n; j++) {
-                const t = j / n;
-                const u = 1 - t;
-                allPoints.push({
-                    x: u * u * prev.x + 2 * u * t * mx + t * t * first.x,
-                    y: u * u * prev.y + 2 * u * t * my + t * t * first.y,
-                    z: u * u * prev.z + 2 * u * t * mz + t * t * first.z
-                });
-            }
-        }
-
-        // Dense interpolation of ring edges (density/3 since we have 3 rings)
-        const ringDensity = density / 3;
-        for (let i = 0; i < ringVerts.length - 1; i++) {
-            const a = ringVerts[i], b = ringVerts[i + 1];
-            const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
-            const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            const n = Math.max(2, Math.round(len * ringDensity));
-            for (let j = (i === 0 ? 0 : 1); j < n; j++) {
-                const t = j / (n - 1);
-                allPoints.push({
-                    x: a.x + dx * t,
-                    y: a.y + dy * t,
-                    z: a.z + dz * t
-                });
-            }
+    // Dense interpolation of outline edges
+    for (let i = 0; i < outline.length - 1; i++) {
+        const dx = outline[i + 1].x - outline[i].x;
+        const dy = outline[i + 1].y - outline[i].y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const n = Math.max(2, Math.round(len * density));
+        for (let j = (i === 0 ? 0 : 1); j < n; j++) {
+            const t = j / (n - 1);
+            allPoints.push({
+                x: outline[i].x + dx * t,
+                y: outline[i].y + dy * t,
+                z: 0
+            });
         }
     }
 
     const outlineCount = allPoints.length;
 
-    // ── Label text below rock (z=0, face-on to camera) ────────────
+    // ── Label text below rock ──────────────────────────────────────
     const labelScale = Math.max(0.35, sizeFactor * 0.45);
     const { points: labelPts, width: labelW } = generateSingleLine(label, density);
 
@@ -430,7 +369,7 @@ export function generateRockWithLabel(sizeFactor, seed, label, sublabel, density
     const firstLX = labelPts.length > 0 ? labelPts[0].x * labelScale + labelX : 0;
     const firstLY = labelPts.length > 0 ? labelPts[0].y * labelScale + labelY : labelY;
 
-    const tDist = Math.sqrt((firstLX - last.x) ** 2 + (firstLY - last.y) ** 2 + (last.z || 0) ** 2);
+    const tDist = Math.sqrt((firstLX - last.x) ** 2 + (firstLY - last.y) ** 2);
     const transN = Math.max(5, Math.round(tDist * density * 0.08));
     const tmx = (last.x + firstLX) / 2;
     const tmy = Math.min(last.y, firstLY) - 0.15 * sizeFactor;
@@ -441,7 +380,7 @@ export function generateRockWithLabel(sizeFactor, seed, label, sublabel, density
         allPoints.push({
             x: u * u * last.x + 2 * u * t * tmx + t * t * firstLX,
             y: u * u * last.y + 2 * u * t * tmy + t * t * firstLY,
-            z: u * u * (last.z || 0) // fade z to 0 for text plane
+            z: 0
         });
     }
 
