@@ -389,12 +389,13 @@ export function generateRockWithLabel(sizeFactor, seed, label, sublabel, density
             }
         }
 
-        // Dense interpolation of ring edges
+        // Dense interpolation of ring edges (density/3 since we have 3 rings)
+        const ringDensity = density / 3;
         for (let i = 0; i < ringVerts.length - 1; i++) {
             const a = ringVerts[i], b = ringVerts[i + 1];
             const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
             const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            const n = Math.max(2, Math.round(len * density));
+            const n = Math.max(2, Math.round(len * ringDensity));
             for (let j = (i === 0 ? 0 : 1); j < n; j++) {
                 const t = j / (n - 1);
                 allPoints.push({

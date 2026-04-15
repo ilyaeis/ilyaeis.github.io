@@ -335,6 +335,8 @@ function rocketBezierTangent(t) {
     };
 }
 
+let rocketIconEl = null; // cached on first use
+
 function updateRocketExit(dt) {
     const vw = window.innerWidth / 100;
     const vh = window.innerHeight / 100;
@@ -344,6 +346,7 @@ function updateRocketExit(dt) {
         rocketHintEl.classList.remove('arrived', 'flying');
         void rocketHintEl.offsetWidth;
         rocketHintEl.classList.add('exiting');
+        rocketIconEl = rocketHintEl.querySelector('.rocket-icon');
 
         // Read current landing position
         const landLeft = parseFloat(rocketHintEl.style.getPropertyValue('--land-left')) || (50 * vw - 80);
@@ -369,8 +372,7 @@ function updateRocketExit(dt) {
 
     // Rotation from tangent (angle relative to up-right)
     const angle = Math.atan2(tan.x, tan.y) * (180 / Math.PI) - 45;
-    const iconEl = rocketHintEl.querySelector('.rocket-icon');
-    if (iconEl) iconEl.style.transform = `rotate(${-angle}deg)`;
+    if (rocketIconEl) rocketIconEl.style.transform = `rotate(${-angle}deg)`;
 
     // Fade out in last 30%
     const opacity = rawT > 0.7 ? 1 - (rawT - 0.7) / 0.3 : 1;
@@ -382,7 +384,7 @@ function updateRocketExit(dt) {
         rocketHintEl.style.opacity = '';
         rocketHintEl.style.left = '';
         rocketHintEl.style.bottom = '';
-        if (iconEl) iconEl.style.transform = '';
+        if (rocketIconEl) rocketIconEl.style.transform = '';
 
         // Set up vortex
         worldPos.set(0, 0, 0);
@@ -861,16 +863,24 @@ function updateRockDraw(dt) {
             // Freeze rock+label colors before drawing flag
             trail.colorFreezeIdx = trail.pointCount;
 
-            // Transition from last rock/label point to flag base
+            // Quadratic Bezier transition from last label point to flag base
             const lastPt = rockPoints[rockPoints.length - 1];
             const fp = rd.flagPoints[0];
-            const transN = 6;
+            // Midpoint arcs to the right side of the rock for a smooth curve
+            const mx = (lastPt.x + fp.x) / 2 + 0.3 * (rd.points[0] ? rd.points[0].x : 0);
+            const my = (lastPt.y + fp.y) / 2;
+            const mz = ((lastPt.z || 0) + (fp.z || 0)) / 2;
+            const transN = 15;
             for (let j = 1; j <= transN; j++) {
                 const t = j / transN;
+                const u = 1 - t;
+                const lx = u * u * lastPt.x + 2 * u * t * mx + t * t * fp.x;
+                const ly = u * u * lastPt.y + 2 * u * t * my + t * t * fp.y;
+                const lz = u * u * (lastPt.z || 0) + 2 * u * t * mz + t * t * (fp.z || 0);
                 pushPointWorld(trail,
-                    rd.center.x + (((1 - t) * lastPt.x + t * fp.x) * rockRight.x + ((1 - t) * lastPt.y + t * fp.y) * rockUp.x + ((1 - t) * (lastPt.z || 0) + t * (fp.z || 0)) * rockFwd.x) * ROCK_SCALE,
-                    rd.center.y + (((1 - t) * lastPt.x + t * fp.x) * rockRight.y + ((1 - t) * lastPt.y + t * fp.y) * rockUp.y + ((1 - t) * (lastPt.z || 0) + t * (fp.z || 0)) * rockFwd.y) * ROCK_SCALE,
-                    rd.center.z + (((1 - t) * lastPt.x + t * fp.x) * rockRight.z + ((1 - t) * lastPt.y + t * fp.y) * rockUp.z + ((1 - t) * (lastPt.z || 0) + t * (fp.z || 0)) * rockFwd.z) * ROCK_SCALE
+                    rd.center.x + (lx * rockRight.x + ly * rockUp.x + lz * rockFwd.x) * ROCK_SCALE,
+                    rd.center.y + (lx * rockRight.y + ly * rockUp.y + lz * rockFwd.y) * ROCK_SCALE,
+                    rd.center.z + (lx * rockRight.z + ly * rockUp.z + lz * rockFwd.z) * ROCK_SCALE
                 );
             }
 
