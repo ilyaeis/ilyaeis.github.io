@@ -10,7 +10,7 @@ import {
     rk4Step, addJourneyTime, render, isPaused
 } from './attractors.js';
 import * as cam from './camera.js';
-import { generateTextLines, generateRockWithLabel } from './strokeFont.js';
+import { generateTextLines, generateRockWithLabel, generateFlag } from './strokeFont.js';
 
 // ── Phase enum ─────────────────────────────────────────────────────
 export const Phase = {
@@ -82,6 +82,7 @@ let greyRockLines = [];     // THREE.Line objects for grey previews
 const constellationDir = new THREE.Vector3();
 const rockRight = new THREE.Vector3();
 const rockUp = new THREE.Vector3();
+const rockFwd = new THREE.Vector3();
 let rockFlightDuration = 0;
 
 // ── Tuning ─────────────────────────────────────────────────────────
@@ -116,14 +117,15 @@ const ROCK_SCALE = 0.4;              // world units per 2D unit
 const ROCK_DRAW_PTS = 110;           // points per frame when drawing rock + label
 const ROCK_FLIGHT_SPEED = 2.5;       // world units per second
 const MILESTONES = [
-    { label: 'GYMNASIUM', sublabel: 'RIGA', sizeFactor: 1.0,  seed: 42, distance: 8.0 },
+    { label: 'SECONDARY SCHOOL', sublabel: 'GYMNASIUM', sizeFactor: 1.0,  seed: 42, distance: 8.0 },
     { label: 'BACHELOR IN', sublabel: 'FINANCIAL ENGINEERING', sizeFactor: 0.55, seed: 73, distance: 7.0 },
-    { label: 'GIRAFFE360', sublabel: null,  sizeFactor: 0.35, seed: 17, distance: 5.0 },
+    { label: 'R&D ENGINEER', sublabel: 'GIRAFFE360', sizeFactor: 0.35, seed: 17, distance: 5.0 },
 ];
 
 // Rocket hint
-const ROCKET_FLY_DURATION = 3.0;   // matches CSS animation duration
-const ROCKET_EXIT_DURATION = 2.5;  // smooth loop + fly away
+const ROCKET_FLY_DURATION = 1.2;   // matches CSS animation duration
+const ROCKET_BUBBLE_SHOW = 0.5;    // bubble visible before auto-exit
+const ROCKET_EXIT_DURATION = 1.3;  // JS Bezier loop + accelerate away
 
 // DOM refs
 let tapPromptEl = null;
@@ -299,31 +301,88 @@ function updateRocketHint(dt) {
     // After flight animation completes, show the bubble
     if (phaseTime >= ROCKET_FLY_DURATION && !rocketHintEl.classList.contains('arrived')) {
         rocketHintEl.classList.add('arrived');
-        showTapPrompt();
     }
 
-    // Wait for tap after bubble is visible
-    const canAdvance = phaseTime >= ROCKET_FLY_DURATION + 0.5;
-    if (tapPending && canAdvance) {
-        tapPending = false;
-        hideTapPrompt();
+    // Consume any stray taps during rocket
+    if (tapPending) tapPending = false;
+
+    // Auto-advance after bubble shown briefly
+    if (phaseTime >= ROCKET_FLY_DURATION + ROCKET_BUBBLE_SHOW) {
         enterPhase(Phase.ROCKET_EXIT);
     }
 }
 
-// ── ROCKET_EXIT ───────────────────────────────────────────────────
+// ── ROCKET_EXIT (JS Bezier-driven loop + accelerate away) ────────
+// Bezier control points in screen pixels, set on first frame
+let rocketBezP0 = { x: 0, y: 0 };
+let rocketBezP1 = { x: 0, y: 0 };
+let rocketBezP2 = { x: 0, y: 0 };
+let rocketBezP3 = { x: 0, y: 0 };
+
+function rocketBezierPoint(t) {
+    const u = 1 - t;
+    return {
+        x: u*u*u * rocketBezP0.x + 3*u*u*t * rocketBezP1.x + 3*u*t*t * rocketBezP2.x + t*t*t * rocketBezP3.x,
+        y: u*u*u * rocketBezP0.y + 3*u*u*t * rocketBezP1.y + 3*u*t*t * rocketBezP2.y + t*t*t * rocketBezP3.y
+    };
+}
+
+function rocketBezierTangent(t) {
+    const u = 1 - t;
+    return {
+        x: 3*u*u*(rocketBezP1.x - rocketBezP0.x) + 6*u*t*(rocketBezP2.x - rocketBezP1.x) + 3*t*t*(rocketBezP3.x - rocketBezP2.x),
+        y: 3*u*u*(rocketBezP1.y - rocketBezP0.y) + 6*u*t*(rocketBezP2.y - rocketBezP1.y) + 3*t*t*(rocketBezP3.y - rocketBezP2.y)
+    };
+}
+
 function updateRocketExit(dt) {
+    const vw = window.innerWidth / 100;
+    const vh = window.innerHeight / 100;
+
     if (phaseFirstFrame) {
         phaseFirstFrame = false;
         rocketHintEl.classList.remove('arrived', 'flying');
         void rocketHintEl.offsetWidth;
         rocketHintEl.classList.add('exiting');
+
+        // Read current landing position
+        const landLeft = parseFloat(rocketHintEl.style.getPropertyValue('--land-left')) || (50 * vw - 80);
+        const landBottom = 50 * vh;
+
+        // Bezier: small loop then swoop off-screen bottom-left with acceleration
+        rocketBezP0 = { x: landLeft, y: landBottom };
+        rocketBezP1 = { x: landLeft + 8 * vw, y: landBottom + 12 * vh };  // up-right (loop top)
+        rocketBezP2 = { x: landLeft + 4 * vw, y: landBottom - 15 * vh };  // down-right (loop bottom)
+        rocketBezP3 = { x: -80, y: -80 };                                  // off-screen bottom-left
     }
 
-    if (phaseTime >= ROCKET_EXIT_DURATION) {
+    // Ease-in (cubic) for acceleration effect
+    const rawT = Math.min(phaseTime / ROCKET_EXIT_DURATION, 1);
+    const t = rawT * rawT * rawT;
+
+    const pos = rocketBezierPoint(t);
+    const tan = rocketBezierTangent(t);
+
+    // Position
+    rocketHintEl.style.left = pos.x + 'px';
+    rocketHintEl.style.bottom = pos.y + 'px';
+
+    // Rotation from tangent (angle relative to up-right)
+    const angle = Math.atan2(tan.x, tan.y) * (180 / Math.PI) - 45;
+    const iconEl = rocketHintEl.querySelector('.rocket-icon');
+    if (iconEl) iconEl.style.transform = `rotate(${-angle}deg)`;
+
+    // Fade out in last 30%
+    const opacity = rawT > 0.7 ? 1 - (rawT - 0.7) / 0.3 : 1;
+    rocketHintEl.style.opacity = opacity;
+
+    if (rawT >= 1) {
         rocketHintEl.classList.remove('exiting');
         rocketHintEl.style.visibility = 'hidden';
         rocketHintEl.style.opacity = '';
+        rocketHintEl.style.left = '';
+        rocketHintEl.style.bottom = '';
+        if (iconEl) iconEl.style.transform = '';
 
         // Set up vortex
         worldPos.set(0, 0, 0);
@@ -643,6 +702,7 @@ function setupConstellation() {
     // Orient rock plane perpendicular to flight direction
     rockRight.crossVectors(constellationDir, camera.up).normalize();
     rockUp.crossVectors(rockRight, constellationDir).normalize();
+    rockFwd.crossVectors(rockRight, rockUp).normalize();
 
     // Pre-generate all rock data — triangle layout (not a straight line)
     // Offsets perpendicular to flight direction for each rock
@@ -664,7 +724,23 @@ function setupConstellation() {
         const { points, outlineCount } = generateRockWithLabel(
             ms.sizeFactor, ms.seed, ms.label, ms.sublabel
         );
-        rockDataArray.push({ center, points, outlineCount });
+        // Find topmost outline point for flag anchor
+        let maxY = -Infinity;
+        for (let i = 0; i < outlineCount; i++) {
+            if (points[i].y > maxY) maxY = points[i].y;
+        }
+        // Find the point closest to the top with the most positive x (visible side)
+        let topIdx = 0;
+        for (let i = 0; i < outlineCount; i++) {
+            if (points[i].y > maxY - 0.05 * ms.sizeFactor && points[i].x > points[topIdx].x) {
+                topIdx = i;
+            }
+        }
+        const anchor = points[topIdx];
+        const { points: flagPts } = generateFlag(
+            anchor.x, anchor.y, anchor.z || 0, ms.sizeFactor * 0.3
+        );
+        rockDataArray.push({ center, points, outlineCount, flagPoints: flagPts });
     }
 
     // Create grey preview outlines for all rocks
@@ -675,9 +751,10 @@ function setupConstellation() {
         const positions = new Float32Array(n * 3);
         for (let i = 0; i < n; i++) {
             const p = pts[i];
-            positions[i * 3]     = rd.center.x + (p.x * rockRight.x + p.y * rockUp.x) * ROCK_SCALE;
-            positions[i * 3 + 1] = rd.center.y + (p.x * rockRight.y + p.y * rockUp.y) * ROCK_SCALE;
-            positions[i * 3 + 2] = rd.center.z + (p.x * rockRight.z + p.y * rockUp.z) * ROCK_SCALE;
+            const pz = p.z || 0;
+            positions[i * 3]     = rd.center.x + (p.x * rockRight.x + p.y * rockUp.x + pz * rockFwd.x) * ROCK_SCALE;
+            positions[i * 3 + 1] = rd.center.y + (p.x * rockRight.y + p.y * rockUp.y + pz * rockFwd.y) * ROCK_SCALE;
+            positions[i * 3 + 2] = rd.center.z + (p.x * rockRight.z + p.y * rockUp.z + pz * rockFwd.z) * ROCK_SCALE;
         }
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -777,19 +854,64 @@ function updateRockDraw(dt) {
         }
     }
 
-    // All points drawn → advance
+    // All rock+label points drawn → draw flag, then advance
     if (!rockPoints || rockPointIdx >= rockPoints.length) {
+        // Draw red flag in a single frame (small point set)
+        if (rd.flagPoints && !rd.flagDrawn) {
+            // Freeze rock+label colors before drawing flag
+            trail.colorFreezeIdx = trail.pointCount;
+
+            // Transition from last rock/label point to flag base
+            const lastPt = rockPoints[rockPoints.length - 1];
+            const fp = rd.flagPoints[0];
+            const transN = 6;
+            for (let j = 1; j <= transN; j++) {
+                const t = j / transN;
+                pushPointWorld(trail,
+                    rd.center.x + (((1 - t) * lastPt.x + t * fp.x) * rockRight.x + ((1 - t) * lastPt.y + t * fp.y) * rockUp.x + ((1 - t) * (lastPt.z || 0) + t * (fp.z || 0)) * rockFwd.x) * ROCK_SCALE,
+                    rd.center.y + (((1 - t) * lastPt.x + t * fp.x) * rockRight.y + ((1 - t) * lastPt.y + t * fp.y) * rockUp.y + ((1 - t) * (lastPt.z || 0) + t * (fp.z || 0)) * rockFwd.y) * ROCK_SCALE,
+                    rd.center.z + (((1 - t) * lastPt.x + t * fp.x) * rockRight.z + ((1 - t) * lastPt.y + t * fp.y) * rockUp.z + ((1 - t) * (lastPt.z || 0) + t * (fp.z || 0)) * rockFwd.z) * ROCK_SCALE
+                );
+            }
+
+            // Push all flag points
+            const flagStartIdx = trail.pointCount;
+            for (const p of rd.flagPoints) {
+                const pz = p.z || 0;
+                pushPointWorld(trail,
+                    rd.center.x + (p.x * rockRight.x + p.y * rockUp.x + pz * rockFwd.x) * ROCK_SCALE,
+                    rd.center.y + (p.x * rockRight.y + p.y * rockUp.y + pz * rockFwd.y) * ROCK_SCALE,
+                    rd.center.z + (p.x * rockRight.z + p.y * rockUp.z + pz * rockFwd.z) * ROCK_SCALE
+                );
+            }
+
+            // Color all flag + transition points red
+            const redStart = flagStartIdx - transN;
+            for (let i = redStart; i < trail.pointCount; i++) {
+                const i3 = i * 3;
+                trail.colors[i3] = 1.0;
+                trail.colors[i3 + 1] = 0.12;
+                trail.colors[i3 + 2] = 0.08;
+            }
+
+            // Freeze everything including flag
+            trail.colorFreezeIdx = trail.pointCount;
+            rd.flagDrawn = true;
+            return;
+        }
+
         trail.colorFreezeIdx = trail.pointCount;
         rockIdx++;
 
         if (rockIdx < rockDataArray.length) {
             // Curved flight to next rock
             const prevRock = rockDataArray[rockIdx - 1];
-            const lastPt = rockPoints[rockPoints.length - 1];
+            const lastFlag = prevRock.flagPoints[prevRock.flagPoints.length - 1];
+            const lfz = lastFlag.z || 0;
             _startPos.set(
-                prevRock.center.x + (lastPt.x * rockRight.x + lastPt.y * rockUp.x) * ROCK_SCALE,
-                prevRock.center.y + (lastPt.x * rockRight.y + lastPt.y * rockUp.y) * ROCK_SCALE,
-                prevRock.center.z + (lastPt.x * rockRight.z + lastPt.y * rockUp.z) * ROCK_SCALE
+                prevRock.center.x + (lastFlag.x * rockRight.x + lastFlag.y * rockUp.x + lfz * rockFwd.x) * ROCK_SCALE,
+                prevRock.center.y + (lastFlag.x * rockRight.y + lastFlag.y * rockUp.y + lfz * rockFwd.y) * ROCK_SCALE,
+                prevRock.center.z + (lastFlag.x * rockRight.z + lastFlag.y * rockUp.z + lfz * rockFwd.z) * ROCK_SCALE
             );
 
             rockFlightDuration = MILESTONES[rockIdx].distance / ROCK_FLIGHT_SPEED;
@@ -815,13 +937,14 @@ function updateRockDraw(dt) {
             trail.attractorIdx = attractorIndex;
             trail.drawTime = 0;
 
-            // Depart from last drawn point
+            // Depart from last drawn flag point
             const lastRock = rockDataArray[rockDataArray.length - 1];
-            const lp = rockPoints[rockPoints.length - 1];
+            const lp = lastRock.flagPoints[lastRock.flagPoints.length - 1];
+            const lpz2 = lp.z || 0;
             _startPos.set(
-                lastRock.center.x + (lp.x * rockRight.x + lp.y * rockUp.x) * ROCK_SCALE,
-                lastRock.center.y + (lp.x * rockRight.y + lp.y * rockUp.y) * ROCK_SCALE,
-                lastRock.center.z + (lp.x * rockRight.z + lp.y * rockUp.z) * ROCK_SCALE
+                lastRock.center.x + (lp.x * rockRight.x + lp.y * rockUp.x + lpz2 * rockFwd.x) * ROCK_SCALE,
+                lastRock.center.y + (lp.x * rockRight.y + lp.y * rockUp.y + lpz2 * rockFwd.y) * ROCK_SCALE,
+                lastRock.center.z + (lp.x * rockRight.z + lp.y * rockUp.z + lpz2 * rockFwd.z) * ROCK_SCALE
             );
 
             attractorOffset.copy(_startPos).addScaledVector(constellationDir, FLIGHT_DISTANCE);
@@ -839,10 +962,11 @@ function updateRockDraw(dt) {
     const end = Math.min(rockPointIdx + ROCK_DRAW_PTS, rockPoints.length);
     for (let i = rockPointIdx; i < end; i++) {
         const p = rockPoints[i];
+        const pz = p.z || 0;
         pushPointWorld(trail,
-            rd.center.x + (p.x * rockRight.x + p.y * rockUp.x) * ROCK_SCALE,
-            rd.center.y + (p.x * rockRight.y + p.y * rockUp.y) * ROCK_SCALE,
-            rd.center.z + (p.x * rockRight.z + p.y * rockUp.z) * ROCK_SCALE
+            rd.center.x + (p.x * rockRight.x + p.y * rockUp.x + pz * rockFwd.x) * ROCK_SCALE,
+            rd.center.y + (p.x * rockRight.y + p.y * rockUp.y + pz * rockFwd.y) * ROCK_SCALE,
+            rd.center.z + (p.x * rockRight.z + p.y * rockUp.z + pz * rockFwd.z) * ROCK_SCALE
         );
     }
     rockPointIdx = end;
