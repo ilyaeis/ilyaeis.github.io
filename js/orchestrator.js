@@ -10,6 +10,7 @@ import {
     rk4Step, addJourneyTime, render, isPaused
 } from './attractors.js';
 import * as cam from './camera.js';
+import * as intro from './intro3d.js';
 import { generateTextLines, generateRockWithLabel } from './strokeFont.js';
 
 // ── Phase enum ─────────────────────────────────────────────────────
@@ -18,6 +19,7 @@ export const Phase = {
     TRANSITION_OUT: 1,
     ROCKET_HINT: 6,
     ROCKET_EXIT: 7,
+    ROCKET_STREAK: 12,
     VORTEX: 2,
     FLIGHT_TO_TEXT: 8,
     TEXT_DRAW: 9,
@@ -49,6 +51,18 @@ const vortexRight = new THREE.Vector3();
 const vortexUp = new THREE.Vector3();
 const vortexFwd = new THREE.Vector3(); // camera forward — gives depth to the spiral
 
+// Rocket streak — the trail line the rocket transforms into.
+// Quadratic Bezier: dashes straight toward P1, then bends to P2.
+const streakStart = new THREE.Vector3();
+const streakDir = new THREE.Vector3();
+const streakP1 = new THREE.Vector3();     // randomly placed mid point
+const streakP2 = new THREE.Vector3();     // randomly placed end point
+const vortexCenter = new THREE.Vector3(); // where the streak stops and the spiral grows
+
+// Scratch frame for random flight arcs
+const _arcRight = new THREE.Vector3();
+const _arcUp = new THREE.Vector3();
+
 // Where the current attractor is centered in world space
 const attractorOffset = new THREE.Vector3();
 
@@ -64,6 +78,7 @@ let attractorState = [0, 0, 0];
 // Text overlay state
 let textPoints = null;      // pre-generated 2D point array
 let textPointIdx = 0;       // index into textPoints
+let drawAcc = 0;            // fractional point budget (dt-based drawing speed)
 const textCenter = new THREE.Vector3();
 const textRight = new THREE.Vector3();   // camera-aligned right axis
 const textUp = new THREE.Vector3();      // camera-aligned up axis
@@ -71,6 +86,8 @@ const textDepartDir = new THREE.Vector3(); // saved departure direction
 const textLastPoint = new THREE.Vector3();
 let flightCameraDelay = 0;  // seconds to wait before camera follows flight
 const textFacePos = new THREE.Vector3(); // reused for camera face-on target
+let camAligned = false;     // once true, stop steering — user gets zoom/rotate
+let userDragging = false;   // true while the user holds a rotate/zoom gesture
 
 // Constellation state
 let constellationDone = false;
@@ -106,39 +123,64 @@ const ATTRACTOR_MIN_DRAW = 5.0;
 
 // Text overlay
 const TEXT_FLIGHT_DURATION = 2.5;     // flight to text center
-const TEXT_POINTS_PER_FRAME = 170;    // drawing speed (high density letters)
+const TEXT_POINTS_PER_SEC = 10200;    // drawing speed (≈170 pts/frame at 60 fps)
 const TEXT_SCALE = 0.22;              // world-space size of text (fits 3 lines in view)
 const TEXT_LINGER_CAMERA = 1.0;       // camera stays on text this long after drawing
 const TEXT_LINES = ['CREATIVE.', 'ADAPTIVE.', 'CURIOUS.'];
 
+// Stroke intensity — letter strokes render bold (>1 feeds the bloom),
+// pen-travel strokes (letter connectors, retraces) render faint
+const STROKE_INTENSITY = 1.5;
+const LINK_INTENSITY = 0.35;
+
 // Constellation (milestone rocks after Lorenz)
 const ROCK_SCALE = 0.4;              // world units per 2D unit
-const ROCK_DRAW_PTS = 110;           // points per frame when drawing rock + label
+const ROCK_POINTS_PER_SEC = 6600;    // drawing speed (≈110 pts/frame at 60 fps)
 const ROCK_FLIGHT_SPEED = 2.5;       // world units per second
+// offRight/offUp scatter each rock perpendicular to the flight line
+// (triangle layout, not a straight row)
 const MILESTONES = [
-    { label: 'GYMNASIUM', sublabel: 'RIGA', sizeFactor: 1.0,  seed: 42, distance: 8.0 },
-    { label: 'BACHELOR IN', sublabel: 'FINANCIAL ENGINEERING', sizeFactor: 0.55, seed: 73, distance: 7.0 },
-    { label: 'GIRAFFE360', sublabel: null,  sizeFactor: 0.35, seed: 17, distance: 5.0 },
+    { label: 'GYMNASIUM', sublabel: 'RIGA', sizeFactor: 1.0,  seed: 42, distance: 8.0, offRight: -1.5, offUp:  0.8 },
+    { label: 'BACHELOR IN', sublabel: 'FINANCIAL ENGINEERING', sizeFactor: 0.55, seed: 73, distance: 7.0, offRight:  1.8, offUp:  0.3 },
+    { label: 'GIRAFFE360', sublabel: null,  sizeFactor: 0.35, seed: 17, distance: 5.0, offRight: -0.5, offUp: -1.2 },
 ];
 
-// Rocket hint
-const ROCKET_FLY_DURATION = 3.0;   // matches CSS animation duration
-const ROCKET_EXIT_DURATION = 2.5;  // smooth loop + fly away
+// Rocket hint (3D rocket — see intro3d.js)
+const ROCKET_LAND_DURATION = intro.LAND_DURATION; // glide from idle loops to the bubble spot
+const ROCKET_MORPH_DURATION = intro.CHARGE_DURATION; // charge-up + smear
+
+// Rocket streak — the line shoots forward fast, decelerating
+// exponentially into the point where the vortex spiral grows
+const STREAK_SPEED = 16.0;      // initial speed, world units/s
+const STREAK_LENGTH = 4.5;      // total distance covered as it slows
+const STREAK_DURATION = 1.4;    // seconds until the spiral takes over
+const STREAK_SUBSTEPS = 24;     // trail points per frame along the streak
+const STREAK_FLASH = 0.8;       // extra HDR intensity while at full speed
+const VORTEX_VIEW_DIST = 1.2;   // camera settle distance from the spiral
 
 // DOM refs
 let tapPromptEl = null;
-let page1El = null;
-let socialEl = null;
 let rocketHintEl = null;
 
 // ── Init ───────────────────────────────────────────────────────────
 export function init() {
     tapPromptEl = document.querySelector('.tap-prompt');
-    page1El = document.querySelector('.page-1');
-    socialEl = document.querySelector('.social');
     rocketHintEl = document.getElementById('rocket-hint');
     trail = createTrailSystem();
+    intro.init(scene, camera);
     cam.init(controls);
+    // The moment the user grabs the view, stop any in-progress camera
+    // auto-alignment so it doesn't fight the drag
+    controls.addEventListener('start', () => {
+        userDragging = true;
+        if (!camAligned) {
+            camAligned = true;
+            if (phase === Phase.VORTEX) {
+                controls.autoRotateSpeed = ATTRACTORS[0].camera.azimuthSpeed;
+            }
+        }
+    });
+    controls.addEventListener('end', () => { userDragging = false; });
     showTapPrompt();
 }
 
@@ -151,6 +193,25 @@ function enterPhase(newPhase) {
     phase = newPhase;
     phaseTime = 0;
     phaseFirstFrame = true;
+}
+
+// ── Camera fit distance ────────────────────────────────────────────
+// Distance at which a drawn 2D point set (scaled to world units, centered
+// on the orbit target) fits inside the camera view, with a small margin.
+function computeFitDistance(points, scale) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of points) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+    }
+    // Content may be off-center (e.g. rock labels hang below) — size around origin
+    const w = 2 * Math.max(Math.abs(minX), Math.abs(maxX)) * scale;
+    const h = 2 * Math.max(Math.abs(minY), Math.abs(maxY)) * scale;
+    const tanV = Math.tan(camera.fov * Math.PI / 360);
+    const fit = 1.25 * Math.max((h / 2) / tanV, (w / 2) / (tanV * camera.aspect));
+    return THREE.MathUtils.clamp(fit, controls.minDistance, controls.maxDistance);
 }
 
 // ── Cubic Bezier evaluation ────────────────────────────────────────
@@ -166,7 +227,89 @@ function bezierPoint(t, out) {
     return out;
 }
 
+// Sub-stepped trail points along the active Bezier between prevT and t
+function drawBezierSegment(prevT, t) {
+    for (let i = 0; i < FLIGHT_POINTS_PER_FRAME; i++) {
+        const subT = prevT + (t - prevT) * (i / FLIGHT_POINTS_PER_FRAME);
+        bezierPoint(subT, _vec3);
+        pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
+    }
+}
+
+// ── 2D plane → world space ─────────────────────────────────────────
+// Map a flat stroke-font point onto a world-space plane spanned by a
+// right/up basis around a center.
+function planePointToWorld(out, center, right, up, scale, p) {
+    return out.set(
+        center.x + (p.x * right.x + p.y * up.x) * scale,
+        center.y + (p.x * right.y + p.y * up.y) * scale,
+        center.z + (p.x * right.z + p.y * up.z) * scale
+    );
+}
+
+// Push the next dt-budgeted batch of 2D stroke points mapped onto a
+// plane. Bold letter strokes bloom, pen-travel links render faint.
+// Returns the new index into points.
+function drawStrokePoints(points, idx, pointsPerSec, dt, center, right, up, scale) {
+    drawAcc += pointsPerSec * dt;
+    const budget = Math.floor(drawAcc);
+    drawAcc -= budget;
+    const end = Math.min(idx + budget, points.length);
+    for (let i = idx; i < end; i++) {
+        const p = points[i];
+        trail.pointIntensity = p.c === 0 ? LINK_INTENSITY : STROKE_INTENSITY;
+        planePointToWorld(_vec3, center, right, up, scale, p);
+        pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
+    }
+    return end;
+}
+
+// ── Face-on camera alignment ───────────────────────────────────────
+// Aim the camera at a drawn point set: compute the face-on position
+// (beginFaceAlign, once per phase) then ease toward it each frame
+// (stepFaceAlign) until arrival — unless the user already took over.
+function beginFaceAlign(center, dir, points, scale) {
+    const dist = computeFitDistance(points, scale);
+    textFacePos.copy(center).addScaledVector(dir, -dist);
+    camAligned = userDragging; // user already in control → don't steer
+}
+
+// Returns true on the frame the camera arrives (settles)
+function stepFaceAlign(dt, speed = 2.5) {
+    if (camAligned) return false;
+    camera.position.lerp(textFacePos, 1 - Math.exp(-speed * dt));
+    if (camera.position.distanceToSquared(textFacePos) < 0.0025) {
+        camAligned = true;
+        return true;
+    }
+    return false;
+}
+
+// ── Attractor departure ────────────────────────────────────────────
+// Direction the attractor point is heading + its tip in world space
+function getAttractorDeparture(dirOut, posOut) {
+    const attr = ATTRACTORS[attractorIndex];
+    const s = attractorState;
+    const derivs = attr.derivatives(s[0], s[1], s[2], attr.params);
+    dirOut.set(
+        derivs[0] * attr.scale,
+        derivs[1] * attr.scale,
+        derivs[2] * attr.scale
+    ).normalize();
+    posOut.set(
+        (s[0] - attr.center[0]) * attr.scale + attractorOffset.x,
+        (s[1] - attr.center[1]) * attr.scale + attractorOffset.y,
+        (s[2] - attr.center[2]) * attr.scale + attractorOffset.z
+    );
+}
+
+// ── Random helpers for flight-path variety ─────────────────────────
+function rand(min, max) { return min + Math.random() * (max - min); }
+function randSign() { return Math.random() < 0.5 ? -1 : 1; }
+
 // ── Setup a flight curve from a start position + direction to a target ──
+// Every transition swoops like the meteor flights: the control points
+// get random perpendicular offsets so no two flights arc the same way.
 function setupFlightCurve(startPos, startDir, targetPos) {
     bezP0.copy(startPos);
     bezP3.copy(targetPos);
@@ -179,6 +322,17 @@ function setupFlightCurve(startPos, startDir, targetPos) {
     // (pull back from target along the overall flight vector)
     _vec3.copy(targetPos).sub(startPos).normalize();
     bezP2.copy(_vec3).multiplyScalar(-dist * 0.3).add(targetPos);
+
+    // Random sideways arc — perpendicular frame around the flight vector
+    _arcRight.crossVectors(_vec3, camera.up);
+    if (_arcRight.lengthSq() < 1e-6) _arcRight.set(1, 0, 0);
+    _arcRight.normalize();
+    _arcUp.crossVectors(_arcRight, _vec3).normalize();
+    const sign = randSign();
+    bezP1.addScaledVector(_arcRight, sign * dist * rand(0.15, 0.3));
+    bezP1.addScaledVector(_arcUp, randSign() * dist * rand(0.05, 0.15));
+    bezP2.addScaledVector(_arcRight, -sign * dist * rand(0.1, 0.2));
+    bezP2.addScaledVector(_arcUp, randSign() * dist * rand(0.04, 0.1));
 }
 
 // ── Attractor integration at offset ────────────────────────────────
@@ -211,12 +365,14 @@ export function update(dt) {
     if (isPaused()) return;
     totalTime += dt;
     addJourneyTime(dt);
+    intro.update(dt, totalTime);
 
     switch (phase) {
         case Phase.INTRO:           updateIntro(dt); break;
         case Phase.TRANSITION_OUT:  updateTransitionOut(dt); break;
         case Phase.ROCKET_HINT:     updateRocketHint(dt); break;
         case Phase.ROCKET_EXIT:     updateRocketExit(dt); break;
+        case Phase.ROCKET_STREAK:   updateRocketStreak(dt); break;
         case Phase.VORTEX:          updateVortex(dt); break;
         case Phase.FLIGHT_TO_TEXT:  updateFlightToText(dt); break;
         case Phase.TEXT_DRAW:       updateTextDraw(dt); break;
@@ -251,22 +407,8 @@ function updateIntro(dt) {
 function updateTransitionOut(dt) {
     if (phaseFirstFrame) {
         phaseFirstFrame = false;
-        page1El.classList.add('fade-out');
-
-        const firstRect = socialEl.getBoundingClientRect();
-        socialEl.classList.add('corner');
-        const lastRect = socialEl.getBoundingClientRect();
-        const dx = firstRect.left - lastRect.left;
-        const dy = firstRect.top - lastRect.top;
-        socialEl.style.transform = `translate(${dx}px, ${dy}px)`;
-        socialEl.getBoundingClientRect();
-        socialEl.style.transition = 'transform 0.6s ease';
-        socialEl.style.transform = 'translate(0, 0)';
-        socialEl.addEventListener('transitionend', function cleanup() {
-            socialEl.removeEventListener('transitionend', cleanup);
-            socialEl.style.transition = '';
-            socialEl.style.transform = '';
-        });
+        // 3D text fades and shrinks away; LinkedIn icon glides to corner
+        intro.startExit();
     }
 
     if (phaseTime >= 0.8) {
@@ -288,22 +430,23 @@ function updateRocketHint(dt) {
         bubble.style.opacity = '';
         rocketHintEl.style.visibility = '';
         rocketHintEl.style.opacity = '';
-        // Center rocket + bubble on screen
-        const rocketW = 32; // ~2rem
-        const totalW = rocketW + 48 + bubbleW; // icon + 3rem gap + bubble
+        // Center rocket + bubble on screen; the hint element anchors
+        // the bubble, the 3D rocket lands just to its left
+        const rocketW = 60; // ~3D rocket on screen, px
+        const totalW = rocketW + 16 + bubbleW;
         const landLeft = (window.innerWidth - totalW) / 2;
-        rocketHintEl.style.setProperty('--land-left', landLeft + 'px');
-        rocketHintEl.classList.add('flying');
+        rocketHintEl.style.setProperty('--land-left', (landLeft + rocketW + 16) + 'px');
+        intro.setRocketLanding(landLeft + rocketW / 2, window.innerHeight / 2);
     }
 
-    // After flight animation completes, show the bubble
-    if (phaseTime >= ROCKET_FLY_DURATION && !rocketHintEl.classList.contains('arrived')) {
+    // Once the rocket has landed, show the bubble
+    if (phaseTime >= ROCKET_LAND_DURATION && !rocketHintEl.classList.contains('arrived')) {
         rocketHintEl.classList.add('arrived');
         showTapPrompt();
     }
 
     // Wait for tap after bubble is visible
-    const canAdvance = phaseTime >= ROCKET_FLY_DURATION + 0.5;
+    const canAdvance = phaseTime >= ROCKET_LAND_DURATION + 0.5;
     if (tapPending && canAdvance) {
         tapPending = false;
         hideTapPrompt();
@@ -311,40 +454,108 @@ function updateRocketHint(dt) {
     }
 }
 
-// ── ROCKET_EXIT ───────────────────────────────────────────────────
+// ── ROCKET_EXIT (3D rocket charges up, smears into a line) ────────
 function updateRocketExit(dt) {
     if (phaseFirstFrame) {
         phaseFirstFrame = false;
-        rocketHintEl.classList.remove('arrived', 'flying');
-        void rocketHintEl.offsetWidth;
-        rocketHintEl.classList.add('exiting');
+        rocketHintEl.classList.remove('arrived'); // bubble away
+        intro.setRocketCharging();
     }
 
-    if (phaseTime >= ROCKET_EXIT_DURATION) {
-        rocketHintEl.classList.remove('exiting');
-        rocketHintEl.style.visibility = 'hidden';
-        rocketHintEl.style.opacity = '';
+    if (phaseTime >= ROCKET_MORPH_DURATION) {
+        // The rocket has smeared into a line — hand off to the trail,
+        // starting exactly at the stretched rocket's tip
+        intro.getRocketTipWorld(streakStart);
+        intro.hideRocket();
 
-        // Set up vortex
-        worldPos.set(0, 0, 0);
-        attractorOffset.set(0, 0, 0);
+        // Shoot forward into the scene drifting right — on screen this
+        // continues the rocket's straight horizontal dash
+        camera.getWorldDirection(streakDir);
+        _vec3.crossVectors(streakDir, camera.up).normalize();
+        streakDir.addScaledVector(_vec3, 0.55).normalize();
+
+        // Two randomly placed points shape the streak's path (quadratic
+        // Bezier): P1 sits straight ahead so the launch dash stays true,
+        // P2 pulls the tail into a random curve where the spiral grows
+        streakP1.copy(streakStart)
+            .addScaledVector(streakDir, STREAK_LENGTH * rand(0.45, 0.6));
+        streakP2.copy(streakStart).addScaledVector(streakDir, STREAK_LENGTH);
+        streakP2.addScaledVector(_vec3, randSign() * STREAK_LENGTH * rand(0.15, 0.35));
+        streakP2.addScaledVector(camera.up, randSign() * STREAK_LENGTH * rand(0.1, 0.25));
+
         trail.attractorIdx = 0;
         trail.fade = 1;
         clearTrail(trail);
         addTrailToScene(trail);
-        pushPointWorld(trail, 0, 0, 0);
+        pushPointWorld(trail, streakStart.x, streakStart.y, streakStart.z);
+
+        cam.setMode(cam.Mode.FOLLOW, controls);
+        enterPhase(Phase.ROCKET_STREAK);
+    }
+}
+
+// ── ROCKET_STREAK (line shoots forward fast, then slows down) ─────
+
+// Quadratic Bezier through streakStart → P1 → P2
+function streakPos(u, out) {
+    const a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c = u * u;
+    out.set(
+        a * streakStart.x + b * streakP1.x + c * streakP2.x,
+        a * streakStart.y + b * streakP1.y + c * streakP2.y,
+        a * streakStart.z + b * streakP1.z + c * streakP2.z
+    );
+    return out;
+}
+
+function updateRocketStreak(dt) {
+    // Exponential deceleration: v(t) = V0·e^(−kt) maps onto the curve
+    // parameter, so the line dashes fast and eases into the bend
+    const k = STREAK_SPEED / STREAK_LENGTH;
+    const t = Math.min(phaseTime, STREAK_DURATION);
+    const prevT = Math.max(0, t - dt);
+
+    for (let i = 1; i <= STREAK_SUBSTEPS; i++) {
+        const st = prevT + (t - prevT) * (i / STREAK_SUBSTEPS);
+        const decay = Math.exp(-k * st);
+        // Brilliant while at full speed, settling to normal as it slows
+        trail.pointIntensity = 1 + STREAK_FLASH * decay;
+        streakPos(1 - decay, _vec3);
+        pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
+    }
+
+    streakPos(1 - Math.exp(-k * t), worldPos);
+
+    if (phaseTime >= STREAK_DURATION) {
+        trail.pointIntensity = 1.0;
+        // Arrival tangent of the curve — the spiral faces back along it
+        streakDir.copy(streakP2).sub(streakP1).normalize();
+        vortexCenter.copy(worldPos);
+        attractorOffset.copy(vortexCenter);
+
+        cam.setMode(cam.Mode.ORBIT, controls);
+        cam.setOrbitCenter(vortexCenter.x, vortexCenter.y, vortexCenter.z);
+        controls.autoRotateSpeed = 0; // restored once the camera settles
         enterPhase(Phase.VORTEX);
     }
 }
 
 // ── VORTEX ─────────────────────────────────────────────────────────
 function updateVortex(dt) {
-    // Capture camera basis ONCE on first frame
+    // Build spiral basis ONCE on first frame — the spiral plane faces
+    // back along the streak, where the camera is gliding in from
     if (phaseFirstFrame) {
         phaseFirstFrame = false;
-        camera.getWorldDirection(vortexFwd);
+        vortexFwd.copy(streakDir);
         vortexRight.crossVectors(vortexFwd, camera.up).normalize();
         vortexUp.crossVectors(vortexRight, vortexFwd).normalize();
+
+        textFacePos.copy(vortexCenter).addScaledVector(streakDir, -VORTEX_VIEW_DIST);
+        camAligned = userDragging; // user already in control → don't steer
+    }
+
+    // Camera chases the streak's end point, then hands control back
+    if (stepFaceAlign(dt, 2.0)) {
+        controls.autoRotateSpeed = ATTRACTORS[0].camera.azimuthSpeed;
     }
 
     const t = phaseTime;
@@ -371,9 +582,9 @@ function updateVortex(dt) {
         const cosT = Math.cos(theta);
         const sinT = Math.sin(theta);
         return [
-            r * (cosT * rx + sinT * vortexUp.x),
-            r * (cosT * ry + sinT * vortexUp.y),
-            r * (cosT * rz + sinT * vortexUp.z)
+            vortexCenter.x + r * (cosT * rx + sinT * vortexUp.x),
+            vortexCenter.y + r * (cosT * ry + sinT * vortexUp.y),
+            vortexCenter.z + r * (cosT * rz + sinT * vortexUp.z)
         ];
     }
 
@@ -412,6 +623,7 @@ function updateVortex(dt) {
         const { points } = generateTextLines(TEXT_LINES);
         textPoints = points;
         textPointIdx = 0;
+        drawAcc = 0;
 
         trail.attractorIdx = attractorIndex; // use Lorenz palette for text
         trail.drawTime = 0;
@@ -426,13 +638,7 @@ function updateFlightToText(dt) {
     const t = Math.min(phaseTime / TEXT_FLIGHT_DURATION, 1);
     const prevT = Math.max(0, (phaseTime - dt) / TEXT_FLIGHT_DURATION);
 
-    for (let i = 0; i < FLIGHT_POINTS_PER_FRAME; i++) {
-        const frac = i / FLIGHT_POINTS_PER_FRAME;
-        const subT = prevT + (t - prevT) * frac;
-        bezierPoint(subT, _vec3);
-        pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
-    }
-
+    drawBezierSegment(prevT, t);
     bezierPoint(t, worldPos);
 
     if (t >= 1) {
@@ -452,29 +658,22 @@ function updateFlightToText(dt) {
 
 // ── TEXT_DRAW (trace "CREATIVE" with camera aligning during draw) ──
 function updateTextDraw(dt) {
-    // Compute face-on camera target on first frame
+    // Smoothly align camera to face text DURING drawing, then hand
+    // control back so the user can zoom/rotate freely
     if (phaseFirstFrame) {
         phaseFirstFrame = false;
-        const dist = camera.position.distanceTo(textCenter);
-        textFacePos.copy(textCenter).addScaledVector(textDepartDir, -dist);
+        beginFaceAlign(textCenter, textDepartDir, textPoints, TEXT_SCALE);
     }
-
-    // Smoothly align camera to face text DURING drawing
-    const camSpeed = 2.0;
-    const camFactor = 1 - Math.exp(-camSpeed * dt);
-    camera.position.lerp(textFacePos, camFactor);
+    stepFaceAlign(dt);
 
     // All points drawn → launch to attractor
-    if (!textPoints || textPointIdx >= textPoints.length) {
+    if (textPointIdx >= textPoints.length) {
         trail.colorFreezeIdx = trail.pointCount;
+        trail.pointIntensity = 1.0;
 
-        if (textPoints && textPoints.length > 0) {
+        if (textPoints.length > 0) {
             const lp = textPoints[textPoints.length - 1];
-            textLastPoint.set(
-                textCenter.x + (lp.x * textRight.x + lp.y * textUp.x) * TEXT_SCALE,
-                textCenter.y + (lp.x * textRight.y + lp.y * textUp.y) * TEXT_SCALE,
-                textCenter.z + (lp.x * textRight.z + lp.y * textUp.z) * TEXT_SCALE
-            );
+            planePointToWorld(textLastPoint, textCenter, textRight, textUp, TEXT_SCALE, lp);
         } else {
             textLastPoint.copy(textCenter);
         }
@@ -494,17 +693,9 @@ function updateTextDraw(dt) {
         return;
     }
 
-    // Push the next batch of text points
-    const end = Math.min(textPointIdx + TEXT_POINTS_PER_FRAME, textPoints.length);
-    for (let i = textPointIdx; i < end; i++) {
-        const p = textPoints[i];
-        pushPointWorld(trail,
-            textCenter.x + (p.x * textRight.x + p.y * textUp.x) * TEXT_SCALE,
-            textCenter.y + (p.x * textRight.y + p.y * textUp.y) * TEXT_SCALE,
-            textCenter.z + (p.x * textRight.z + p.y * textUp.z) * TEXT_SCALE
-        );
-    }
-    textPointIdx = end;
+    // Push the next batch of text points (dt-based, frame-rate independent)
+    textPointIdx = drawStrokePoints(textPoints, textPointIdx, TEXT_POINTS_PER_SEC, dt,
+        textCenter, textRight, textUp, TEXT_SCALE);
 
     worldPos.copy(textCenter);
 }
@@ -520,15 +711,8 @@ function updateFlight(dt) {
     const t = Math.min(phaseTime / FLIGHT_DURATION, 1);
     const prevT = Math.max(0, (phaseTime - dt) / FLIGHT_DURATION);
 
-    // Push points along the Bezier curve
-    for (let i = 0; i < FLIGHT_POINTS_PER_FRAME; i++) {
-        const frac = i / FLIGHT_POINTS_PER_FRAME;
-        const subT = prevT + (t - prevT) * frac;
-        bezierPoint(subT, _vec3);
-        pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
-    }
-
-    // Camera follows the curve tip
+    // Push points along the Bezier curve; camera follows the tip
+    drawBezierSegment(prevT, t);
     bezierPoint(t, worldPos);
 
     // Blend attractor in during the last portion of the flight
@@ -565,7 +749,7 @@ function updateAttractorDraw(dt) {
     if (tapPending && phaseTime >= ATTRACTOR_MIN_DRAW) {
         tapPending = false;
         hideTapPrompt();
-        if (attractorIndex === 0 && !constellationDone) {
+        if (ATTRACTORS[attractorIndex].milestones && !constellationDone) {
             setupConstellation();
             enterPhase(Phase.ROCK_FLIGHT);
         } else {
@@ -576,23 +760,7 @@ function updateAttractorDraw(dt) {
 
 // ── LAUNCH_FROM_ATTRACTOR ──────────────────────────────────────────
 function updateLaunchFromAttractor(dt) {
-    const attr = ATTRACTORS[attractorIndex];
-    const s = attractorState;
-
-    // Get the direction the attractor point was last heading
-    const derivs = attr.derivatives(s[0], s[1], s[2], attr.params);
-    _dir.set(
-        derivs[0] * attr.scale,
-        derivs[1] * attr.scale,
-        derivs[2] * attr.scale
-    ).normalize();
-
-    // Start position = attractor tip in world space
-    _startPos.set(
-        (s[0] - attr.center[0]) * attr.scale + attractorOffset.x,
-        (s[1] - attr.center[1]) * attr.scale + attractorOffset.y,
-        (s[2] - attr.center[2]) * attr.scale + attractorOffset.z
-    );
+    getAttractorDeparture(_dir, _startPos);
 
     // Target = fly FLIGHT_DISTANCE away in the departure direction
     _targetPos.copy(_startPos).addScaledVector(_dir, FLIGHT_DISTANCE);
@@ -619,23 +787,7 @@ function updateLaunchFromAttractor(dt) {
 
 // ── CONSTELLATION: setup ──────────────────────────────────────────
 function setupConstellation() {
-    const attr = ATTRACTORS[attractorIndex];
-    const s = attractorState;
-
-    // Departure direction from attractor tip
-    const derivs = attr.derivatives(s[0], s[1], s[2], attr.params);
-    constellationDir.set(
-        derivs[0] * attr.scale,
-        derivs[1] * attr.scale,
-        derivs[2] * attr.scale
-    ).normalize();
-
-    // Start position = attractor tip in world space
-    _startPos.set(
-        (s[0] - attr.center[0]) * attr.scale + attractorOffset.x,
-        (s[1] - attr.center[1]) * attr.scale + attractorOffset.y,
-        (s[2] - attr.center[2]) * attr.scale + attractorOffset.z
-    );
+    getAttractorDeparture(constellationDir, _startPos);
 
     // Freeze trail colors
     trail.colorFreezeIdx = trail.pointCount;
@@ -644,23 +796,16 @@ function setupConstellation() {
     rockRight.crossVectors(constellationDir, camera.up).normalize();
     rockUp.crossVectors(rockRight, constellationDir).normalize();
 
-    // Pre-generate all rock data — triangle layout (not a straight line)
-    // Offsets perpendicular to flight direction for each rock
-    const triOffsets = [
-        { right: -1.5, up:  0.8 },   // top-left
-        { right:  1.8, up:  0.3 },   // right
-        { right: -0.5, up: -1.2 },   // bottom-left
-    ];
+    // Pre-generate all rock data — each milestone's right/up offsets
+    // scatter the rocks around the flight line (triangle layout)
     rockDataArray = [];
     let cumDist = 0;
-    for (let mi = 0; mi < MILESTONES.length; mi++) {
-        const ms = MILESTONES[mi];
+    for (const ms of MILESTONES) {
         cumDist += ms.distance;
-        const off = triOffsets[mi];
         const center = _startPos.clone()
             .addScaledVector(constellationDir, cumDist)
-            .addScaledVector(rockRight, off.right)
-            .addScaledVector(rockUp, off.up);
+            .addScaledVector(rockRight, ms.offRight)
+            .addScaledVector(rockUp, ms.offUp);
         const { points, outlineCount } = generateRockWithLabel(
             ms.sizeFactor, ms.seed, ms.label, ms.sublabel
         );
@@ -670,14 +815,13 @@ function setupConstellation() {
     // Create grey preview outlines for all rocks
     greyRockLines = [];
     for (const rd of rockDataArray) {
-        const pts = rd.points;
         const n = rd.outlineCount;
         const positions = new Float32Array(n * 3);
         for (let i = 0; i < n; i++) {
-            const p = pts[i];
-            positions[i * 3]     = rd.center.x + (p.x * rockRight.x + p.y * rockUp.x) * ROCK_SCALE;
-            positions[i * 3 + 1] = rd.center.y + (p.x * rockRight.y + p.y * rockUp.y) * ROCK_SCALE;
-            positions[i * 3 + 2] = rd.center.z + (p.x * rockRight.z + p.y * rockUp.z) * ROCK_SCALE;
+            planePointToWorld(_vec3, rd.center, rockRight, rockUp, ROCK_SCALE, rd.points[i]);
+            positions[i * 3]     = _vec3.x;
+            positions[i * 3 + 1] = _vec3.y;
+            positions[i * 3 + 2] = _vec3.z;
         }
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -724,13 +868,7 @@ function updateRockFlight(dt) {
     const t = Math.min(phaseTime / rockFlightDuration, 1);
     const prevT = Math.max(0, (phaseTime - dt) / rockFlightDuration);
 
-    for (let i = 0; i < FLIGHT_POINTS_PER_FRAME; i++) {
-        const frac = i / FLIGHT_POINTS_PER_FRAME;
-        const subT = prevT + (t - prevT) * frac;
-        bezierPoint(subT, _vec3);
-        pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
-    }
-
+    drawBezierSegment(prevT, t);
     bezierPoint(t, worldPos);
 
     if (t >= 1) {
@@ -738,6 +876,7 @@ function updateRockFlight(dt) {
         const rd = rockDataArray[rockIdx];
         rockPoints = rd.points;
         rockPointIdx = 0;
+        drawAcc = 0;
 
         // Camera orbits rock center
         cam.setMode(cam.Mode.ORBIT, controls);
@@ -748,21 +887,27 @@ function updateRockFlight(dt) {
     }
 }
 
+// Remove + dispose one grey preview line
+function removeGreyRock(i) {
+    const gl = greyRockLines[i];
+    if (!gl) return;
+    scene.remove(gl);
+    gl.geometry.dispose();
+    gl.material.dispose();
+    greyRockLines[i] = null;
+}
+
 // ── ROCK_DRAW (trace rock outline + label, camera aligns during) ──
 function updateRockDraw(dt) {
     const rd = rockDataArray[rockIdx];
 
-    // Compute face-on camera target on first frame
+    // Smoothly align camera to face rock DURING drawing, then hand
+    // control back so the user can zoom/rotate freely
     if (phaseFirstFrame) {
         phaseFirstFrame = false;
-        const dist = camera.position.distanceTo(rd.center);
-        textFacePos.copy(rd.center).addScaledVector(constellationDir, -dist);
+        beginFaceAlign(rd.center, constellationDir, rd.points, ROCK_SCALE);
     }
-
-    // Smoothly align camera to face rock DURING drawing
-    const camSpeed = 2.5;
-    const camFactor = 1 - Math.exp(-camSpeed * dt);
-    camera.position.lerp(textFacePos, camFactor);
+    stepFaceAlign(dt);
 
     // Fade grey preview as colored outline is drawn
     if (greyRockLines[rockIdx]) {
@@ -770,28 +915,22 @@ function updateRockDraw(dt) {
             const progress = rockPointIdx / rd.outlineCount;
             greyRockLines[rockIdx].material.opacity = 0.3 * (1 - progress);
         } else {
-            scene.remove(greyRockLines[rockIdx]);
-            greyRockLines[rockIdx].geometry.dispose();
-            greyRockLines[rockIdx].material.dispose();
-            greyRockLines[rockIdx] = null;
+            removeGreyRock(rockIdx);
         }
     }
 
     // All points drawn → advance
-    if (!rockPoints || rockPointIdx >= rockPoints.length) {
+    if (rockPointIdx >= rockPoints.length) {
         trail.colorFreezeIdx = trail.pointCount;
+        trail.pointIntensity = 1.0;
+
+        // Depart from the last drawn point of this rock
+        planePointToWorld(_startPos, rd.center, rockRight, rockUp, ROCK_SCALE,
+            rockPoints[rockPoints.length - 1]);
         rockIdx++;
 
         if (rockIdx < rockDataArray.length) {
             // Curved flight to next rock
-            const prevRock = rockDataArray[rockIdx - 1];
-            const lastPt = rockPoints[rockPoints.length - 1];
-            _startPos.set(
-                prevRock.center.x + (lastPt.x * rockRight.x + lastPt.y * rockUp.x) * ROCK_SCALE,
-                prevRock.center.y + (lastPt.x * rockRight.y + lastPt.y * rockUp.y) * ROCK_SCALE,
-                prevRock.center.z + (lastPt.x * rockRight.z + lastPt.y * rockUp.z) * ROCK_SCALE
-            );
-
             rockFlightDuration = MILESTONES[rockIdx].distance / ROCK_FLIGHT_SPEED;
             setupCurvedRockFlight(_startPos, rockDataArray[rockIdx].center, rockIdx);
             worldPos.copy(_startPos);
@@ -803,9 +942,7 @@ function updateRockDraw(dt) {
             constellationDone = true;
 
             // Clean up remaining grey rocks
-            for (const gl of greyRockLines) {
-                if (gl) { scene.remove(gl); gl.geometry.dispose(); gl.material.dispose(); }
-            }
+            for (let i = 0; i < greyRockLines.length; i++) removeGreyRock(i);
             greyRockLines = [];
 
             // Advance to next attractor (Rössler)
@@ -814,15 +951,6 @@ function updateRockDraw(dt) {
             attractorState = [...nextAttr.initialCondition];
             trail.attractorIdx = attractorIndex;
             trail.drawTime = 0;
-
-            // Depart from last drawn point
-            const lastRock = rockDataArray[rockDataArray.length - 1];
-            const lp = rockPoints[rockPoints.length - 1];
-            _startPos.set(
-                lastRock.center.x + (lp.x * rockRight.x + lp.y * rockUp.x) * ROCK_SCALE,
-                lastRock.center.y + (lp.x * rockRight.y + lp.y * rockUp.y) * ROCK_SCALE,
-                lastRock.center.z + (lp.x * rockRight.z + lp.y * rockUp.z) * ROCK_SCALE
-            );
 
             attractorOffset.copy(_startPos).addScaledVector(constellationDir, FLIGHT_DISTANCE);
             setupFlightCurve(_startPos, constellationDir, attractorOffset);
@@ -835,17 +963,9 @@ function updateRockDraw(dt) {
         return;
     }
 
-    // Push rock + label points this frame
-    const end = Math.min(rockPointIdx + ROCK_DRAW_PTS, rockPoints.length);
-    for (let i = rockPointIdx; i < end; i++) {
-        const p = rockPoints[i];
-        pushPointWorld(trail,
-            rd.center.x + (p.x * rockRight.x + p.y * rockUp.x) * ROCK_SCALE,
-            rd.center.y + (p.x * rockRight.y + p.y * rockUp.y) * ROCK_SCALE,
-            rd.center.z + (p.x * rockRight.z + p.y * rockUp.z) * ROCK_SCALE
-        );
-    }
-    rockPointIdx = end;
+    // Push rock + label points this frame (dt-based, frame-rate independent)
+    rockPointIdx = drawStrokePoints(rockPoints, rockPointIdx, ROCK_POINTS_PER_SEC, dt,
+        rd.center, rockRight, rockUp, ROCK_SCALE);
 
     worldPos.copy(rd.center);
 }

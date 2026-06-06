@@ -36,7 +36,8 @@ export const ATTRACTORS = [
         center: [-0.08, -0.08, 23.56],
         initialCondition: [0.1, 0, 0],
         palette: [new THREE.Color(0xffbf00), new THREE.Color(0xff8800), new THREE.Color(0xdd3300)],
-        camera: { radius: 1.2, elevation: 0.5, azimuthSpeed: 0.7 }
+        camera: { radius: 1.2, elevation: 0.5, azimuthSpeed: 0.7 },
+        milestones: true // constellation detour after this attractor (MILESTONES in orchestrator.js)
     },
     {
         name: 'rossler',
@@ -166,6 +167,7 @@ export function createTrailSystem() {
     const positions = new Float32Array(MAX_POINTS * 3);
     const alphas = new Float32Array(MAX_POINTS);
     const colors = new Float32Array(MAX_POINTS * 3);
+    const intensities = new Float32Array(MAX_POINTS);
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -204,7 +206,7 @@ export function createTrailSystem() {
     glowPoint.frustumCulled = false;
 
     return {
-        positions, alphas, colors,
+        positions, alphas, colors, intensities,
         pointCount: 0,
         geometry, material, line,
         glowGeometry, glowMaterial, glowPoint,
@@ -213,7 +215,8 @@ export function createTrailSystem() {
         fade: 1.0,
         inScene: false,
         drawTime: 0,
-        colorFreezeIdx: 0  // points before this index keep their baked colors
+        colorFreezeIdx: 0,  // points before this index keep their baked colors
+        pointIntensity: 1.0 // brightness multiplier applied to newly pushed points
     };
 }
 
@@ -240,6 +243,97 @@ export function getPaletteColor(palette, t) {
 }
 
 // ── Scene Setup ────────────────────────────────────────────────────
+// ── 3D Starfield ───────────────────────────────────────────────────
+// Stars wrap inside a large cube that follows the scene center, then get
+// re-projected onto a shell around it (done in the vertex shader) so they
+// always sit 1x-10x the camera-to-scene distance away — far behind the
+// scene, never near it. The field stays infinite as the journey travels.
+const STAR_COUNT = isMobile ? 700 : 1400;
+const STAR_FIELD_SIZE = 40.0;
+let starPoints = null;
+
+function createStarfield() {
+    const positions = new Float32Array(STAR_COUNT * 3);
+    const params = new Float32Array(STAR_COUNT * 3); // phase, twinkle speed, max opacity
+    const sizes = new Float32Array(STAR_COUNT);
+    for (let i = 0; i < STAR_COUNT; i++) {
+        positions[i * 3]     = (Math.random() - 0.5) * STAR_FIELD_SIZE;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * STAR_FIELD_SIZE;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * STAR_FIELD_SIZE;
+        params[i * 3]     = Math.random() * Math.PI * 2;
+        params[i * 3 + 1] = 0.3 + Math.random() * 1.2;
+        params[i * 3 + 2] = 0.15 + Math.random() * 0.35;
+        sizes[i] = 1.5 + Math.random() * 2.5;
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('aParam', new THREE.BufferAttribute(params, 3));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+
+    const mat = new THREE.ShaderMaterial({
+        uniforms: {
+            uTime: { value: 0 },
+            uCamPos: { value: new THREE.Vector3() },
+            uSceneCenter: { value: new THREE.Vector3() },
+            uSceneDist: { value: 1.2 },
+            uFieldSize: { value: STAR_FIELD_SIZE },
+            uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO) }
+        },
+        vertexShader: `
+            uniform float uTime;
+            uniform vec3 uCamPos;
+            uniform vec3 uSceneCenter;
+            uniform float uSceneDist;
+            uniform float uFieldSize;
+            uniform float uPixelRatio;
+            attribute vec3 aParam;
+            attribute float aSize;
+            varying float vAlpha;
+            void main() {
+                // Wrap the star into a cube centered on the scene
+                vec3 q = mod(position - uSceneCenter + 0.5 * uFieldSize, uFieldSize) - 0.5 * uFieldSize;
+                float d = length(q);
+                // Re-project onto a shell around the scene center so stars
+                // always sit 100%-1000% of the camera-to-scene distance away
+                float t = clamp(d / (0.866 * uFieldSize), 0.0, 1.0);
+                float r = uSceneDist * mix(1.0, 10.0, t);
+                vec3 wp = uSceneCenter + (q / max(d, 1e-4)) * r;
+                vec4 mv = viewMatrix * vec4(wp, 1.0);
+
+                float tw = 0.55 + 0.45 * sin(uTime * aParam.y + aParam.x);
+                // Fade stars passing close to the camera (no giant blobs)
+                // and ones near the wrap boundary (hides recenter pops)
+                float nearFade = smoothstep(0.25 * uSceneDist, 0.75 * uSceneDist, distance(wp, uCamPos));
+                float farFade = 1.0 - smoothstep(0.85, 0.98, t);
+                vAlpha = aParam.z * tw * nearFade * farFade;
+
+                // Size relative to the scene distance, so stars keep the
+                // same apparent size whatever the zoom level is
+                gl_PointSize = clamp(aSize * uPixelRatio * 2.4 * uSceneDist / max(-mv.z, 0.001),
+                                     1.0 * uPixelRatio, 7.0 * uPixelRatio);
+                gl_Position = projectionMatrix * mv;
+            }
+        `,
+        fragmentShader: `
+            varying float vAlpha;
+            void main() {
+                float r = length(gl_PointCoord - 0.5) * 2.0;
+                float a = smoothstep(1.0, 0.25, r) * vAlpha;
+                gl_FragColor = vec4(vec3(1.0), a);
+            }
+        `,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+    });
+
+    starPoints = new THREE.Points(geo, mat);
+    starPoints.frustumCulled = false;
+    starPoints.renderOrder = -1; // behind the trail
+    scene.add(starPoints);
+}
+
 export function initScene(canvas) {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -280,6 +374,8 @@ export function initScene(canvas) {
     controls.autoRotate = true;
     controls.autoRotateSpeed = ATTRACTORS[0].camera.azimuthSpeed;
     controls.target.set(0, 0, 0);
+
+    createStarfield();
 }
 
 // ── Trail helpers ──────────────────────────────────────────────────
@@ -301,6 +397,7 @@ export function clearTrail(trail) {
     trail.pointCount = 0;
     trail.drawTime = 0;
     trail.colorFreezeIdx = 0;
+    trail.pointIntensity = 1.0;
     trail.geometry.setDrawRange(0, 0);
 }
 
@@ -315,16 +412,19 @@ export function pushPoint(trail, x, y, z, scale, center) {
         trail.positions[i3] = sx;
         trail.positions[i3 + 1] = sy;
         trail.positions[i3 + 2] = sz;
+        trail.intensities[trail.pointCount] = trail.pointIntensity;
         trail.pointCount++;
     } else {
         trail.positions.copyWithin(0, 3, trail.pointCount * 3);
         trail.colors.copyWithin(0, 3, trail.pointCount * 3);
         trail.alphas.copyWithin(0, 1, trail.pointCount);
+        trail.intensities.copyWithin(0, 1, trail.pointCount);
         if (trail.colorFreezeIdx > 0) trail.colorFreezeIdx--;
         const i3 = (trail.pointCount - 1) * 3;
         trail.positions[i3] = sx;
         trail.positions[i3 + 1] = sy;
         trail.positions[i3 + 2] = sz;
+        trail.intensities[trail.pointCount - 1] = trail.pointIntensity;
     }
 }
 
@@ -335,17 +435,20 @@ export function pushPointWorld(trail, wx, wy, wz) {
         trail.positions[i3] = wx;
         trail.positions[i3 + 1] = wy;
         trail.positions[i3 + 2] = wz;
+        trail.intensities[trail.pointCount] = trail.pointIntensity;
         trail.pointCount++;
     } else {
         trail.positions.copyWithin(0, 3, trail.pointCount * 3);
         trail.colors.copyWithin(0, 3, trail.pointCount * 3);
         trail.alphas.copyWithin(0, 1, trail.pointCount);
+        trail.intensities.copyWithin(0, 1, trail.pointCount);
         // Shift freeze index too (one point evicted from front)
         if (trail.colorFreezeIdx > 0) trail.colorFreezeIdx--;
         const i3 = (trail.pointCount - 1) * 3;
         trail.positions[i3] = wx;
         trail.positions[i3 + 1] = wy;
         trail.positions[i3 + 2] = wz;
+        trail.intensities[trail.pointCount - 1] = trail.pointIntensity;
     }
 }
 
@@ -400,10 +503,12 @@ export function updateTrailAttributes(trail, paletteOverride) {
             const localAge = (newCount - 1 - (i - freeze)) / Math.max(newCount - 1, 1);
             const palT = 1.0 - localAge;
             const col = getPaletteColor(palette, palT);
+            // Per-point intensity: >1 = bold (HDR, fed into bloom), <1 = faint
+            const k = trail.intensities[i] || 1;
             const i3 = i * 3;
-            trail.colors[i3] = col.r;
-            trail.colors[i3 + 1] = col.g;
-            trail.colors[i3 + 2] = col.b;
+            trail.colors[i3] = col.r * k;
+            trail.colors[i3 + 1] = col.g * k;
+            trail.colors[i3 + 2] = col.b * k;
         }
     }
 
@@ -438,6 +543,13 @@ export function updateTrailGlow(trail, time) {
 
 // ── Render ─────────────────────────────────────────────────────────
 export function render() {
+    if (starPoints) {
+        const u = starPoints.material.uniforms;
+        u.uTime.value = journeyTime;
+        u.uCamPos.value.copy(camera.position);
+        u.uSceneCenter.value.copy(controls.target);
+        u.uSceneDist.value = Math.max(camera.position.distanceTo(controls.target), 0.5);
+    }
     composer.render();
 }
 

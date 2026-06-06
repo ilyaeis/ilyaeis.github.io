@@ -14,19 +14,9 @@ body {
     touch-action: none;
 }
 
-/* Stars canvas — fixed behind everything */
-#stars {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 0;
-    pointer-events: none;
-}
-
 /* Attractor canvas — fixed, fullscreen behind text.
-   mix-blend-mode: screen makes black transparent so stars show through. */
+   Stars are rendered in 3D inside this canvas's scene.
+   mix-blend-mode: screen keeps the body tone showing through black. */
 #attractor {
     position: fixed;
     top: 0;
@@ -37,113 +27,35 @@ body {
     mix-blend-mode: screen;
 }
 
-/* Page section */
-.page-1 {
-    position: relative;
-    width: 100%;
-    height: 100vh;
-    z-index: 1;
-    pointer-events: none;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+/* Visually-hidden heading — the visible intro is rendered in 3D */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
 }
 
-.container {
-    text-align: center;
-    position: relative;
-    z-index: 2;
-}
-
-h1 {
-    font-size: 2.4rem;
-    font-weight: 300;
-    letter-spacing: 0.04em;
-    margin-bottom: 0.6rem;
-    transition: opacity 0.8s ease;
-}
-
-.description {
-    font-size: 1rem;
-    font-weight: 300;
-    color: #888;
-    letter-spacing: 0.06em;
-    margin-bottom: 1.2rem;
-    transition: opacity 0.8s ease;
-}
-
-/* Social links */
-.social {
-    transition: transform 0.6s ease, opacity 0.2s ease;
-}
-
-.social a {
-    display: inline-block;
-    opacity: 0.5;
-    transition: opacity 0.2s ease;
-    pointer-events: auto;
-}
-
-.social a:hover {
-    opacity: 1;
-}
-
-.social img {
-    width: 24px;
-    height: 24px;
-    filter: invert(1);
-}
-
-/* TRANSITION_OUT — text fades, LinkedIn glides to corner */
-.page-1.fade-out h1,
-.page-1.fade-out .description {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.social.corner {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    z-index: 10;
-}
-
-/* Rocket hint */
+/* Rocket hint bubble — anchored where the 3D rocket lands */
 .rocket-hint {
     position: fixed;
     z-index: 15;
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
+    left: var(--land-left, 50vw);
+    bottom: 50vh;
 }
 
-.rocket-hint.flying {
+.rocket-hint.arrived {
     visibility: visible;
     opacity: 1;
-    animation: rocket-path 3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
-}
-
-.rocket-hint.arrived .rocket-icon {
-    animation: rocket-bob 2s ease-in-out infinite;
-}
-
-.rocket-icon {
-    font-size: 2rem;
-    display: inline-block;
-    position: relative;
-    transform: rotate(45deg);
-    filter: drop-shadow(0 0 6px rgba(255, 160, 50, 0.5));
-}
-
-
-
-.rocket-hint.flying .rocket-icon {
-    animation: rocket-spin 3s ease-in-out forwards;
 }
 
 .rocket-bubble {
     position: absolute;
-    left: 3rem;
+    left: 0;
     top: 50%;
     transform: translateY(-50%);
     background: rgba(255, 255, 255, 0.08);
@@ -179,93 +91,6 @@ h1 {
 
 .rocket-hint.arrived .rocket-bubble {
     opacity: 1;
-}
-
-@keyframes rocket-path {
-    0%   { left: -3rem;  bottom: -3rem; }
-    12%  { left: 10vw;   bottom: 30vh;  }
-    /* swoops up high */
-    24%  { left: 18vw;   bottom: 58vh;  }
-    /* dips back down */
-    36%  { left: 26vw;   bottom: 35vh;  }
-    /* curves up again */
-    50%  { left: 34vw;   bottom: 55vh;  }
-    /* levels out approaching center */
-    65%  { left: 42vw;   bottom: 48vh;  }
-    /* overshoot past center */
-    82%  { left: calc(var(--land-left, calc(50vw - 5rem)) + 1rem); bottom: 52vh; }
-    /* bounce back to land */
-    92%  { left: calc(var(--land-left, calc(50vw - 5rem)) - 1rem); bottom: 49vh; }
-    100% { left: var(--land-left, calc(50vw - 5rem)); bottom: 50vh; }
-}
-
-@keyframes rocket-spin {
-    0%   { transform: rotate(45deg); }
-    12%  { transform: rotate(30deg); }
-    24%  { transform: rotate(-15deg); }
-    36%  { transform: rotate(20deg); }
-    50%  { transform: rotate(-10deg); }
-    65%  { transform: rotate(5deg); }
-    82%  { transform: rotate(-5deg); }
-    92%  { transform: rotate(3deg); }
-    100% { transform: rotate(0deg); }
-}
-
-/* Idle — playful wiggle + float */
-@keyframes rocket-bob {
-    0%   { transform: translateY(0) rotate(0deg); }
-    15%  { transform: translateY(-5px) rotate(3deg); }
-    30%  { transform: translateY(-2px) rotate(-2deg); }
-    50%  { transform: translateY(-8px) rotate(2deg); }
-    70%  { transform: translateY(-3px) rotate(-3deg); }
-    85%  { transform: translateY(-6px) rotate(1deg); }
-    100% { transform: translateY(0) rotate(0deg); }
-}
-
-/* Rocket exit — smooth accelerating loop then fly away */
-.rocket-hint.exiting {
-    visibility: visible;
-    opacity: 1;
-    animation: rocket-exit-path 2.5s ease-in forwards;
-}
-
-.rocket-hint.exiting .rocket-icon {
-    animation: rocket-exit-spin 2.5s ease-in forwards;
-}
-
-.rocket-hint.exiting .rocket-bubble {
-    opacity: 0;
-}
-
-@keyframes rocket-exit-path {
-    /* Little nod — "okay bye!" */
-    0%   { left: var(--land-left, calc(50vw - 5rem)); bottom: 50vh; opacity: 1; }
-    5%   { left: var(--land-left, calc(50vw - 5rem)); bottom: 49vh; }
-    10%  { left: calc(var(--land-left, calc(50vw - 5rem)) + 1rem); bottom: 52vh; }
-    /* Playful loop */
-    22%  { left: calc(var(--land-left, calc(50vw - 5rem)) + 8vw + 5rem);  bottom: 60vh; }
-    34%  { left: calc(var(--land-left, calc(50vw - 5rem)) + 14vw + 5rem); bottom: 50vh; }
-    46%  { left: calc(var(--land-left, calc(50vw - 5rem)) + 6vw + 5rem);  bottom: 38vh; }
-    56%  { left: calc(var(--land-left, calc(50vw - 5rem)) + 2rem); bottom: 40vh; opacity: 1; }
-    /* Accelerate away */
-    70%  { left: 22vw;  bottom: 28vh; opacity: 1; }
-    82%  { left: 6vw;   bottom: 10vh; opacity: 0.6; }
-    100% { left: -5rem; bottom: -5rem; opacity: 0; }
-}
-
-@keyframes rocket-exit-spin {
-    0%   { transform: rotate(0deg); }
-    /* Little nod */
-    5%   { transform: rotate(10deg); }
-    10%  { transform: rotate(-15deg); }
-    /* Spin through the loop */
-    22%  { transform: rotate(-80deg); }
-    34%  { transform: rotate(-180deg); }
-    46%  { transform: rotate(-280deg); }
-    56%  { transform: rotate(-370deg); }
-    /* Lock toward bottom-left exit */
-    70%  { transform: rotate(-490deg); }
-    100% { transform: rotate(-585deg); }
 }
 
 /* Tap prompt */
