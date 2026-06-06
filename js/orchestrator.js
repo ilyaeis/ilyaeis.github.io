@@ -27,7 +27,10 @@ export const Phase = {
     ATTRACTOR_DRAW: 4,
     LAUNCH_FROM_ATTRACTOR: 5,
     ROCK_FLIGHT: 10,
-    ROCK_DRAW: 11
+    ROCK_DRAW: 11,
+    FLIGHT_TO_LANDING: 13,
+    LANDING_DRAW: 14,
+    LANDING_LINGER: 15
 };
 
 // ── State ──────────────────────────────────────────────────────────
@@ -89,6 +92,10 @@ const textFacePos = new THREE.Vector3(); // reused for camera face-on target
 let camAligned = false;     // once true, stop steering — user gets zoom/rotate
 let userDragging = false;   // true while the user holds a rotate/zoom gesture
 
+// Landing state (contact stop after the full attractor tour)
+let landingDone = false;
+let mailPlane = null;       // invisible hit-plane over the contact text
+
 // Constellation state
 let constellationDone = false;
 let rockIdx = 0;
@@ -144,6 +151,13 @@ const MILESTONES = [
     { label: 'BACHELOR IN', sublabel: 'FINANCIAL ENGINEERING', sizeFactor: 0.55, seed: 73, distance: 7.0, offRight:  1.8, offUp:  0.3 },
     { label: 'GIRAFFE360', sublabel: null,  sizeFactor: 0.35, seed: 17, distance: 5.0, offRight: -0.5, offUp: -1.2 },
 ];
+
+// Landing (contact stop) — after every attractor has been visited once,
+// the next launch flies to a traced contact card instead of looping.
+// main.js raycasts the invisible mail plane and opens mailto: on click.
+export const CONTACT_EMAIL = 'ilya.safronos@gmail.com';
+const LANDING_LINES = ['GET IN TOUCH', CONTACT_EMAIL];
+const LANDING_TAP_DELAY = 1.5;       // linger before the tap prompt returns
 
 // Rocket hint (3D rocket — see intro3d.js)
 const ROCKET_LAND_DURATION = intro.LAND_DURATION; // glide from idle loops to the bubble spot
@@ -381,6 +395,9 @@ export function update(dt) {
         case Phase.LAUNCH_FROM_ATTRACTOR: updateLaunchFromAttractor(dt); break;
         case Phase.ROCK_FLIGHT: updateRockFlight(dt); break;
         case Phase.ROCK_DRAW:   updateRockDraw(dt); break;
+        case Phase.FLIGHT_TO_LANDING: updateFlightToLanding(dt); break;
+        case Phase.LANDING_DRAW:      updateLandingDraw(dt); break;
+        case Phase.LANDING_LINGER:    updateLandingLinger(dt); break;
     }
 
     phaseTime += dt;
@@ -634,7 +651,8 @@ function updateVortex(dt) {
 }
 
 // ── FLIGHT_TO_TEXT (Bezier to text center, no attractor blend) ─────
-function updateFlightToText(dt) {
+// Shared by the trait text (after vortex) and the contact landing.
+function flightToTextPlane(dt, nextPhase) {
     const t = Math.min(phaseTime / TEXT_FLIGHT_DURATION, 1);
     const prevT = Math.max(0, (phaseTime - dt) / TEXT_FLIGHT_DURATION);
 
@@ -652,9 +670,11 @@ function updateFlightToText(dt) {
         cam.setOrbitCenter(textCenter.x, textCenter.y, textCenter.z);
         controls.autoRotateSpeed = 0;
 
-        enterPhase(Phase.TEXT_DRAW);
+        enterPhase(nextPhase);
     }
 }
+
+function updateFlightToText(dt) { flightToTextPlane(dt, Phase.TEXT_DRAW); }
 
 // ── TEXT_DRAW (trace "CREATIVE" with camera aligning during draw) ──
 function updateTextDraw(dt) {
@@ -752,6 +772,10 @@ function updateAttractorDraw(dt) {
         if (ATTRACTORS[attractorIndex].milestones && !constellationDone) {
             setupConstellation();
             enterPhase(Phase.ROCK_FLIGHT);
+        } else if (attractorIndex === ATTRACTORS.length - 1 && !landingDone) {
+            // Full tour complete — fly to the contact landing instead of looping
+            setupLanding();
+            enterPhase(Phase.FLIGHT_TO_LANDING);
         } else {
             enterPhase(Phase.LAUNCH_FROM_ATTRACTOR);
         }
@@ -969,3 +993,135 @@ function updateRockDraw(dt) {
 
     worldPos.copy(rd.center);
 }
+
+// ── LANDING: setup (contact stop after the last attractor) ────────
+function setupLanding() {
+    getAttractorDeparture(_dir, _startPos);
+    textDepartDir.copy(_dir);
+
+    // Contact card center: halfway along a normal flight hop
+    textCenter.copy(_startPos).addScaledVector(_dir, FLIGHT_DISTANCE * 0.5);
+    setupFlightCurve(_startPos, _dir, textCenter);
+
+    const { points } = generateTextLines(LANDING_LINES);
+    textPoints = points;
+    textPointIdx = 0;
+    drawAcc = 0;
+
+    // Freeze attractor colors; the contact text comes home to the
+    // Lorenz palette the journey started with
+    trail.colorFreezeIdx = trail.pointCount;
+    trail.attractorIdx = 0;
+    trail.drawTime = 0;
+
+    worldPos.copy(_startPos);
+    cam.setMode(cam.Mode.FOLLOW, controls);
+}
+
+// ── FLIGHT_TO_LANDING (same swoop as the trait text) ──────────────
+function updateFlightToLanding(dt) { flightToTextPlane(dt, Phase.LANDING_DRAW); }
+
+// ── LANDING_DRAW (trace "GET IN TOUCH" + email) ────────────────────
+function updateLandingDraw(dt) {
+    if (phaseFirstFrame) {
+        phaseFirstFrame = false;
+        beginFaceAlign(textCenter, textDepartDir, textPoints, TEXT_SCALE);
+    }
+    stepFaceAlign(dt);
+
+    // All points drawn → place the clickable mail plane and linger
+    if (textPointIdx >= textPoints.length) {
+        trail.colorFreezeIdx = trail.pointCount;
+        trail.pointIntensity = 1.0;
+
+        const lp = textPoints[textPoints.length - 1];
+        planePointToWorld(textLastPoint, textCenter, textRight, textUp, TEXT_SCALE, lp);
+
+        createMailPlane();
+        enterPhase(Phase.LANDING_LINGER);
+        return;
+    }
+
+    textPointIdx = drawStrokePoints(textPoints, textPointIdx, TEXT_POINTS_PER_SEC, dt,
+        textCenter, textRight, textUp, TEXT_SCALE);
+
+    worldPos.copy(textCenter);
+}
+
+// ── LANDING_LINGER (wait for tap, then resume the attractor loop) ──
+function updateLandingLinger(dt) {
+    worldPos.copy(textCenter);
+
+    if (phaseTime >= LANDING_TAP_DELAY) showTapPrompt();
+
+    if (tapPending && phaseTime >= LANDING_TAP_DELAY) {
+        tapPending = false;
+        hideTapPrompt();
+        landingDone = true;
+        removeMailPlane();
+
+        // Resume the loop from the top (Lorenz)
+        attractorIndex = 0;
+        const attr = ATTRACTORS[attractorIndex];
+        attractorState = [...attr.initialCondition];
+        trail.attractorIdx = attractorIndex;
+        trail.drawTime = 0;
+
+        attractorOffset.copy(textCenter).addScaledVector(textDepartDir, FLIGHT_DISTANCE);
+        setupFlightCurve(textLastPoint, textDepartDir, attractorOffset);
+        worldPos.copy(textLastPoint);
+
+        flightCameraDelay = 0;
+        cam.setMode(cam.Mode.FOLLOW, controls);
+        enterPhase(Phase.FLIGHT);
+    }
+}
+
+// ── Landing mail hit-plane ─────────────────────────────────────────
+// Invisible plane covering the traced contact text; main.js raycasts
+// it for cursor feedback and opens mailto:CONTACT_EMAIL on click.
+function createMailPlane() {
+    // Cover only the email line (bold strokes in the lower half of the
+    // block) — taps on "GET IN TOUCH" or empty space still advance
+    let blockMinY = Infinity, blockMaxY = -Infinity;
+    for (const p of textPoints) {
+        if (p.y < blockMinY) blockMinY = p.y;
+        if (p.y > blockMaxY) blockMaxY = p.y;
+    }
+    const midY = (blockMinY + blockMaxY) / 2;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of textPoints) {
+        if (p.c !== 1 || p.y >= midY) continue;
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+    }
+    const geo = new THREE.PlaneGeometry(
+        (maxX - minX) * TEXT_SCALE * 1.1,
+        (maxY - minY) * TEXT_SCALE * 1.3
+    );
+    const mat = new THREE.MeshBasicMaterial({
+        transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide
+    });
+    mailPlane = new THREE.Mesh(geo, mat);
+    planePointToWorld(mailPlane.position, textCenter, textRight, textUp, TEXT_SCALE,
+        { x: (minX + maxX) / 2, y: (minY + maxY) / 2 });
+    // Face back along the approach direction (where the camera settles)
+    _vec3.copy(textDepartDir).negate();
+    mailPlane.quaternion.setFromRotationMatrix(
+        new THREE.Matrix4().makeBasis(textRight, textUp, _vec3)
+    );
+    scene.add(mailPlane);
+}
+
+function removeMailPlane() {
+    if (!mailPlane) return;
+    scene.remove(mailPlane);
+    mailPlane.geometry.dispose();
+    mailPlane.material.dispose();
+    mailPlane = null;
+}
+
+// Clickable only while the contact landing is on screen
+export function getMailPlane() { return mailPlane; }

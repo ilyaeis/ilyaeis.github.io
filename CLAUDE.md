@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Personal portfolio site (GitHub Pages, `ilyaeis.github.io`) — a single-page WebGL experience: a tap-driven "journey" that flies a glowing trail line from an intro screen through a vortex, traced text, milestone rocks, and a sequence of strange attractors. No framework, no build step, no tests. three.js is loaded from CDN via an import map in `index.html`.
+Personal portfolio site (GitHub Pages, `ilyaeis.github.io`) — a single-page WebGL experience: a tap-driven "journey" that flies a glowing trail line from an intro screen through a vortex, traced text, milestone rocks, a sequence of strange attractors, and a contact landing. No framework, no build step, no tests. three.js is loaded from CDN via an import map in `index.html`. `index.html` also carries the SEO mirror of the experience (meta/OG tags, JSON-LD, a `visually-hidden` content block) — keep it in sync when journey content changes.
 
 ## Commands
 
@@ -24,8 +24,8 @@ Everything renders into one canvas (`#attractor`). The core idea: **a single con
 
 ### Module roles (js/)
 
-- **main.js** — bootstrap + input. rAF loop calls `orchestrator.update(dt)`. Tap detection with a drag guard (pointer moved < 10px = tap → `onTap()`); raycasts the 3D LinkedIn icon for clicks/cursor; pauses via IntersectionObserver when the canvas is offscreen.
-- **orchestrator.js** — the brain. A `Phase` enum state machine (INTRO → rocket hint/exit/streak → VORTEX → text draw → FLIGHT → ATTRACTOR_DRAW → rock constellation → loops through attractors). Phases advance on `tapPending` after a minimum time. Owns flight Bezier curves (`bezP0..3`), the world-space cursor `worldPos` (what the camera follows), and per-phase camera handoff.
+- **main.js** — bootstrap + input. rAF loop calls `orchestrator.update(dt)`. Tap detection with a drag guard (pointer moved < 10px = tap → `onTap()`); raycasts the 3D LinkedIn icon and the landing's mail hit-plane for clicks/cursor; pauses via IntersectionObserver when the canvas is offscreen.
+- **orchestrator.js** — the brain. A `Phase` enum state machine (INTRO → rocket hint/exit/streak → VORTEX → text draw → FLIGHT → ATTRACTOR_DRAW → rock constellation → attractor tour → contact landing after the last attractor → loops through attractors). Phases advance on `tapPending` after a minimum time. Owns flight Bezier curves (`bezP0..3`), the world-space cursor `worldPos` (what the camera follows), and per-phase camera handoff. The landing traces `LANDING_LINES` (contact email) and parks an invisible `mailPlane` over the text that main.js raycasts for a `mailto:` click.
 - **attractors.js** — three.js toolkit: scene/camera/renderer/UnrealBloom composer, OrbitControls, the `ATTRACTORS` table (derivatives, `dt`, `scale`, `center`, palette, orbit camera params), RK4 integrator, the trail system, and the starfield. The trail is one `THREE.Line` with position/alpha/color attributes (`MAX_POINTS` ring buffer; old points shift out), additive blending. `pushPoint` transforms attractor-space coords; `pushPointWorld` takes world coords directly.
 - **camera.js** — two modes: ORBIT (target converges to a fixed center, auto-rotate) and FOLLOW (target lerps after the flying `worldPos`). All transitions ease slow→fast.
 - **intro3d.js** — the 3D landing page (extruded name text, LinkedIn icon, rocket with idle loops). Objects live on a world-space anchor so view rotation moves them with the stars; the rocket/icon re-parent to the camera (`camera.attach`) when they need to glide to screen-anchored spots. Mode setters (`startExit`, `setRocketLanding`, …) are driven by the orchestrator.

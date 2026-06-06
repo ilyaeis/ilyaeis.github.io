@@ -3,7 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ilja Safronovs</title>
+    <title>Ilja Safronovs — Portfolio</title>
+    <meta name="description" content="Interactive WebGL portfolio of Ilja Safronovs — financial engineering student in Riga, working at Giraffe360. A tap-driven journey through strange attractors, from school to today.">
+    <meta name="author" content="Ilja Safronovs">
+    <meta name="theme-color" content="#0a0a0a">
+    <link rel="canonical" href="https://ilyaeis.github.io/">
+
+    <!-- Social previews -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ilyaeis.github.io/">
+    <meta property="og:title" content="Ilja Safronovs — Portfolio">
+    <meta property="og:description" content="An interactive WebGL journey through strange attractors — milestones, glowing trails and chaos. Tap to fly through.">
+    <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Ilja Safronovs",
+        "url": "https://ilyaeis.github.io/",
+        "email": "mailto:ilya.safronos@gmail.com",
+        "jobTitle": "Financial Engineering Student",
+        "worksFor": { "@type": "Organization", "name": "Giraffe360" },
+        "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis"]
+    }
+    </script>
+
     <link rel="stylesheet" href="css/style.css">
     <script type="importmap">
     {
@@ -17,8 +45,26 @@
 <body>
     <canvas id="attractor"></canvas>
 
-    <!-- The visible intro (name, tagline, LinkedIn, rocket) is rendered in 3D -->
-    <h1 class="visually-hidden">Ilja Safronovs — student. problem solver. builder.</h1>
+    <!-- The visible experience is rendered in 3D; this mirror of its
+         content is for crawlers, link previews and screen readers -->
+    <header class="visually-hidden">
+        <h1>Ilja Safronovs — student. problem solver. builder.</h1>
+        <p>Creative. Adaptive. Curious. This portfolio is an interactive
+           WebGL journey: a glowing trail flies through a vortex, traces my
+           milestones as a rock constellation, and tours a series of strange
+           attractors before landing at my contact details.</p>
+        <h2>Journey milestones</h2>
+        <ul>
+            <li>Gymnasium — Riga</li>
+            <li>Bachelor in Financial Engineering</li>
+            <li>Giraffe360</li>
+        </ul>
+        <h2>Get in touch</h2>
+        <p>
+            <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis">LinkedIn</a>
+            <a href="mailto:ilya.safronos@gmail.com">ilya.safronos@gmail.com</a>
+        </p>
+    </header>
 
     <div class="rocket-hint" id="rocket-hint">
         <div class="rocket-bubble">hey! you can also zoom in, zoom out &amp; rotate</div>
