@@ -1,9 +1,9 @@
 // ── Static World ───────────────────────────────────────────────────
 // Builds every journey stop as pre-existing geometry at load: the
 // trait text, milestone rocks, pre-integrated attractor curves and
-// the contact landing all sit dim in world space from frame one.
-// Each stop "lights up" with a reveal sweep when the comet arrives
-// (uReveal uniform sweeping the aT vertex attribute).
+// the contact landing are scattered randomly through 3D space, each
+// glowing in its own palette from frame one. The comet (orchestrator)
+// flies between them — sometimes straight through a third scene.
 
 import * as THREE from 'three';
 import { ATTRACTORS, rk4Step, isMobile, getPaletteColor } from './attractors.js';
@@ -29,68 +29,76 @@ const LINK_INTENSITY = 0.35;             // faint pen-travel strokes
 const ATTRACTOR_POINTS = isMobile ? 6000 : 12000;
 const ATTRACTOR_WARMUP = 500;            // integration steps before recording
 const ATTRACTOR_ALPHA = 0.35;            // per-point alpha of static curves
-const DIM_COLOR = new THREE.Color(0x555555);
-const DIM_ALPHA_PLANAR = 0.30;           // matches the old grey rock previews
-const DIM_ALPHA_ATTRACTOR = 0.10;        // 12k additive points need less
-const REVEAL_DURATION = 1.5;             // seconds for the light-up sweep
-const REVEAL_EDGE = 0.06;                // soft front of the sweep (in aT units)
 
-// ── Journey layout ─────────────────────────────────────────────────
-// One fixed direction through world space; stops scatter sideways off
-// the line so the route swings instead of marching straight.
+// Random scatter — each stop hops far from the previous one in a
+// random 3D direction (lightly biased outward so the journey keeps
+// drifting away from the intro), never closer than MIN_SEPARATION to
+// another. The meteor rocks are one scene: they cluster tightly.
+const MIN_HOP = 30;
+const MAX_HOP = 50;
+const ROCK_HOP_MIN = 10;                 // rock → rock (same scene)
+const ROCK_HOP_MAX = 14;
+const MIN_SEPARATION = 16;
+const ROCK_SEPARATION = 7;               // rocks may sit near each other
+const PLACE_TRIES = 12;
+const MAX_PITCH = 0.55;                  // |y| of hop direction — keeps text upright
+
+// Overall outward drift of the journey
 export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
-const journeyRight = new THREE.Vector3()
-    .crossVectors(journeyDir, new THREE.Vector3(0, 1, 0)).normalize();
-const journeyUp = new THREE.Vector3()
-    .crossVectors(journeyRight, journeyDir).normalize();
 
-// dist = units along journeyDir from the intro origin; offR/offU lateral
+// Visit order. Planar stops carry their own paletteIdx (into the
+// ATTRACTORS table) so every scene glows in a different color — the
+// three meteor rocks are ONE scene and share a single palette.
 const ROUTE = [
-    { type: StopType.TEXT,      dist: 10,   offR:  0.0, offU:  0.0 },
-    { type: StopType.ATTRACTOR, dist: 19,   offR: -1.2, offU:  0.5, attractorIdx: 0 },
-    { type: StopType.ROCK,      dist: 26,   offR: -2.4, offU:  1.2, milestone: 0 },
-    { type: StopType.ROCK,      dist: 31,   offR:  0.6, offU:  0.6, milestone: 1 },
-    { type: StopType.ROCK,      dist: 35.5, offR: -1.0, offU: -0.8, milestone: 2 },
-    { type: StopType.ATTRACTOR, dist: 44,   offR:  1.4, offU: -0.4, attractorIdx: 1 },
-    { type: StopType.ATTRACTOR, dist: 53,   offR: -0.8, offU:  0.9, attractorIdx: 2 },
-    { type: StopType.ATTRACTOR, dist: 62,   offR:  1.0, offU:  0.6, attractorIdx: 3 },
-    { type: StopType.ATTRACTOR, dist: 71,   offR: -1.2, offU: -0.5, attractorIdx: 4 },
-    { type: StopType.LANDING,   dist: 80,   offR:  0.0, offU:  0.0 },
+    { type: StopType.TEXT,      paletteIdx: 0 },
+    { type: StopType.ATTRACTOR, attractorIdx: 0 },
+    { type: StopType.ROCK,      milestone: 0, paletteIdx: 1 },
+    { type: StopType.ROCK,      milestone: 1, paletteIdx: 1 },
+    { type: StopType.ROCK,      milestone: 2, paletteIdx: 1 },
+    { type: StopType.ATTRACTOR, attractorIdx: 1 },
+    { type: StopType.ATTRACTOR, attractorIdx: 2 },
+    { type: StopType.ATTRACTOR, attractorIdx: 3 },
+    { type: StopType.ATTRACTOR, attractorIdx: 4 },
+    { type: StopType.LANDING,   paletteIdx: 4 },
 ];
 
-// ── Reveal shader ──────────────────────────────────────────────────
-// Vertices before the sweep front render in full baked color (HDR,
-// feeds the bloom); vertices past it render dim grey.
+// ── Stop shader ────────────────────────────────────────────────────
+// Baked HDR colors + per-point alpha; one shared material for all stops
 const STOP_VERTEX = `
     attribute vec3 color;
     attribute float aAlpha;
-    attribute float aT;
     varying vec3 vColor;
     varying float vAlpha;
-    varying float vT;
     void main() {
         vColor = color;
         vAlpha = aAlpha;
-        vT = aT;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
 `;
 
 const STOP_FRAGMENT = `
-    uniform float uReveal;
-    uniform vec3 uDimColor;
-    uniform float uDimAlpha;
     varying vec3 vColor;
     varying float vAlpha;
-    varying float vT;
     void main() {
-        float lit = 1.0 - smoothstep(uReveal - ${REVEAL_EDGE.toFixed(3)}, uReveal, vT);
-        vec3 col = mix(uDimColor, vColor, lit);
-        float a = mix(uDimAlpha, vAlpha, lit);
-        if (a < 0.003) discard;
-        gl_FragColor = vec4(col, a);
+        if (vAlpha < 0.003) discard;
+        gl_FragColor = vec4(vColor, vAlpha);
     }
 `;
+
+let stopMaterial = null;
+
+function getStopMaterial() {
+    if (!stopMaterial) {
+        stopMaterial = new THREE.ShaderMaterial({
+            vertexShader: STOP_VERTEX,
+            fragmentShader: STOP_FRAGMENT,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+    }
+    return stopMaterial;
+}
 
 // ── State ──────────────────────────────────────────────────────────
 export let stops = [];
@@ -98,6 +106,9 @@ let mailPlane = null;
 export function getMailPlane() { return mailPlane; }
 
 const _vec3 = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+
+function rand(min, max) { return min + Math.random() * (max - min); }
 
 // ── 2D plane → world space ─────────────────────────────────────────
 export function planePointToWorld(out, center, right, up, scale, p) {
@@ -108,37 +119,42 @@ export function planePointToWorld(out, center, right, up, scale, p) {
     );
 }
 
-// ── Line builder ───────────────────────────────────────────────────
-function buildStopLine(positions, colors, alphas, dimAlpha) {
-    const n = alphas.length;
-    const aT = new Float32Array(n);
-    for (let i = 0; i < n; i++) aT[i] = n > 1 ? i / (n - 1) : 0;
+// ── Random scatter layout ──────────────────────────────────────────
+// Hop direction: a big random kick with a light outward drift,
+// pitch-limited so planar scenes stay roughly upright and the path
+// never goes vertical. The kick dwarfs the drift — hops can swing
+// sideways or even double back; only the long-run average drifts out.
+function randomHopDir(out) {
+    out.copy(journeyDir);
+    out.x += rand(-2.2, 2.2);
+    out.y += rand(-1.1, 1.1);
+    out.z += rand(-2.2, 2.2);
+    out.normalize();
+    out.y = THREE.MathUtils.clamp(out.y, -MAX_PITCH, MAX_PITCH);
+    return out.normalize();
+}
 
+function placeNextCenter(prev, placed, hopMin, hopMax, separation) {
+    let candidate = null;
+    for (let i = 0; i < PLACE_TRIES; i++) {
+        candidate = prev.clone().addScaledVector(randomHopDir(_dir), rand(hopMin, hopMax));
+        if (placed.every(p => p.distanceTo(candidate) >= separation)) break;
+    }
+    return candidate;
+}
+
+// ── Line builder ───────────────────────────────────────────────────
+function buildStopLine(positions, colors, alphas) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geo.setAttribute('aAlpha', new THREE.BufferAttribute(alphas, 1));
-    geo.setAttribute('aT', new THREE.BufferAttribute(aT, 1));
     geo.computeBoundingSphere();
-
-    const mat = new THREE.ShaderMaterial({
-        vertexShader: STOP_VERTEX,
-        fragmentShader: STOP_FRAGMENT,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        uniforms: {
-            uReveal: { value: 0 },
-            uDimColor: { value: DIM_COLOR },
-            uDimAlpha: { value: dimAlpha }
-        }
-    });
-
-    return new THREE.Line(geo, mat); // static — default frustum culling applies
+    return new THREE.Line(geo, getStopMaterial()); // static — frustum culling applies
 }
 
 // ── Planar stop (text / rock / landing) ────────────────────────────
-function buildPlanarStop(def, center, palette) {
+function buildPlanarStop(def, center, right, up, palette) {
     const scale = def.type === StopType.ROCK ? ROCK_SCALE : TEXT_SCALE;
     let points;
     if (def.type === StopType.ROCK) {
@@ -157,7 +173,7 @@ function buildPlanarStop(def, center, palette) {
 
     for (let i = 0; i < n; i++) {
         const p = points[i];
-        planePointToWorld(_vec3, center, journeyRight, journeyUp, scale, p);
+        planePointToWorld(_vec3, center, right, up, scale, p);
         positions[i * 3]     = _vec3.x;
         positions[i * 3 + 1] = _vec3.y;
         positions[i * 3 + 2] = _vec3.z;
@@ -174,7 +190,7 @@ function buildPlanarStop(def, center, palette) {
     }
 
     return {
-        line: buildStopLine(positions, colors, alphas, DIM_ALPHA_PLANAR),
+        line: buildStopLine(positions, colors, alphas),
         points2d: points,
         scale,
         halfW: maxAbsX * scale,
@@ -216,7 +232,7 @@ function buildAttractorStop(def, center) {
     }
 
     return {
-        line: buildStopLine(positions, colors, alphas, DIM_ALPHA_ATTRACTOR),
+        line: buildStopLine(positions, colors, alphas),
         rideState: s // comet riding resumes the integration from here
     };
 }
@@ -248,12 +264,12 @@ function buildMailPlane(stop) {
         transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide
     });
     mailPlane = new THREE.Mesh(geo, mat);
-    planePointToWorld(mailPlane.position, stop.center, journeyRight, journeyUp,
+    planePointToWorld(mailPlane.position, stop.center, stop.right, stop.up,
         stop.scale, { x: (minX + maxX) / 2, y: (minY + maxY) / 2 });
     // Face back along the approach direction (where the camera settles)
-    _vec3.copy(journeyDir).negate();
+    _vec3.copy(stop.normal).negate();
     mailPlane.quaternion.setFromRotationMatrix(
-        new THREE.Matrix4().makeBasis(journeyRight, journeyUp, _vec3)
+        new THREE.Matrix4().makeBasis(stop.right, stop.up, _vec3)
     );
     return mailPlane;
 }
@@ -261,46 +277,49 @@ function buildMailPlane(stop) {
 // ── Build ──────────────────────────────────────────────────────────
 export function buildWorld(scene) {
     stops = [];
-    for (const def of ROUTE) {
-        const center = new THREE.Vector3()
-            .addScaledVector(journeyDir, def.dist)
-            .addScaledVector(journeyRight, def.offR)
-            .addScaledVector(journeyUp, def.offU);
+    const placed = [new THREE.Vector3(0, 0, 0)]; // intro counts for separation
+    let prev = placed[0];
+    let prevDef = null;
 
-        // Planar stops keep the Lorenz palette the journey starts with
-        const palette = ATTRACTORS[def.attractorIdx ?? 0].palette;
+    for (const def of ROUTE) {
+        // Rock → rock stays tight (the meteors are one scene);
+        // everything else scatters far apart
+        const tight = def.type === StopType.ROCK && prevDef?.type === StopType.ROCK;
+        const center = tight
+            ? placeNextCenter(prev, placed, ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION)
+            : placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION);
+        placed.push(center);
+        prevDef = def;
+
+        // Planar stops face back along their approach direction so the
+        // arriving camera sees them head-on; basis stays upright.
+        const normal = _dir.copy(center).sub(prev).normalize().clone();
+        const right = new THREE.Vector3()
+            .crossVectors(normal, new THREE.Vector3(0, 1, 0)).normalize();
+        const up = new THREE.Vector3().crossVectors(right, normal).normalize();
+
+        const paletteIdx = def.attractorIdx ?? def.paletteIdx ?? 0;
+        const palette = ATTRACTORS[paletteIdx].palette;
         const built = def.type === StopType.ATTRACTOR
             ? buildAttractorStop(def, center)
-            : buildPlanarStop(def, center, palette);
+            : buildPlanarStop(def, center, right, up, palette);
 
         const stop = {
             type: def.type,
             attractorIdx: def.attractorIdx,
+            paletteIdx,
             center,
-            right: journeyRight,
-            up: journeyUp,
-            normal: journeyDir,
-            reveal: 0,
-            revealTarget: 0,
+            right,
+            up,
+            normal,
             ...built
         };
         scene.add(stop.line);
         stops.push(stop);
+        prev = center;
     }
 
     const landing = stops[stops.length - 1];
     scene.add(buildMailPlane(landing));
     return stops;
-}
-
-// ── Per-frame reveal easing ────────────────────────────────────────
-export function lightStop(stop) { stop.revealTarget = 1; }
-
-export function updateWorld(dt) {
-    for (const stop of stops) {
-        if (stop.reveal >= stop.revealTarget) continue;
-        stop.reveal = Math.min(stop.revealTarget, stop.reveal + dt / REVEAL_DURATION);
-        // Push the front slightly past 1 so the soft edge fully clears
-        stop.line.material.uniforms.uReveal.value = stop.reveal * (1 + REVEAL_EDGE);
-    }
 }

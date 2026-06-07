@@ -14,7 +14,7 @@ import {
 import * as cam from './camera.js';
 import * as intro from './intro3d.js';
 import {
-    buildWorld, updateWorld, lightStop, stops, StopType,
+    buildWorld, stops, StopType,
     getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL
 } from './world.js';
 
@@ -49,11 +49,11 @@ const _vB = new THREE.Vector3();
 const _startPos = new THREE.Vector3();
 const _targetPos = new THREE.Vector3();
 
-// Travel Bezier
-const bezP0 = new THREE.Vector3();
-const bezP1 = new THREE.Vector3();
-const bezP2 = new THREE.Vector3();
-const bezP3 = new THREE.Vector3();
+// Travel path — one or two chained cubic Bezier legs. Two legs appear
+// when a third scene sits near the corridor between stops: the comet
+// flies straight through it on the way.
+let travelLegs = [];       // [{ p0, p1, p2, p3 }]
+let travelFracs = [];      // cumulative end fraction of each leg (by length)
 let travelDuration = 0;
 let corkscrew = false;     // first flight spirals around its curve
 
@@ -73,18 +73,23 @@ let loopT = 0;             // planar-stop loop parameter
 // ── Tuning ─────────────────────────────────────────────────────────
 const COMET_CAPACITY = isMobile ? 600 : 1200;
 
-// Travel
-const TRAVEL_SPEED = 2.5;            // world units per second
-const TRAVEL_MIN = 2.0;              // seconds
-const TRAVEL_MAX = 5.0;
-const TRAVEL_POINTS_PER_FRAME = 30;  // comet substeps along the Bezier
-const REVEAL_AT = 0.65;              // travel fraction that lights the stop
+// Travel — stops are 30-50 units apart now, so the comet moves fast
+const TRAVEL_SPEED = 9.0;            // world units per second
+const TRAVEL_MIN = 2.5;              // seconds
+const TRAVEL_MAX = 7.0;
+const TRAVEL_POINTS_PER_FRAME = 30;  // comet substeps along the path
 const LAUNCH_FLASH = 0.8;            // extra HDR intensity leaving the intro
+
+// Fly-through: a stop within this corridor of the flight line (and not
+// too near either end) becomes a via point the comet passes through
+const VIA_BAND = [0.2, 0.8];         // projection range along the flight line
+const VIA_MAX_PERP = 0.5;            // × flight distance
+const VIA_JITTER = 0.8;              // random offset so it never dead-centers
 
 // Corkscrew (replaces the old vortex stop) — the first flight spirals
 // around its own curve, ramping in and out
 const CORK_REVS = 3;                 // full revolutions over the flight
-const CORK_RADIUS = 1.1;             // peak spiral radius (mid-flight)
+const CORK_RADIUS = 1.4;             // peak spiral radius (mid-flight)
 
 // Viewing
 const RIDE_POINTS_PER_SEC = 12000;   // comet speed along attractor curves
@@ -154,22 +159,31 @@ function computeFitDistance(points, scale) {
     return THREE.MathUtils.clamp(fit, controls.minDistance, controls.maxDistance);
 }
 
-// ── Cubic Bezier evaluation ────────────────────────────────────────
-function bezierPoint(t, out) {
+// ── Cubic Bezier evaluation (single leg) ───────────────────────────
+function legPoint(leg, t, out) {
     const u = 1 - t;
     const uu = u * u;
     const uuu = uu * u;
     const tt = t * t;
     const ttt = tt * t;
-    out.x = uuu * bezP0.x + 3 * uu * t * bezP1.x + 3 * u * tt * bezP2.x + ttt * bezP3.x;
-    out.y = uuu * bezP0.y + 3 * uu * t * bezP1.y + 3 * u * tt * bezP2.y + ttt * bezP3.y;
-    out.z = uuu * bezP0.z + 3 * uu * t * bezP1.z + 3 * u * tt * bezP2.z + ttt * bezP3.z;
+    out.x = uuu * leg.p0.x + 3 * uu * t * leg.p1.x + 3 * u * tt * leg.p2.x + ttt * leg.p3.x;
+    out.y = uuu * leg.p0.y + 3 * uu * t * leg.p1.y + 3 * u * tt * leg.p2.y + ttt * leg.p3.y;
+    out.z = uuu * leg.p0.z + 3 * uu * t * leg.p1.z + 3 * u * tt * leg.p2.z + ttt * leg.p3.z;
     return out;
 }
 
-function bezierTangent(t, out) {
-    bezierPoint(Math.min(t + 0.005, 1), _vA);
-    bezierPoint(Math.max(t - 0.005, 0), _vB);
+// ── Whole-path evaluation (legs chained by length fraction) ────────
+function travelPoint(gt, out) {
+    let i = 0;
+    while (i < travelLegs.length - 1 && gt > travelFracs[i]) i++;
+    const start = i === 0 ? 0 : travelFracs[i - 1];
+    const lt = THREE.MathUtils.clamp((gt - start) / (travelFracs[i] - start), 0, 1);
+    return legPoint(travelLegs[i], lt, out);
+}
+
+function travelTangent(gt, out) {
+    travelPoint(Math.min(gt + 0.004, 1), _vA);
+    travelPoint(Math.max(gt - 0.004, 0), _vB);
     return out.subVectors(_vA, _vB).normalize();
 }
 
@@ -177,20 +191,24 @@ function bezierTangent(t, out) {
 function rand(min, max) { return min + Math.random() * (max - min); }
 function randSign() { return Math.random() < 0.5 ? -1 : 1; }
 
-// ── Setup a flight curve from a start position + direction to a target ──
+// ── Build one flight leg from a start position + direction to a target ──
 // Every transition swoops: the control points get random perpendicular
 // offsets so no two flights arc the same way.
-function setupFlightCurve(startPos, startDir, targetPos) {
-    bezP0.copy(startPos);
-    bezP3.copy(targetPos);
+function buildLeg(startPos, startDir, targetPos) {
+    const leg = {
+        p0: startPos.clone(),
+        p1: new THREE.Vector3(),
+        p2: new THREE.Vector3(),
+        p3: targetPos.clone()
+    };
 
     // Control point 1: extend from start in the departure direction
     const dist = startPos.distanceTo(targetPos);
-    bezP1.copy(startDir).normalize().multiplyScalar(dist * 0.4).add(startPos);
+    leg.p1.copy(startDir).normalize().multiplyScalar(dist * 0.4).add(startPos);
 
     // Control point 2: approach target gently from the flight direction
     _vec3.copy(targetPos).sub(startPos).normalize();
-    bezP2.copy(_vec3).multiplyScalar(-dist * 0.3).add(targetPos);
+    leg.p2.copy(_vec3).multiplyScalar(-dist * 0.3).add(targetPos);
 
     // Random sideways arc — perpendicular frame around the flight vector
     _arcRight.crossVectors(_vec3, camera.up);
@@ -198,10 +216,38 @@ function setupFlightCurve(startPos, startDir, targetPos) {
     _arcRight.normalize();
     _arcUp.crossVectors(_arcRight, _vec3).normalize();
     const sign = randSign();
-    bezP1.addScaledVector(_arcRight, sign * dist * rand(0.15, 0.3));
-    bezP1.addScaledVector(_arcUp, randSign() * dist * rand(0.05, 0.15));
-    bezP2.addScaledVector(_arcRight, -sign * dist * rand(0.1, 0.2));
-    bezP2.addScaledVector(_arcUp, randSign() * dist * rand(0.04, 0.1));
+    leg.p1.addScaledVector(_arcRight, sign * dist * rand(0.15, 0.3));
+    leg.p1.addScaledVector(_arcUp, randSign() * dist * rand(0.05, 0.15));
+    leg.p2.addScaledVector(_arcRight, -sign * dist * rand(0.1, 0.2));
+    leg.p2.addScaledVector(_arcUp, randSign() * dist * rand(0.04, 0.1));
+    return leg;
+}
+
+// ── Fly-through pick ───────────────────────────────────────────────
+// A stop sitting near the corridor between the comet and its target
+// (not too close to either end) becomes a via point — the comet
+// passes through that scene instead of flying around it.
+function pickViaStop(destIdx, from, to) {
+    _vA.subVectors(to, from);
+    const abLenSq = _vA.lengthSq();
+    if (abLenSq < 1e-6) return null;
+    const abLen = Math.sqrt(abLenSq);
+
+    let best = null;
+    let bestPerp = VIA_MAX_PERP * abLen;
+    for (let k = 0; k < stops.length; k++) {
+        if (k === destIdx || k === stopIndex) continue;
+        const c = stops[k].center;
+        const s = (_vB.subVectors(c, from).dot(_vA)) / abLenSq;
+        if (s < VIA_BAND[0] || s > VIA_BAND[1]) continue;
+        _vec3.copy(from).addScaledVector(_vA, s); // closest point on the line
+        const perp = _vec3.distanceTo(c);
+        if (perp < bestPerp) {
+            bestPerp = perp;
+            best = stops[k];
+        }
+    }
+    return best;
 }
 
 // ── Face-on camera alignment ───────────────────────────────────────
@@ -247,13 +293,42 @@ function setupTravel(destIdx, withCorkscrew) {
         _targetPos.copy(dest.center);
     }
 
-    setupFlightCurve(worldPos, cometDir, _targetPos);
-    const dist = worldPos.distanceTo(_targetPos);
-    travelDuration = THREE.MathUtils.clamp(dist / TRAVEL_SPEED, TRAVEL_MIN, TRAVEL_MAX);
+    // Route through a third scene when one sits near the flight line
+    // (checked before stopIndex moves to the destination)
+    const via = pickViaStop(destIdx, worldPos, _targetPos);
+    travelLegs = [];
+    if (via) {
+        const viaPos = via.center.clone().add(new THREE.Vector3(
+            rand(-VIA_JITTER, VIA_JITTER),
+            rand(-VIA_JITTER, VIA_JITTER),
+            rand(-VIA_JITTER, VIA_JITTER)
+        ));
+        const leg1 = buildLeg(worldPos, cometDir, viaPos);
+        // Depart the via along leg1's arrival tangent — smooth join
+        _vec3.subVectors(leg1.p3, leg1.p2).normalize();
+        travelLegs.push(leg1, buildLeg(viaPos, _vec3, _targetPos));
+    } else {
+        travelLegs.push(buildLeg(worldPos, cometDir, _targetPos));
+    }
+
+    // Time + leg fractions proportional to chord length
+    let total = 0;
+    const lens = travelLegs.map(l => {
+        const len = l.p0.distanceTo(l.p3);
+        total += len;
+        return len;
+    });
+    travelFracs = [];
+    let acc = 0;
+    for (const len of lens) {
+        acc += len / total;
+        travelFracs.push(acc);
+    }
+    travelDuration = THREE.MathUtils.clamp(total / TRAVEL_SPEED, TRAVEL_MIN, TRAVEL_MAX);
     corkscrew = withCorkscrew;
 
-    // Comet glows in the destination's palette (planar stops are Lorenz)
-    trail.attractorIdx = dest.attractorIdx ?? 0;
+    // Comet glows in the destination's palette
+    trail.attractorIdx = dest.paletteIdx ?? 0;
 
     stopIndex = destIdx;
     cam.setMode(cam.Mode.FOLLOW, controls);
@@ -263,7 +338,7 @@ function setupTravel(destIdx, withCorkscrew) {
 // Spiral offset around the curve tangent — radius ramps in and out so
 // the corkscrew starts and ends exactly on the curve
 function applyCorkscrew(t, point) {
-    bezierTangent(t, _tan);
+    travelTangent(t, _tan);
     _arcRight.crossVectors(_tan, camera.up);
     if (_arcRight.lengthSq() < 1e-6) _arcRight.set(1, 0, 0);
     _arcRight.normalize();
@@ -291,8 +366,6 @@ export function update(dt) {
     }
 
     phaseTime += dt;
-
-    updateWorld(dt); // reveal sweeps
 
     if (trail && trail.inScene) {
         updateTrailAttributes(trail);
@@ -401,7 +474,7 @@ function updateTravel(dt) {
 
     for (let i = 1; i <= TRAVEL_POINTS_PER_FRAME; i++) {
         const subT = prevT + (t - prevT) * (i / TRAVEL_POINTS_PER_FRAME);
-        bezierPoint(subT, _vec3);
+        travelPoint(subT, _vec3);
         if (corkscrew) {
             applyCorkscrew(subT, _vec3);
             // Brilliant launch flash, settling as the spiral unwinds
@@ -411,12 +484,9 @@ function updateTravel(dt) {
     }
     trail.pointIntensity = 1.0;
 
-    // Camera follows the smooth base curve, not the spiral
-    bezierPoint(t, worldPos);
-    bezierTangent(t, cometDir);
-
-    // Light the destination so the sweep finishes as the comet arrives
-    if (t >= REVEAL_AT) lightStop(stops[stopIndex]);
+    // Camera follows the smooth base path, not the spiral
+    travelPoint(t, worldPos);
+    travelTangent(t, cometDir);
 
     if (t >= 1) enterView();
 }
