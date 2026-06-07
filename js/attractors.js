@@ -10,9 +10,6 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 // ── Constants ──────────────────────────────────────────────────────
 export const DECAY_RATE = 4.0;
-export const POINTS_PER_FRAME_MIN = 50;
-export const POINTS_PER_FRAME_MAX = 300;
-export const RAMP_DURATION = 5;
 
 // ── Mobile detection ───────────────────────────────────────────────
 export const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent)
@@ -163,11 +160,13 @@ export function cubicEaseInOut(t) {
 }
 
 // ── Trail System ───────────────────────────────────────────────────
-export function createTrailSystem() {
-    const positions = new Float32Array(MAX_POINTS * 3);
-    const alphas = new Float32Array(MAX_POINTS);
-    const colors = new Float32Array(MAX_POINTS * 3);
-    const intensities = new Float32Array(MAX_POINTS);
+// capacity bounds the ring buffer — a small capacity yields a short
+// comet (old points shift out as new ones arrive).
+export function createTrailSystem(capacity = MAX_POINTS) {
+    const positions = new Float32Array(capacity * 3);
+    const alphas = new Float32Array(capacity);
+    const colors = new Float32Array(capacity * 3);
+    const intensities = new Float32Array(capacity);
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -207,6 +206,7 @@ export function createTrailSystem() {
 
     return {
         positions, alphas, colors, intensities,
+        capacity,
         pointCount: 0,
         geometry, material, line,
         glowGeometry, glowMaterial, glowPoint,
@@ -401,36 +401,9 @@ export function clearTrail(trail) {
     trail.geometry.setDrawRange(0, 0);
 }
 
-// Push a point in attractor space (applies scale/center transform)
-export function pushPoint(trail, x, y, z, scale, center) {
-    const sx = (x - center[0]) * scale;
-    const sy = (y - center[1]) * scale;
-    const sz = (z - center[2]) * scale;
-
-    if (trail.pointCount < MAX_POINTS) {
-        const i3 = trail.pointCount * 3;
-        trail.positions[i3] = sx;
-        trail.positions[i3 + 1] = sy;
-        trail.positions[i3 + 2] = sz;
-        trail.intensities[trail.pointCount] = trail.pointIntensity;
-        trail.pointCount++;
-    } else {
-        trail.positions.copyWithin(0, 3, trail.pointCount * 3);
-        trail.colors.copyWithin(0, 3, trail.pointCount * 3);
-        trail.alphas.copyWithin(0, 1, trail.pointCount);
-        trail.intensities.copyWithin(0, 1, trail.pointCount);
-        if (trail.colorFreezeIdx > 0) trail.colorFreezeIdx--;
-        const i3 = (trail.pointCount - 1) * 3;
-        trail.positions[i3] = sx;
-        trail.positions[i3 + 1] = sy;
-        trail.positions[i3 + 2] = sz;
-        trail.intensities[trail.pointCount - 1] = trail.pointIntensity;
-    }
-}
-
 // Push a point already in world space (no transform)
 export function pushPointWorld(trail, wx, wy, wz) {
-    if (trail.pointCount < MAX_POINTS) {
+    if (trail.pointCount < trail.capacity) {
         const i3 = trail.pointCount * 3;
         trail.positions[i3] = wx;
         trail.positions[i3 + 1] = wy;
@@ -449,40 +422,6 @@ export function pushPointWorld(trail, wx, wy, wz) {
         trail.positions[i3 + 1] = wy;
         trail.positions[i3 + 2] = wz;
         trail.intensities[trail.pointCount - 1] = trail.pointIntensity;
-    }
-}
-
-export function clampTrailState(trail) {
-    const limit = 150;
-    for (let i = 0; i < 3; i++) {
-        if (Math.abs(trail.state[i]) > limit) {
-            trail.state[i] *= limit / Math.abs(trail.state[i]);
-        }
-        if (!isFinite(trail.state[i])) {
-            const attr = ATTRACTORS[trail.attractorIdx];
-            trail.state = [...attr.initialCondition];
-            return;
-        }
-    }
-}
-
-export function integrateTrail(trail, frameDt) {
-    const attr = ATTRACTORS[trail.attractorIdx];
-    trail.drawTime += frameDt;
-
-    const rampT = Math.min(trail.drawTime / RAMP_DURATION, 1);
-    const pointsThisFrame = Math.floor(
-        POINTS_PER_FRAME_MIN + (POINTS_PER_FRAME_MAX - POINTS_PER_FRAME_MIN) * rampT
-    );
-
-    for (let i = 0; i < pointsThisFrame; i++) {
-        trail.state = rk4Step(
-            attr.derivatives,
-            trail.state[0], trail.state[1], trail.state[2],
-            attr.dt, attr.params
-        );
-        clampTrailState(trail);
-        pushPoint(trail, trail.state[0], trail.state[1], trail.state[2], attr.scale, attr.center);
     }
 }
 
