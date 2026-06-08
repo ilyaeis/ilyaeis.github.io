@@ -144,13 +144,17 @@ function placeNextCenter(prev, placed, hopMin, hopMax, separation) {
 }
 
 // ── Line builder ───────────────────────────────────────────────────
-function buildStopLine(positions, colors, alphas) {
+function buildStopLine(positions, colors, alphas, segments = false) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geo.setAttribute('aAlpha', new THREE.BufferAttribute(alphas, 1));
     geo.computeBoundingSphere();
-    return new THREE.Line(geo, getStopMaterial()); // static — frustum culling applies
+    // segments → disconnected stroke pairs (letters with no connectors);
+    // otherwise a continuous strip (attractor curves). Static either way.
+    return segments
+        ? new THREE.LineSegments(geo, getStopMaterial())
+        : new THREE.Line(geo, getStopMaterial());
 }
 
 // ── Planar stop (text / rock / landing) ────────────────────────────
@@ -166,31 +170,43 @@ function buildPlanarStop(def, center, right, up, palette) {
     }
 
     const n = points.length;
-    const positions = new Float32Array(n * 3);
-    const colors = new Float32Array(n * 3);
-    const alphas = new Float32Array(n);
     let maxAbsX = 0, maxAbsY = 0;
-
     for (let i = 0; i < n; i++) {
+        maxAbsX = Math.max(maxAbsX, Math.abs(points[i].x));
+        maxAbsY = Math.max(maxAbsY, Math.abs(points[i].y));
+    }
+
+    // Only the bold strokes (c=1) are drawn as static geometry — the
+    // faint pen-travel/connectors (c=0) are omitted entirely so nothing
+    // links the letters/meteors together. Each drawn segment joins two
+    // consecutive c=1 points; gaps (a c=0 between them) break the line.
+    // The comet still flies the full path (connectors included) at run
+    // time — those only ever show transiently in its trail.
+    const segPos = [];
+    const segCol = [];
+    const segAlpha = [];
+    function pushVertex(i) {
         const p = points[i];
         planePointToWorld(_vec3, center, right, up, scale, p);
-        positions[i * 3]     = _vec3.x;
-        positions[i * 3 + 1] = _vec3.y;
-        positions[i * 3 + 2] = _vec3.z;
-
-        const k = p.c === 0 ? LINK_INTENSITY : STROKE_INTENSITY;
+        segPos.push(_vec3.x, _vec3.y, _vec3.z);
         const col = getPaletteColor(palette, n > 1 ? i / (n - 1) : 0);
-        colors[i * 3]     = col.r * k;
-        colors[i * 3 + 1] = col.g * k;
-        colors[i * 3 + 2] = col.b * k;
-        alphas[i] = 1.0;
-
-        maxAbsX = Math.max(maxAbsX, Math.abs(p.x));
-        maxAbsY = Math.max(maxAbsY, Math.abs(p.y));
+        segCol.push(col.r * STROKE_INTENSITY, col.g * STROKE_INTENSITY, col.b * STROKE_INTENSITY);
+        segAlpha.push(1.0);
+    }
+    for (let i = 0; i < n - 1; i++) {
+        if (points[i].c === 1 && points[i + 1].c === 1) {
+            pushVertex(i);
+            pushVertex(i + 1);
+        }
     }
 
     return {
-        line: buildStopLine(positions, colors, alphas),
+        line: buildStopLine(
+            new Float32Array(segPos),
+            new Float32Array(segCol),
+            new Float32Array(segAlpha),
+            /* segments */ true
+        ),
         points2d: points,
         scale,
         halfW: maxAbsX * scale,

@@ -42,29 +42,27 @@ const rocketMats = [];
 // Modes
 let textMode = 'intro';     // intro | exiting | gone
 let iconMode = 'intro';     // intro | tocorner | corner
-let rocketMode = 'idle';    // idle | landing | landed | charging | gone
+let rocketMode = 'idle';    // idle | charging | gone
 
 let time = 0;
 let exitT = 0;              // text exit timer
 let iconT = 0;              // icon-to-corner timer
-let landT = 0;              // rocket landing timer
 let chargeT = 0;            // rocket charge timer
 let appearT = 0;            // fade-in timer once assets load
 
-const landTargetPx = { x: 0, y: 0 };
 let fromScale = 1;          // icon scale when leaving for the corner
 const _qFrom = new THREE.Quaternion();
 const _qIdent = new THREE.Quaternion();
-const _rocketFrom = new THREE.Vector3();
+const _rocketFrom = new THREE.Vector3();   // rocket position when the morph starts
 const _qRocketFrom = new THREE.Quaternion();
-let rocketFromScale = 1;
+const _rocketDir = new THREE.Vector3();    // anchor-space nose heading at morph start
+let dashDist = 1;           // how far the streak travels while morphing
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _from = new THREE.Vector3();
 
-export const LAND_DURATION = 1.6;
 const EXIT_DURATION = 0.8;
-export const CHARGE_DURATION = 1.25;
+export const CHARGE_DURATION = 1.1;
 
 // ── Helpers ────────────────────────────────────────────────────────
 function viewExtents(dist) {
@@ -287,22 +285,20 @@ export function startExit() {
     }
 }
 
-export function setRocketLanding(px, py) {
-    landTargetPx.x = px;
-    landTargetPx.y = py;
-    // Re-parent to the camera (keeping world transform) — the landing
-    // spot is screen-anchored next to the DOM hint bubble
-    camera.attach(rocket);
-    _rocketFrom.copy(rocket.position);
-    _qRocketFrom.copy(rocket.quaternion);
-    rocketFromScale = rocket.scale.x;
-    rocketMode = 'landing';
-    landT = 0;
-}
-
+// Morph the rocket into the comet streak from exactly where it is right
+// now — no fly-to-center step. We freeze its current idle transform and
+// accelerate straight along its nose, stretching it into a line.
 export function setRocketCharging() {
     rocketMode = 'charging';
     chargeT = 0;
+    _rocketFrom.copy(rocket.position);
+    _qRocketFrom.copy(rocket.quaternion);
+    // Travel direction = the nose (local +X) in anchor space
+    _rocketDir.set(1, 0, 0).applyQuaternion(rocket.quaternion).normalize();
+    // Short forward run — stays comfortably on screen while the comet
+    // line grows out of its tip
+    const { hw } = viewExtents(INTRO_VIEW_DIST);
+    dashDist = (hw / INTRO_SCALE) * 0.4;
 }
 
 export function rocketChargeDone() {
@@ -317,6 +313,13 @@ export function hideRocket() {
 export function getRocketTipWorld(out) {
     rocket.updateWorldMatrix(true, false);
     return out.set(0.1, 0, 0).applyMatrix4(rocket.matrixWorld);
+}
+
+// World-space heading of the morphing streak, so the comet departs
+// continuing the exact direction the rocket was moving in.
+export function getRocketDirWorld(out) {
+    rocket.updateWorldMatrix(true, false);
+    return out.set(1, 0, 0).transformDirection(rocket.matrixWorld).normalize();
 }
 
 export function getIconObject() {
@@ -381,52 +384,18 @@ export function update(dt, totalTime) {
         if (rocketMode === 'idle') {
             rocketIdlePos(time, rocket.position);
             aimRocketAlongPath(time);
-        } else if (rocketMode === 'landing' || rocketMode === 'landed') {
-            landT += dt;
-            const k = smoothstep(Math.min(landT / LAND_DURATION, 1));
-            screenToCam(landTargetPx.x, landTargetPx.y, HUD_DIST, _v);
-            if (k < 1) {
-                // Glide from the attach-time transform (camera-local now)
-                // to the screen-anchored landing spot, leveling out
-                rocket.position.lerpVectors(_rocketFrom, _v, k);
-                rocket.quaternion.slerpQuaternions(_qRocketFrom, _qIdent, k);
-                rocket.scale.setScalar(rocketFromScale + (1 - rocketFromScale) * k);
-            } else {
-                rocketMode = 'landed';
-                // Idle bob in place, flame quiet
-                rocket.scale.setScalar(1);
-                rocket.position.copy(_v);
-                rocket.position.y += 0.006 * Math.sin(time * 2.2);
-                rocket.rotation.set(0, 0, 0.06 * Math.sin(time * 1.7));
-            }
         } else if (rocketMode === 'charging') {
+            // The rocket keeps its real shape — it just eases into an
+            // accelerating run along its own heading and fades out, while
+            // the orchestrator traces the glowing comet line from its tip.
             chargeT += dt;
-            const ph = chargeT;
-            screenToCam(landTargetPx.x, landTargetPx.y, HUD_DIST, _v);
-            rocket.rotation.set(0, 0, 0);
-            rocket.scale.set(1, 1, 1);
-
-            if (ph < 0.55) {
-                // Pull back
-                const k = smoothstep(ph / 0.55);
-                rocket.position.set(_v.x - 0.045 * k, _v.y, _v.z);
-                rocket.scale.x = 1 - 0.1 * k;
-            } else if (ph < 1.0) {
-                // Tremble at full charge
-                const j = 0.004;
-                rocket.position.set(
-                    _v.x - 0.045 + j * Math.sin(ph * 90),
-                    _v.y + j * Math.sin(ph * 71),
-                    _v.z
-                );
-                rocket.scale.x = 0.88;
-            } else {
-                // Release: dash forward, smearing into a line
-                const k = (ph - 1.0) / (CHARGE_DURATION - 1.0);
-                rocket.position.set(_v.x - 0.045 + 0.3 * k * k, _v.y, _v.z);
-                rocket.scale.set(1 + 9 * k, Math.max(1 - k * 1.1, 0.08), Math.max(1 - k * 1.1, 0.08));
-                setOpacity(rocketMats, Math.max(1 - k * 0.85, 0.15));
-            }
+            const p = Math.min(chargeT / CHARGE_DURATION, 1);
+            const accel = p * p;                  // ease-in: gentle, building speed
+            rocket.position.copy(_rocketFrom).addScaledVector(_rocketDir, dashDist * accel);
+            rocket.quaternion.copy(_qRocketFrom);
+            rocket.scale.setScalar(1);
+            // Fade away over the back two-thirds — the streak is left behind
+            setOpacity(rocketMats, Math.max(1 - Math.max(p - 0.3, 0) / 0.7, 0));
         }
     }
 }
