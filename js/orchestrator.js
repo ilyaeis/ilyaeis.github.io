@@ -82,8 +82,8 @@ const COMET_CAPACITY = isMobile ? 600 : 1200;
 
 // Travel — stops are 30-50 units apart now, so the comet moves fast
 const TRAVEL_SPEED = 9.0;            // world units per second
-const TRAVEL_MIN = 2.5;              // seconds
-const TRAVEL_MAX = 7.0;
+const TRAVEL_MIN = 5.0;              // seconds
+const TRAVEL_MAX = 8.0;
 const TRAVEL_POINTS_PER_FRAME = 30;  // comet substeps along the path
 const CAM_PATH_WINDOW = 0.2;         // s: half-width of the path smoothing the camera follows
 const CAM_PATH_SAMPLES = 9;          // path samples per frame for that smoothing

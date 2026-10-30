@@ -135,12 +135,12 @@ const SCENERY_LEGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 // random 3D direction (lightly biased outward so the journey keeps
 // drifting away from the intro), never closer than MIN_SEPARATION to
 // another. The meteor rocks are one scene: they cluster tightly.
-const MIN_HOP = 30;
-const MAX_HOP = 50;
-const ROCK_HOP_MIN = 10;                 // rock → rock (same scene)
-const ROCK_HOP_MAX = 14;
-const MIN_SEPARATION = 16;
-const ROCK_SEPARATION = 7;               // rocks may sit near each other
+const MIN_HOP = 34;
+const MAX_HOP = 42;
+const ROCK_HOP_MIN = 32;                 // rock → rock (same scene)
+const ROCK_HOP_MAX = 40;
+const MIN_SEPARATION = 26;
+const ROCK_SEPARATION = 22;              // rocks may sit near each other
 
 const TEXT_DIM_ALPHA = 0.25;            // the text block starts dim; lit as the comet traces it (1.0 = always lit)
 const PLACE_TRIES = 12;

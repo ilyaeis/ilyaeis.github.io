@@ -188,6 +188,7 @@ body {
 }
 
 .stop-panel-more::after { content: ' \2192'; }
+.stop-panel a.stop-panel-more[hidden] { display: none; }
 
 /* Bottom layout (default): rock above, panel below */
 .stop-panel {
