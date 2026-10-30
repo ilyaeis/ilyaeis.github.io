@@ -200,23 +200,62 @@ export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 // The text block is one stop; the comet traces it, spirals around it and
 // flies on without a tap (orchestrator).
 const ROUTE = [
-    { type: StopType.TEXT,    paletteIdx: 0 },
-    { type: StopType.ROCK,    milestone: 0, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 1, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 2, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 3, paletteIdx: 1 },
-    { type: StopType.PROJECT, milestone: 5, paletteIdx: 2 },   // FLOW
-    { type: StopType.PROJECT, milestone: 8, paletteIdx: 2 },   // CALCULATOR
-    { type: StopType.PROJECT, milestone: 9, paletteIdx: 2 },   // SORTING
-    { type: StopType.LANDING, paletteIdx: 4 },
+    { id: 'traits',     universe: 'intro',      type: StopType.TEXT,    paletteIdx: 0,
+      title: 'Traits', summary: 'Creative. Adaptive. Curious.' },
+    { id: 'rvkg',       universe: 'milestones', type: StopType.ROCK,    milestone: 0, paletteIdx: 1,
+      summary: 'Programming and mathematics track; state mathematics olympiads.' },
+    { id: 'rtu',        universe: 'milestones', type: StopType.ROCK,    milestone: 1, paletteIdx: 1,
+      summary: 'Professional Bachelor in Financial Engineering.' },
+    { id: 'ai-talent',  universe: 'milestones', type: StopType.ROCK,    milestone: 2, paletteIdx: 1,
+      summary: 'Ponder AI talent program.' },
+    { id: 'giraffe360', universe: 'milestones', type: StopType.ROCK,    milestone: 3, paletteIdx: 1,
+      summary: 'R&D engineer working on 3D Gaussian splatting reconstruction.' },
+    { id: 'flow',       universe: 'projects',   type: StopType.PROJECT, milestone: 5, paletteIdx: 2,
+      summary: 'Offline workout tracker app (Dart/Flutter).' },
+    { id: 'calculator', universe: 'projects',   type: StopType.PROJECT, milestone: 8, paletteIdx: 2,
+      summary: 'Offline graphing calculator; 4th place in a programming competition.' },
+    { id: 'sorting',    universe: 'projects',   type: StopType.PROJECT, milestone: 9, paletteIdx: 2,
+      summary: 'Sorting algorithm visualizer (C++/SFML).' },
+    { id: 'contact',    universe: 'contact',    type: StopType.LANDING, paletteIdx: 4,
+      title: 'Contact', summary: 'Get in touch by email, LinkedIn or GitHub.' },
+];
+// Universes are names, not indexes. A new universe is a new entry here
+// plus ROUTE entries that use its id.
+export const UNIVERSES = [
+    { id: 'intro',      title: 'Intro' },
+    { id: 'milestones', title: 'Milestones' },
+    { id: 'projects',   title: 'Projects' },
+    { id: 'contact',    title: 'Contact' },
 ];
 // Fly-by projects (no stop, no panel): `before` = the project stop they hang in front of;
 // title and skills line say what each one is and shows
 const FLYBYS = [
-    { milestone: 4, before: 0, title: 'LOAD BALANCING LAB', skills: 'NETWORKING · DISTRIBUTED SYSTEMS · PYTHON' },
-    { milestone: 6, before: 1, title: 'MONTE CARLO FINANCE', skills: 'RISK MODELLING · STATISTICS · PYTHON' },
-    { milestone: 7, before: 2, title: 'NEUROEVOLUTION AI', skills: 'MACHINE LEARNING · GAME AI · PYTHON' },
+    { id: 'balancer', milestone: 4, before: 0, title: 'LOAD BALANCING LAB', skills: 'NETWORKING · DISTRIBUTED SYSTEMS · PYTHON' },
+    { id: 'monte-carlo', milestone: 6, before: 1, title: 'MONTE CARLO FINANCE', skills: 'RISK MODELLING · STATISTICS · PYTHON' },
+    { id: 'neat', milestone: 7, before: 2, title: 'NEUROEVOLUTION AI', skills: 'MACHINE LEARNING · GAME AI · PYTHON' },
 ];
+
+// Static catalog of every stop and fly-by (no WebGL needed): the agent API
+// reads it before the world is built. `index` = position in stops[].
+// Fly-bys are listed but not navigable (`near` = the stop they hang before).
+const TYPE_NAMES = { [StopType.TEXT]: 'text', [StopType.ROCK]: 'rock', [StopType.PROJECT]: 'project', [StopType.LANDING]: 'landing' };
+export const catalog = [
+    ...ROUTE.map((d, index) => ({
+        id: d.id, universe: d.universe, type: TYPE_NAMES[d.type], index,
+        title: d.title ?? MILESTONES[d.milestone].panel.title,
+        summary: d.summary,
+        panel: d.milestone !== undefined ? MILESTONES[d.milestone].panel : null,
+        navigable: true
+    })),
+    ...FLYBYS.map(fb => {
+        const near = ROUTE.filter(d => d.type === StopType.PROJECT)[fb.before].id;
+        const panel = MILESTONES[fb.milestone].panel;
+        return { id: fb.id, universe: 'projects', type: 'flyby', index: -1, title: panel.title,
+                 summary: fb.skills, panel, navigable: false, near };
+    })
+];
+export function stopById(id) { return catalog.find(e => e.id === id) ?? null; }
+
 
 // ── Stop shader ────────────────────────────────────────────────────
 // Baked HDR colors + per-point alpha; one shared material for all stops
@@ -667,6 +706,8 @@ export function buildWorld(scene) {
         const built = buildPlanarStop(def, center, right, up, palette);
 
         const stop = {
+            id: def.id,
+            universe: def.universe,
             type: def.type,
             paletteIdx,
             panel: def.milestone !== undefined ? MILESTONES[def.milestone].panel : undefined,

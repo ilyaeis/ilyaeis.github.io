@@ -16,7 +16,7 @@ import * as cam from './camera.js';
 import * as intro from './intro3d.js';
 import * as tunnel from './tunnel.js';
 import {
-    buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setOutsideVisible, flybys,
+    buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setOutsideVisible, flybys, stopById,
     getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL
 } from './world.js';
 
@@ -211,7 +211,13 @@ export function init() {
     baseFov = camera.fov;
     const q = new URLSearchParams(location.search);
     const stopQ = Number(q.get('stop')), legQ = Number(q.get('leg'));
-    if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
+    const goTarget = q.has('go') ? stopById(q.get('go')) : null;
+    if (goTarget?.navigable) {          // ?go=<id>[&mode=fly|jump]
+        const i = goTarget.index;
+        if (q.get('mode') === 'fly' && i >= 1) { jumpTo(i - 1); setupTravel(i, false); }
+        else jumpTo(i);
+    }
+    else if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
     else if (q.has('leg') && Number.isInteger(legQ) && legQ >= 1 && stops[legQ]) { jumpTo(legQ - 1); setupTravel(legQ, false); }
     else showTapPrompt();
     const tQ = Number(q.get('t'));
@@ -231,6 +237,9 @@ export function onTap() { tapPending = true; }
 
 // Dev only (dev/camlog.html): step without drawing, and read the state
 export function setSkipRender(v) { skipRender = v; }
+export function getState() {
+    return { phase, stopIndex, userDragging, phaseTime };
+}
 export function devState() {
     return { phase, phaseTime, stopIndex, stopType: stops[stopIndex]?.type ?? -1, worldPos, cometPos };
 }
@@ -240,12 +249,13 @@ function emitStop(phaseName) {
     const stop = stops[stopIndex];
     if (!stop) return;
     window.dispatchEvent(new CustomEvent('journey:stop', {
-        detail: { phase: phaseName, index: stopIndex, type: stop.type, panel: stop.panel || null }
+        detail: { phase: phaseName, index: stopIndex, type: stop.type, panel: stop.panel || null,
+                  id: stop.id, universe: stop.universe, label: stop.panel?.title ?? stop.id }
     }));
 }
 
-// Dev only: land the comet at stop n instantly (?stop=N, ?leg=N).
-function jumpTo(n) {
+// Land the comet at stop n instantly (?stop, ?leg, ?go, journey.goTo jump).
+export function jumpTo(n) {
     intro.hideRocket(); hideTapPrompt();
     stopIndex = n;
     const stop = stops[n];
@@ -543,7 +553,7 @@ function stepFaceAlign(dt) {
 }
 
 // ── Travel setup ───────────────────────────────────────────────────
-function setupTravel(destIdx, withCorkscrew) {
+export function setupTravel(destIdx, withCorkscrew) {
     const dest = stops[destIdx];
     emitStop('leave'); // before stopIndex moves to the destination
 
