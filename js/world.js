@@ -134,7 +134,33 @@ const SCENERY_SPIN = 0.04;               // rad/s about local Y
 // leg i = flight into stops[i]; leg 0 is the intro corkscrew into the text,
 // leg 1 (text -> rock 1) has the first galaxy. Attractor k % ATTRACTORS.length is reused
 // when there are more legs than attractors.
-const SCENERY_LEGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+// No galaxies on the entry leg (5) or inside the projects universe (6-9).
+const SCENERY_LEGS = [1, 2, 3, 4, 10];
+
+// Projects universe: a sphere shell drawn as one spiral line; the five project rocks sit inside it
+const UNIVERSE_RADIUS = 28;
+const UNIVERSE_HOP = [34, 42];           // GIRAFFE -> shell centre: UNIVERSE_RADIUS + rand(...)
+const UNIVERSE_ROCK_R = 0.55;            // rocks sit at this x radius from the centre
+const UNIVERSE_TURNS = 40;
+const UNIVERSE_POINTS = isMobile ? 2000 : 4000;
+const UNIVERSE_ALPHA = 0.3;              // < 1 colours: no bloom
+const UNIVERSE_SPIN = 0.02;              // rad/s
+const UNIVERSE_EXIT_MARGIN = 6;          // stop after the universe must be > radius + this from the centre
+// Rock slots in the shell frame (e1 = entry direction): x along e1 (-1 entry ... +1 exit),
+// rho/phi polar around e1 (phi in degrees); all x UNIVERSE_ROCK_R x radius
+// One entry per ROUTE `group`: palette for shell + rocks (ATTRACTORS index; 2 = thomas, purple/magenta),
+// rock slots, and the shell builder (one function per universe, so a group can use another shape).
+const UNIVERSE_DEFS = {
+    projects: {
+        palette: 2,
+        slots: [
+            { x: -0.95, rho: 0.25, phi: 0 }, { x: -0.45, rho: 0.85, phi: 144 }, { x: 0.00, rho: 0.90, phi: 288 },
+            { x: 0.45, rho: 0.85, phi: 72 },  { x: 0.95, rho: 0.25, phi: 216 },
+        ],
+        buildShell: (scene, u, palette) => buildSpiralShell(scene, u.center, u.radius, palette)
+    }
+};
+const UNIVERSE_SLOT_JITTER = 0.08;
 
 // Random scatter — each stop hops far from the previous one in a
 // random 3D direction (lightly biased outward so the journey keeps
@@ -165,11 +191,11 @@ const ROUTE = [
     { type: StopType.ROCK,    milestone: 1, paletteIdx: 1 },
     { type: StopType.ROCK,    milestone: 2, paletteIdx: 1 },
     { type: StopType.ROCK,    milestone: 3, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 4, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 5, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 6, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 7, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 8, paletteIdx: 1 },
+    { type: StopType.ROCK,    milestone: 4, paletteIdx: UNIVERSE_DEFS.projects.palette, group: 'projects' },
+    { type: StopType.ROCK,    milestone: 5, paletteIdx: UNIVERSE_DEFS.projects.palette, group: 'projects' },
+    { type: StopType.ROCK,    milestone: 6, paletteIdx: UNIVERSE_DEFS.projects.palette, group: 'projects' },
+    { type: StopType.ROCK,    milestone: 7, paletteIdx: UNIVERSE_DEFS.projects.palette, group: 'projects' },
+    { type: StopType.ROCK,    milestone: 8, paletteIdx: UNIVERSE_DEFS.projects.palette, group: 'projects' },
     { type: StopType.LANDING, paletteIdx: 4 },
 ];
 
@@ -214,6 +240,7 @@ function getStopMaterial() {
 // ── State ──────────────────────────────────────────────────────────
 export let stops = [];
 export let scenery = [];
+export let universes = [];               // one per ROUTE group: { group, center, radius, e1, right, up, line, palette }
 let mailPlane = null;
 export function getMailPlane() { return mailPlane; }
 
@@ -246,11 +273,11 @@ function randomHopDir(out) {
     return out.normalize();
 }
 
-function placeNextCenter(prev, placed, hopMin, hopMax, separation) {
+function placeNextCenter(prev, placed, hopMin, hopMax, separation, reject = null) {
     let candidate = null;
     for (let i = 0; i < PLACE_TRIES; i++) {
         candidate = prev.clone().addScaledVector(randomHopDir(_dir), rand(hopMin, hopMax));
-        if (placed.every(p => p.distanceTo(candidate) >= separation)) break;
+        if (placed.every(p => p.distanceTo(candidate) >= separation) && !reject?.(candidate)) break;
     }
     return candidate;
 }
@@ -369,6 +396,7 @@ function buildScenery(scene) {
             let d = Infinity;
             for (const st of stops) d = Math.min(d, cand.distanceTo(st.center));
             for (const sc of scenery) d = Math.min(d, cand.distanceTo(sc.center));
+            for (const u of universes) d = Math.min(d, Math.abs(cand.distanceTo(u.center) - u.radius)); // keep off the shell walls
             if (d > bestD) { bestD = d; center = cand.clone(); }
         }
 
@@ -408,6 +436,47 @@ function buildScenery(scene) {
 
 export function updateScenery(dt) {
     for (const s of scenery) s.line.rotation.y += SCENERY_SPIN * dt;
+    for (const u of universes) u.line.rotation.y += UNIVERSE_SPIN * dt;
+}
+
+// The universe that contains point p, or null
+export function isInsideUniverse(p) {
+    for (const u of universes) if (p.distanceTo(u.center) < u.radius) return u;
+    return null;
+}
+
+// ── Projects universe shell ────────────────────────────────────────
+// One static spiral line from pole to pole, wound around a sphere.
+function sphereSpiralPoints(n, turns, radius) {
+    const positions = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+        const t = i / (n - 1);
+        const y = 1 - 2 * t;
+        const r = Math.sqrt(Math.max(0, 1 - y * y));
+        const phi = Math.PI * 2 * turns * t;
+        positions[i * 3]     = Math.cos(phi) * r * radius;
+        positions[i * 3 + 1] = y * radius;
+        positions[i * 3 + 2] = Math.sin(phi) * r * radius;
+    }
+    return positions;
+}
+
+function buildSpiralShell(scene, center, radius, paletteIdx) {
+    const n = UNIVERSE_POINTS;
+    const positions = sphereSpiralPoints(n, UNIVERSE_TURNS, radius);
+    const colors = new Float32Array(n * 3);
+    const alphas = new Float32Array(n).fill(UNIVERSE_ALPHA);
+    const palette = ATTRACTORS[paletteIdx].palette;
+    for (let i = 0; i < n; i++) {
+        const col = getPaletteColor(palette, i / (n - 1));
+        colors[i * 3] = col.r; colors[i * 3 + 1] = col.g; colors[i * 3 + 2] = col.b;
+    }
+    const line = buildStopLine(positions, colors, alphas);
+    line.geometry.rotateX(0.6);          // poles off the world Y axis
+    line.geometry.rotateZ(0.5);
+    line.position.copy(center);
+    scene.add(line);
+    return line;
 }
 
 // Brighten a dim stop up to stroke point `uptoIdx` (vertices are in
@@ -462,14 +531,49 @@ export function buildWorld(scene) {
     const placed = [new THREE.Vector3(0, 0, 0)]; // intro counts for separation
     let prev = placed[0];
     let prevDef = null;
+    universes = [];
+    let universe = null;                 // the universe of the current ROUTE group
+    let universeSlot = 0;
 
     for (const def of ROUTE) {
         // Rock → rock stays tight (the meteors are one scene);
         // everything else scatters far apart
-        const tight = def.type === StopType.ROCK && prevDef?.type === StopType.ROCK;
-        const center = tight
-            ? placeNextCenter(prev, placed, ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION)
-            : placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION);
+        const tight = def.type === StopType.ROCK && prevDef?.type === StopType.ROCK && !def.group;
+        let center;
+        if (def.group) {
+            if (!universe || universe.group !== def.group) {
+                universeSlot = 0;
+                // Entry direction: keep every earlier stop outside the shell
+                let e1, c;
+                for (let i = 0; i < PLACE_TRIES; i++) {
+                    e1 = randomHopDir(new THREE.Vector3());
+                    c = prev.clone().addScaledVector(e1, UNIVERSE_RADIUS + rand(UNIVERSE_HOP[0], UNIVERSE_HOP[1]));
+                    if (placed.every(p => p.distanceTo(c) > UNIVERSE_RADIUS + UNIVERSE_EXIT_MARGIN)) break;
+                }
+                const right = new THREE.Vector3().crossVectors(e1, new THREE.Vector3(0, 1, 0)).normalize();
+                const up = new THREE.Vector3().crossVectors(right, e1).normalize();
+                universe = { group: def.group, center: c, radius: UNIVERSE_RADIUS, e1, right, up, line: null, palette: UNIVERSE_DEFS[def.group].palette };
+                universes.push(universe);
+            }
+            const slot = UNIVERSE_DEFS[def.group].slots[universeSlot++];
+            const rr = UNIVERSE_ROCK_R * UNIVERSE_RADIUS;
+            const phi = slot.phi * Math.PI / 180;
+            center = universe.center.clone()
+                .addScaledVector(universe.e1, slot.x * rr)
+                .addScaledVector(universe.right, Math.cos(phi) * slot.rho * rr)
+                .addScaledVector(universe.up, Math.sin(phi) * slot.rho * rr);
+            center.x += rand(-1, 1) * UNIVERSE_SLOT_JITTER * rr;
+            center.y += rand(-1, 1) * UNIVERSE_SLOT_JITTER * rr;
+            center.z += rand(-1, 1) * UNIVERSE_SLOT_JITTER * rr;
+        } else if (prevDef?.group) {
+            // First stop after the universe: well outside the shell
+            const reject = c => c.distanceTo(universe.center) < universe.radius + UNIVERSE_EXIT_MARGIN;
+            center = placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION, reject);
+        } else {
+            center = tight
+                ? placeNextCenter(prev, placed, ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION)
+                : placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION);
+        }
         placed.push(center);
         prevDef = def;
 
@@ -487,6 +591,7 @@ export function buildWorld(scene) {
         const stop = {
             type: def.type,
             paletteIdx,
+            group: def.group ?? null,
             panel: def.type === StopType.ROCK ? MILESTONES[def.milestone].panel : undefined,
             center,
             right,
@@ -499,6 +604,7 @@ export function buildWorld(scene) {
         prev = center;
     }
 
+    for (const u of universes) u.line = UNIVERSE_DEFS[u.group].buildShell(scene, u, u.palette);
     buildScenery(scene);
 
     const landing = stops[stops.length - 1];

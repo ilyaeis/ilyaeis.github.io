@@ -15,7 +15,7 @@ import {
 import * as cam from './camera.js';
 import * as intro from './intro3d.js';
 import {
-    buildWorld, stops, StopType, planePointToWorld, scenery, updateScenery, lightStop,
+    buildWorld, stops, StopType, planePointToWorld, scenery, updateScenery, lightStop, isInsideUniverse,
     getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL
 } from './world.js';
 
@@ -400,7 +400,11 @@ function pickViaScenery(from, to) {
 
     let best = null;
     let bestPerp = VIA_MAX_PERP * abLen;
+    const fromU = isInsideUniverse(from), toU = isInsideUniverse(to);
     for (const g of scenery) {
+        // A galaxy in another universe (or outside) must not pull a leg through a shell wall
+        const gU = isInsideUniverse(g.center);
+        if (gU !== fromU || gU !== toU) continue;
         const s = (_vB.subVectors(g.center, from).dot(_vA)) / abLenSq;
         if (s < VIA_BAND[0] || s > VIA_BAND[1]) continue;
         _vec3.copy(from).addScaledVector(_vA, s); // closest point on the line
