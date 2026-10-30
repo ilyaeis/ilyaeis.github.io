@@ -14,7 +14,7 @@ export const StopType = { TEXT: 0, ROCK: 1, LANDING: 2 };
 
 // ── Content ────────────────────────────────────────────────────────
 export const CONTACT_EMAIL = 'ilya.safronos@gmail.com';
-const TEXT_LINES = ['CREATIVE.', 'ADAPTIVE.', 'CURIOUS.'];
+const TEXT_WORDS = ['CREATIVE.', 'ADAPTIVE.', 'CURIOUS.'];
 const LANDING_LINES = ['GET IN TOUCH', CONTACT_EMAIL];
 const MILESTONES = [
     { label: 'RVKG', sizeFactor: 0.9, seed: 42, panel: {
@@ -74,7 +74,9 @@ const SCENERY_SCALE_MAX = 6.0;
 const SCENERY_STANDOFF = 0.35;           // center sits this × leg length beside the leg midpoint
 const SCENERY_STANDOFF_MIN = 5.0;
 const SCENERY_SPIN = 0.04;               // rad/s about local Y
-const SCENERY_LEGS = [1, 2, 3, 4, 5];    // leg i = flight into stops[i]; stops[0] is the TEXT (leg 0 is the intro corkscrew)
+// leg i = flight into stops[i]; legs 0-2 are the intro launch and the word
+// fly-throughs (no galaxy); word 3 -> rock 1 keeps the fly-by
+const SCENERY_LEGS = [3, 4, 5, 6, 7];
 
 // Random scatter — each stop hops far from the previous one in a
 // random 3D direction (lightly biased outward so the journey keeps
@@ -86,6 +88,14 @@ const ROCK_HOP_MIN = 10;                 // rock → rock (same scene)
 const ROCK_HOP_MAX = 14;
 const MIN_SEPARATION = 16;
 const ROCK_SEPARATION = 7;               // rocks may sit near each other
+
+// Trait words: short hops along a near-straight corridor so the comet
+// flies through them one after another in depth
+const WORD_HOP_MIN = 7;
+const WORD_HOP_MAX = 9;
+const WORD_SEPARATION = 4;
+const WORD_CORRIDOR_JITTER = 0.3;        // per-axis random kick added to the previous hop direction
+const WORD_DIM_ALPHA = 0.25;             // words start dim; lit as the comet traces them (1.0 = always lit)
 const PLACE_TRIES = 12;
 const MAX_PITCH = 0.55;                  // |y| of hop direction — keeps text upright
 
@@ -95,8 +105,12 @@ export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 // Visit order. Planar stops carry their own paletteIdx (into the
 // ATTRACTORS table) so every scene glows in a different color — the
 // four milestone rocks are ONE scene and share a single palette.
+// The three words are one scene (shared palette, like the rocks) and are
+// flown through, never held.
 const ROUTE = [
-    { type: StopType.TEXT,    paletteIdx: 0 },
+    { type: StopType.TEXT,    word: 0, paletteIdx: 0, passThrough: true },
+    { type: StopType.TEXT,    word: 1, paletteIdx: 0, passThrough: true },
+    { type: StopType.TEXT,    word: 2, paletteIdx: 0, passThrough: true },
     { type: StopType.ROCK,    milestone: 0, paletteIdx: 1 },
     { type: StopType.ROCK,    milestone: 1, paletteIdx: 1 },
     { type: StopType.ROCK,    milestone: 2, paletteIdx: 1 },
@@ -177,10 +191,21 @@ function randomHopDir(out) {
     return out.normalize();
 }
 
-function placeNextCenter(prev, placed, hopMin, hopMax, separation) {
+// Near-straight hop: the previous hop direction plus a small kick
+function corridorDir(out, prevDir) {
+    out.copy(prevDir);
+    out.x += rand(-WORD_CORRIDOR_JITTER, WORD_CORRIDOR_JITTER);
+    out.y += rand(-WORD_CORRIDOR_JITTER, WORD_CORRIDOR_JITTER);
+    out.z += rand(-WORD_CORRIDOR_JITTER, WORD_CORRIDOR_JITTER);
+    out.normalize();
+    out.y = THREE.MathUtils.clamp(out.y, -MAX_PITCH, MAX_PITCH);
+    return out.normalize();
+}
+
+function placeNextCenter(prev, placed, hopMin, hopMax, separation, dirFn = randomHopDir) {
     let candidate = null;
     for (let i = 0; i < PLACE_TRIES; i++) {
-        candidate = prev.clone().addScaledVector(randomHopDir(_dir), rand(hopMin, hopMax));
+        candidate = prev.clone().addScaledVector(dirFn(_dir), rand(hopMin, hopMax));
         if (placed.every(p => p.distanceTo(candidate) >= separation)) break;
     }
     return candidate;
@@ -209,7 +234,7 @@ function buildPlanarStop(def, center, right, up, palette) {
         ({ points } = generateRockWithLabel(ms.sizeFactor, ms.seed, ms.label, null));
     } else {
         ({ points } = generateTextLines(
-            def.type === StopType.LANDING ? LANDING_LINES : TEXT_LINES));
+            def.type === StopType.LANDING ? LANDING_LINES : [TEXT_WORDS[def.word]]));
     }
 
     const n = points.length;
@@ -228,13 +253,15 @@ function buildPlanarStop(def, center, right, up, palette) {
     const segPos = [];
     const segCol = [];
     const segAlpha = [];
+    const segIdx = [];
     function pushVertex(i) {
         const p = points[i];
         planePointToWorld(_vec3, center, right, up, scale, p);
         segPos.push(_vec3.x, _vec3.y, _vec3.z);
         const col = getPaletteColor(palette, n > 1 ? i / (n - 1) : 0);
         segCol.push(col.r * STROKE_INTENSITY, col.g * STROKE_INTENSITY, col.b * STROKE_INTENSITY);
-        segAlpha.push(1.0);
+        segAlpha.push(def.passThrough ? WORD_DIM_ALPHA : 1.0);
+        segIdx.push(i);
     }
     for (let i = 0; i < n - 1; i++) {
         if (points[i].c === 1 && points[i + 1].c === 1) {
@@ -251,6 +278,8 @@ function buildPlanarStop(def, center, right, up, palette) {
             /* segments */ true
         ),
         points2d: points,
+        strokeIdx: new Int32Array(segIdx),
+        litVertex: 0,
         scale,
         halfW: maxAbsX * scale,
         halfH: maxAbsY * scale
@@ -333,6 +362,15 @@ export function updateScenery(dt) {
     for (const s of scenery) s.line.rotation.y += SCENERY_SPIN * dt;
 }
 
+// Brighten a dim word up to stroke point `uptoIdx` (vertices are in
+// point order, so this is a short forward walk from the last lit vertex)
+export function lightStop(stop, uptoIdx) {
+    const attr = stop.line.geometry.getAttribute('aAlpha');
+    let v = stop.litVertex;
+    while (v < attr.count && stop.strokeIdx[v] <= uptoIdx) attr.array[v++] = 1.0;
+    if (v !== stop.litVertex) { stop.litVertex = v; attr.needsUpdate = true; }
+}
+
 // ── Mail hit-plane ─────────────────────────────────────────────────
 // Invisible plane over the email line of the landing stop; main.js
 // raycasts it (via the orchestrator) for cursor + mailto: clicks.
@@ -376,12 +414,17 @@ export function buildWorld(scene) {
     const placed = [new THREE.Vector3(0, 0, 0)]; // intro counts for separation
     let prev = placed[0];
     let prevDef = null;
+    const prevHop = journeyDir.clone();
 
     for (const def of ROUTE) {
         // Rock → rock stays tight (the meteors are one scene);
         // everything else scatters far apart
         const tight = def.type === StopType.ROCK && prevDef?.type === StopType.ROCK;
-        const center = tight
+        const corridor = def.passThrough && prevDef?.passThrough;
+        const center = corridor
+            ? placeNextCenter(prev, placed, WORD_HOP_MIN, WORD_HOP_MAX, WORD_SEPARATION,
+                out => corridorDir(out, prevHop))
+            : tight
             ? placeNextCenter(prev, placed, ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION)
             : placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION);
         placed.push(center);
@@ -390,6 +433,7 @@ export function buildWorld(scene) {
         // Planar stops face back along their approach direction so the
         // arriving camera sees them head-on; basis stays upright.
         const normal = _dir.copy(center).sub(prev).normalize().clone();
+        prevHop.copy(normal);
         const right = new THREE.Vector3()
             .crossVectors(normal, new THREE.Vector3(0, 1, 0)).normalize();
         const up = new THREE.Vector3().crossVectors(right, normal).normalize();
@@ -400,6 +444,7 @@ export function buildWorld(scene) {
 
         const stop = {
             type: def.type,
+            passThrough: !!def.passThrough,
             paletteIdx,
             panel: def.type === StopType.ROCK ? MILESTONES[def.milestone].panel : undefined,
             center,
