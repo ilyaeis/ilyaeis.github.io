@@ -11,8 +11,12 @@
 // comet flies the static centreline (centreWorld) and the camera path
 // does not depend on time.
 //
-// The warp (orchestrator) drives setFade / setRush / setReveal and the
-// star streaks (updateStreaks).
+// The warp (orchestrator) drives setFade / setRush / setVortex and the
+// star streaks (updateStreaks). Both ends of the tunnel are wormhole
+// mouths: before s = flareIn and after s = flareOut (setFlare) the wall
+// flares out like a trumpet and swirls as a vortex, so the comet dives
+// into a funnel made of the tunnel's own rings and strands, and on exit
+// they open up and dissolve behind it.
 
 import * as THREE from 'three';
 import { isMobile } from './attractors.js';
@@ -28,6 +32,10 @@ const WINDOW_AHEAD = 44;                 // ... and ahead
 const EDGE_FADE_BACK = 8;                // alpha ramps at the window ends
 const EDGE_FADE_AHEAD = 16;
 const FAR_DIM = [6, 32, 0.12];           // alpha × this far down the tunnel (keeps the vanishing point calm)
+const FLARE_LENGTH = 11;                 // mouth: radius × e^(d / this), d = distance past the tunnel end
+const FLARE_MAX = 14;                    // radius factor cap at the far mouth
+const FLARE_ALPHA = 0.5;                 // alpha × factor^-this (the wide mouth stays faint)
+const VORTEX_SPEED = 1.6;                // rad/s the mouth swirls during the warp
 // Strands: pitch (units per turn), handedness, angle offset, palette position, alpha
 const STRANDS = [
     { pitch: 9, hand: 1, off: 0.0, col: 0.0, alpha: 0.42 },
@@ -72,7 +80,7 @@ const STREAK_INTENSITY = 1.6;
 const COMMON = /* glsl */`
     uniform vec3 uOrigin, uLX, uLY, uLZ;
     uniform vec4 uAmp, uFreq, uPhase;
-    uniform float uS0, uTime, uSpin, uOsc, uPulse, uRush, uFade, uReveal;
+    uniform float uS0, uTime, uSpin, uOsc, uPulse, uRush, uFade, uFlareIn, uFlareOut, uVortex;
     uniform vec3 uCol0, uCol1, uCol2;
     varying vec3 vColor;
     varying float vAlpha;
@@ -101,14 +109,22 @@ const COMMON = /* glsl */`
     float sectionSpin(float s, float j) {
         return uSpin + ${SPIN_OSC_AMP.toFixed(3)} * sin(uOsc + 6.2831853 * s / ${SPIN_OSC_PERIOD.toFixed(1)} + 2.0 * j);
     }
+    // Wormhole mouths: 1 inside the tunnel, growing past either end
+    float flare(float s) {
+        float d = max(uFlareIn - s, 0.0) + max(s - uFlareOut, 0.0);
+        return min(exp(d / ${FLARE_LENGTH.toFixed(1)}), ${FLARE_MAX.toFixed(1)});
+    }
+    // Extra swirl of the mouths (0 in the tunnel, so the twist stays bounded there)
+    float vortex(float s) { return uVortex * (1.0 - 1.0 / flare(s)); }
     float radiusAt(float s) {
-        return ${TUNNEL_RADIUS.toFixed(3)} * (1.0 + ${BREATH_AMP.toFixed(3)} * sin(6.2831853 * s / 13.0 - 1.3 * uTime));
+        return ${TUNNEL_RADIUS.toFixed(3)} * flare(s) * (1.0 + ${BREATH_AMP.toFixed(3)} * sin(6.2831853 * s / 13.0 - 1.3 * uTime));
     }
     float windowAlpha(float s) {
         float sMin = uS0 - ${WINDOW_BACK.toFixed(1)}, sMax = uS0 + ${WINDOW_AHEAD.toFixed(1)};
         float a = smoothstep(sMin, sMin + ${EDGE_FADE_BACK.toFixed(1)}, s) * (1.0 - smoothstep(sMax - ${EDGE_FADE_AHEAD.toFixed(1)}, sMax, s));
-        a *= mix(1.0, ${FAR_DIM[2].toFixed(3)}, smoothstep(${FAR_DIM[0].toFixed(1)}, ${FAR_DIM[1].toFixed(1)}, s - uS0));
-        a *= 1.0 - smoothstep(uReveal - 6.0, uReveal, s);
+        // far dimming counts from the entry throat when the viewer is still before it (the funnel ahead stays bright)
+        a *= mix(1.0, ${FAR_DIM[2].toFixed(3)}, smoothstep(${FAR_DIM[0].toFixed(1)}, ${FAR_DIM[1].toFixed(1)}, s - max(uS0, uFlareIn)));
+        a *= pow(flare(s), -${FLARE_ALPHA.toFixed(2)});
         return a * uFade;
     }
     float pulseAt(float s) {
@@ -133,7 +149,7 @@ const STRAND_VERTEX = /* glsl */`
         float s = sBase + aIdx * uDs;
         vec3 R, U;
         frameAt(s, R, U);
-        float th = uHand * 6.2831853 * s / uPitch + uOff + 0.8 * sin(6.2831853 * s / 31.0 + uJ) + sectionSpin(s, uJ);
+        float th = uHand * 6.2831853 * s / uPitch + uOff + 0.8 * sin(6.2831853 * s / 31.0 + uJ) + sectionSpin(s, uJ) + vortex(s);
         vec3 p = centreW(s) + radiusAt(s) * (cos(th) * R + sin(th) * U);
         float k = pulseAt(s);
         vColor = palette(uColT + s / 90.0) * k;
@@ -150,7 +166,7 @@ const RING_VERTEX = /* glsl */`
         float s = sBase + aRing.x * ${RING_SPACING.toFixed(2)};
         vec3 R, U;
         frameAt(s, R, U);
-        float spin = sectionSpin(s, 0.0);
+        float spin = sectionSpin(s, 0.0) + vortex(s);
         float th = aRing.y + spin;
         vec3 p = centreW(s) + radiusAt(s) * (cos(th) * R + sin(th) * U);
         float bead = pow(0.5 + 0.5 * cos(${RING_BEADS.toFixed(1)} * aRing.y), 6.0);
@@ -239,7 +255,8 @@ export function build(scene) {
         uFreq: { value: new THREE.Vector4(...freq) },
         uPhase: { value: new THREE.Vector4(...phase) },
         uS0: { value: 0 }, uTime: { value: 0 }, uSpin: { value: 0 }, uOsc: { value: 0 },
-        uPulse: { value: 0 }, uRush: { value: 0 }, uFade: { value: 0 }, uReveal: { value: 1e6 },
+        uPulse: { value: 0 }, uRush: { value: 0 }, uFade: { value: 0 },
+        uFlareIn: { value: -1e6 }, uFlareOut: { value: 1e6 }, uVortex: { value: 0 },
         uCol0: { value: COLORS[0] }, uCol1: { value: COLORS[1] }, uCol2: { value: COLORS[2] }
     };
     const ds = (WINDOW_BACK + WINDOW_AHEAD) / (STRAND_SAMPLES - 1);
@@ -296,7 +313,10 @@ export function setFade(f) {
     for (const o of objects) o.visible = f > 0.001;
 }
 export function setRush(r) { if (uniforms) uniforms.uRush.value = r; }
-export function setReveal(s) { if (uniforms) uniforms.uReveal.value = s; }
+// The two tunnel ends (s), where the wormhole mouths open
+export function setFlare(sIn, sOut) { if (uniforms) { uniforms.uFlareIn.value = sIn; uniforms.uFlareOut.value = sOut; } }
+// t = seconds into the warp flight: the mouths swirl (only seen during the warp)
+export function setVortex(t) { if (uniforms) uniforms.uVortex.value = VORTEX_SPEED * t; }
 
 export function update(dt) {
     if (!uniforms) return;

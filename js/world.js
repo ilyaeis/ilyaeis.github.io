@@ -262,11 +262,12 @@ export function stopById(id) { return catalog.find(e => e.id === id) ?? null; }
 const STOP_VERTEX = `
     attribute vec3 color;
     attribute float aAlpha;
+    uniform float uVis;
     varying vec3 vColor;
     varying float vAlpha;
     void main() {
         vColor = color;
-        vAlpha = aAlpha;
+        vAlpha = aAlpha * uVis;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
 `;
@@ -280,11 +281,13 @@ const STOP_FRAGMENT = `
     }
 `;
 
-let stopMaterial = null;
-
-function getStopMaterial() {
-    if (!stopMaterial) {
-        stopMaterial = new THREE.ShaderMaterial({
+// Two shared materials: the outside world (rocks, text, landing, galaxies)
+// and the tunnel's project labels. Their uVis cross-fade during the warp.
+const stopMaterials = {};
+function getStopMaterial(kind = 'outside') {
+    if (!stopMaterials[kind]) {
+        stopMaterials[kind] = new THREE.ShaderMaterial({
+            uniforms: { uVis: { value: kind === 'outside' ? 1 : 0 } },
             vertexShader: STOP_VERTEX,
             fragmentShader: STOP_FRAGMENT,
             transparent: true,
@@ -292,7 +295,7 @@ function getStopMaterial() {
             depthWrite: false
         });
     }
-    return stopMaterial;
+    return stopMaterials[kind];
 }
 
 // ── State ──────────────────────────────────────────────────────────
@@ -376,7 +379,9 @@ function projectPoints(label, halfW, halfH) {
         } else pts.push({ x, y, c });
         prev = { x, y };
     };
-    push(-hw, -hh + r, 1);
+    // The comet arrives at the centre of the viz, then draws out to the frame
+    push(0, 0, 0);
+    push(-hw, -hh + r, 0);
     for (const [cx, cy, a0] of corners) {
         for (let i = 0; i <= 8; i++) {
             const a = a0 - (Math.PI / 2) * i / 8;
@@ -538,7 +543,7 @@ function buildScenery(scene) {
 // visualizations near the comet (arc parameter headS) animate.
 const VIZ_RANGE = [-12, 60];             // s window (behind, ahead) where a viz updates
 const VIZ_FADE = [16, 32];               // |s - headS|: a viz fades out from here to here (the next ones emerge from the dark)
-let inTunnel = false;
+let insideFade = 0;                      // 0 = outside the tunnel, 1 = inside (cross-fade in the warp)
 export function updateWorld(dt, headS) {
     for (const s of scenery) s.line.rotation.y += SCENERY_SPIN * dt;
     tunnel.update(dt);
@@ -547,21 +552,23 @@ export function updateWorld(dt, headS) {
 }
 function updateViz(viz, s, headS, dt) {
     if (near(s, headS)) viz.update(dt);
-    viz.setVisibility(1 - THREE.MathUtils.smoothstep(Math.abs(s - headS), VIZ_FADE[0], VIZ_FADE[1]), inTunnel);
+    const v = (1 - THREE.MathUtils.smoothstep(Math.abs(s - headS), VIZ_FADE[0], VIZ_FADE[1])) * insideFade;
+    viz.setVisibility(v, v > 0.002);
 }
 // Inside the tunnel the outside world (galaxies, rocks, landing) is
 // hidden: the walls are see-through lines, and far glows would sit on
-// top of the visualizations. The warp flash covers the switch.
-// The projects (stops and fly-bys) exist only inside: before the warp in
-// the tunnel and everything in it is invisible.
-export function setOutsideVisible(v) {
-    inTunnel = !v;
-    for (const s of scenery) s.line.visible = v;
+// top of the visualizations. The projects (stops and fly-bys) exist only
+// inside. f = 0 outside .. 1 inside: the warp cross-fades the two worlds.
+export function setInsideFade(f) {
+    insideFade = f;
+    getStopMaterial('outside').uniforms.uVis.value = 1 - f;
+    getStopMaterial('inside').uniforms.uVis.value = f;
+    for (const s of scenery) s.line.visible = f < 0.998;
     for (const st of stops) {
-        st.line.visible = (st.type === StopType.PROJECT) !== v;
-        if (st.viz) st.viz.group.visible = !v;
+        st.line.visible = st.type === StopType.PROJECT ? f > 0.002 : f < 0.998;
+        if (st.viz) st.viz.group.visible = f > 0.002;
     }
-    for (const f of flybys) f.viz.group.visible = !v;
+    for (const fb of flybys) fb.viz.group.visible = f > 0.002;
 }
 function near(s, headS) { return s - headS > VIZ_RANGE[0] && s - headS < VIZ_RANGE[1]; }
 
@@ -719,6 +726,7 @@ export function buildWorld(scene) {
             normal,
             ...built
         };
+        if (def.type === StopType.PROJECT) stop.line.material = getStopMaterial('inside');
         scene.add(stop.line);
         stops.push(stop);
         prev = center;
@@ -750,7 +758,7 @@ export function buildWorld(scene) {
 
     tunnel.build(scene);
     buildScenery(scene);
-    setOutsideVisible(true);
+    setInsideFade(0);
 
     const landing = stops[stops.length - 1];
     scene.add(buildMailPlane(landing));

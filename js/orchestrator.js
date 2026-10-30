@@ -16,7 +16,7 @@ import * as cam from './camera.js';
 import * as intro from './intro3d.js';
 import * as tunnel from './tunnel.js';
 import {
-    buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setOutsideVisible, flybys, stopById,
+    buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
     getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL
 } from './world.js';
 
@@ -65,6 +65,7 @@ let warp = null;           // { kind: 'in' | 'out', g: path share of the jump, t
 let headS = -1e9;          // the viewer's arc parameter in the tunnel
 let followFrom = 2.5, followTo = 2.5; // chase distance: departure -> destination fit
 let easeC2 = false;        // tunnel flights: smootherstep time ease
+const arrivePos = new THREE.Vector3(); // VIEW camera spot of the destination (face-on, fit distance)
 let flyby = null;          // the fly-by the current flight spirals round (world.flybys entry)
 let flybyLeg = -1;         // its helix leg index
 let flybyG = [0, 0];       // path share where that leg starts / ends
@@ -159,6 +160,8 @@ const VIEW_TAP_DELAY = {
 
 // Projects tunnel (tunnel.js). Flights inside it follow the centreline.
 const TUNNEL_DEPART = 8;             // s after a project stop where the departure joins the centreline
+const ARRIVE_BLEND = 0.3;            // share of the flight time over which the camera blends into the VIEW pose (time-based, so dt-free)
+const ARRIVE_BLEND_WARP = 0.35;      // the long warp-in flight blends a little longer
 const FOLLOW_EASE = 0.3;             // path share over which the chase distance eases to the destination fit
 const JOIN_HEADING_MIX = 1.0;        // departure into the tunnel: share of the live heading in the first control arm
 const TUNNEL_LAND = 6;               // the last units of s blend from the centreline onto the label start
@@ -181,12 +184,18 @@ const FLYBY_EASE_RAMP = 0.25;        // share of the flight time to reach (and l
 const FLYBY_FRAME_IN = [0.2, 0.15];  // framing ramps in over [start - a, start + b] (path share)
 const FLYBY_FRAME_OUT = [0.15, 0.2]; // and out over [end - a, end + b]
 const FLYBY_FOCUS = [-1.4, 0.0];     // camera focus: this far past the viz centre (negative: before it), drifting over the spiral (keeps the camera moving)
-const WARP_RISE = 0.8;               // s before the jump
-const WARP_FALL = 1.3;               // s after it
-const WARP_FOV = 24;                 // extra degrees of FOV at the peak
-const WARP_COMET = 1.4;              // extra comet intensity at the peak
-const WARP_FADE_G = 0.02;            // tunnel fade: +- this share of the path around the jump
-const WARP_REVEAL_SPEED = 90;        // units/s: on entry the tunnel builds ahead of the comet
+// Warp = a wormhole. Warp in: as the comet nears the tunnel start, a
+// funnel of the tunnel's own rings and strands fades in ahead, swirling,
+// while the outside world fades out; stars stretch into streaks as the
+// comet dives through the throat; the walls narrow into the tunnel.
+// Warp out is the reverse: the end flares open behind the comet and the
+// outside world fades back in. All cross-fades, no cuts.
+const WARP_RISE = 0.9;               // s: streaks / FOV / bloom rise before the jump (throat)
+const WARP_FALL = 1.4;               // s: ... and settle after it
+const WARP_FOV = 12;                 // extra degrees of FOV at the peak (gentle)
+const WARP_COMET = 1.2;              // extra comet intensity at the peak
+const WARP_FADE_PRE = 2.2;           // s: the worlds cross-fade from this long before the jump
+const WARP_FADE_POST = 0.4;          // ... to this long after it (reversed on the way out)
 
 // Rocket → comet morph duration (3D rocket — see intro3d.js)
 const ROCKET_MORPH_DURATION = intro.CHARGE_DURATION;
@@ -209,6 +218,7 @@ export function init() {
     });
     controls.addEventListener('end', () => { userDragging = false; });
     baseFov = camera.fov;
+    tunnel.setFlare(0, tunnelExitS);
     const q = new URLSearchParams(location.search);
     const stopQ = Number(q.get('stop')), legQ = Number(q.get('leg'));
     const goTarget = q.has('go') ? stopById(q.get('go')) : null;
@@ -266,12 +276,13 @@ export function jumpTo(n) {
     camera.position.copy(stop.center).addScaledVector(stop.normal, -fitFor(stop));
     cam.setScreenShift(hasPanel(stop), true);
     tunnel.setFade(stop.tunnelS != null ? 1 : 0);
-    setOutside(stop.tunnelS == null);
+    setInside(stop.tunnelS != null ? 1 : 0);
     enterView();
 }
 
 // The world outside the tunnel (and the intro objects) vs the tunnel's own content
-function setOutside(v) { setOutsideVisible(v); intro.setIntroVisible(v); }
+// f = 0 outside .. 1 inside; the far intro objects switch at the middle
+function setInside(f) { setInsideFade(f); intro.setIntroVisible(f < 0.5); }
 
 // Stops with an HTML panel beside them (screen shift, fit)
 function hasPanel(stop) { return stop.type === StopType.ROCK || stop.type === StopType.PROJECT; }
@@ -601,6 +612,8 @@ export function setupTravel(destIdx, withCorkscrew) {
     // big change (a small rock -> a wide project) starts without a jolt.
     followFrom = camera.position.distanceTo(controls.target);
     followTo = withCorkscrew ? Math.max(fitFor(dest), CORK_FOLLOW_DIST) : fitFor(dest);
+    arrivePos.copy(dest.center).addScaledVector(dest.normal, -fitFor(dest)); // = beginFaceAlign's target
+    cam.setArrival(dest.center, arrivePos, 0);
     cam.setFollowDistance(followFrom);
     // A fly-by is framed centred: the panel shift comes back after it
     shiftBack = !flyby;
@@ -860,6 +873,10 @@ function updateTravel(dt) {
     cameraAnchor(phaseTime + dt, worldPos);
     travelTangent(t, cometDir);
     if (warp) tunnel.updateStreaks(dt, cometPos, cometDir, w);
+    // Arrival: blend into the VIEW pose over the last ARRIVE_BLEND of the time
+    const x = Math.min((phaseTime + dt) / travelDuration, 1);
+    const blend = warp?.kind === 'in' ? ARRIVE_BLEND_WARP : ARRIVE_BLEND;
+    cam.setArrival(null, null, THREE.MathUtils.smootherstep(x, 1 - blend, 1));
     // Fly-by: the camera frames the viz, looking down the tunnel
     headingOverride = null;
     if (k > 0) {
@@ -868,7 +885,7 @@ function updateTravel(dt) {
         worldPos.lerp(_vA, k);
         headingOverride = _camDir.copy(cometDir).lerp(flyby.T, k).normalize();
     }
-    if (!shiftBack && t > flybyG[1] + FLYBY_FRAME_OUT[1]) {
+    if (!shiftBack && t > flybyG[1]) {   // as the camera swings back, so the panel layout is set before the arrival
         shiftBack = true;
         cam.setScreenShift(hasPanel(stops[stopIndex]));
     }
@@ -899,11 +916,14 @@ function warpStrength(dtJump) {
 }
 function updateWarp(time, g) {
     const w = warpStrength(time - warp.t);
-    const f = THREE.MathUtils.smoothstep(g, warp.g - WARP_FADE_G, warp.g + WARP_FADE_G);
-    tunnel.setFade(warp.kind === 'in' ? f : 1 - f);
-    setOutside(warp.kind === 'in' ? f < 0.5 : f >= 0.5);
+    // inside-ness: entry fades in before the throat, exit fades out after the mouth
+    const inside = warp.kind === 'in'
+        ? THREE.MathUtils.smootherstep(time, warp.t - WARP_FADE_PRE, warp.t + WARP_FADE_POST)
+        : 1 - THREE.MathUtils.smootherstep(time, warp.t - WARP_FADE_POST, warp.t + WARP_FADE_PRE);
+    tunnel.setFade(inside);
+    setInside(inside);
     tunnel.setRush(w);
-    tunnel.setReveal(warp.kind === 'in' ? tunnel.sOf(cometPos) + Math.max(0, time - warp.t) * WARP_REVEAL_SPEED : 1e6);
+    tunnel.setVortex(time);
     camera.fov = baseFov + WARP_FOV * w;
     camera.updateProjectionMatrix();
     setBloomBoost(w);
@@ -915,7 +935,7 @@ function endWarp() {
     camera.updateProjectionMatrix();
     setBloomBoost(0);
     tunnel.setRush(0);
-    tunnel.setReveal(1e6);
+    tunnel.setVortex(0);
     tunnel.updateStreaks(0, cometPos, cometDir, 0);
 }
 
@@ -923,6 +943,7 @@ function endWarp() {
 function enterView() {
     const stop = stops[stopIndex];
     if (warp) endWarp();
+    cam.setArrival(null, null, 0);
     headingOverride = null;
     flyby = null;
 

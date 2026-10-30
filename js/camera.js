@@ -40,6 +40,10 @@ const lookErr = new THREE.Vector3(), lookErrVel = new THREE.Vector3(); // hand-o
 const camErrGoal = new THREE.Vector3(), camErrGoalVel = new THREE.Vector3();
 const lookErrGoal = new THREE.Vector3(), lookErrGoalVel = new THREE.Vector3();
 let chaseFresh = false;                       // first FOLLOW frame: seed from the current view
+// Arrival: over the end of a flight the chase pose blends into the stop's
+// VIEW pose (look at the stop centre, camera at the face-on spot), so the
+// focus never jumps from the comet to the stop when the flight ends.
+const arrive = { w: 0, target: new THREE.Vector3(), pos: new THREE.Vector3() };
 
 // Measured pose velocity (for hand-offs)
 export const cameraVel = new THREE.Vector3(); // read-only outside
@@ -130,6 +134,13 @@ export function devState() { return { mode: currentMode, chaseDist: dist.x, chas
 
 export function setOrbitCenter(x, y, z) { orbitCenter.set(x, y, z); }
 
+// w = 0..1 (the caller eases it); target = stop centre, pos = VIEW camera spot
+export function setArrival(target, pos, w) {
+    arrive.w = w;
+    if (target) arrive.target.copy(target);
+    if (pos) arrive.pos.copy(pos);
+}
+
 // How far behind the comet the chase camera trails. Pass the destination's
 // fit distance so the arrival pose already matches the stop's framing.
 // Must stay within controls.minDistance..maxDistance (OrbitControls clamps).
@@ -173,6 +184,10 @@ export function update(dt, controls, camera, cometPos, cometDir) {
         }
         controls.target.copy(_look).add(lookErr);
         camera.position.copy(_cam).add(camErr);
+        if (arrive.w > 0) {
+            controls.target.lerp(arrive.target, arrive.w);
+            camera.position.lerp(arrive.pos, arrive.w);
+        }
     } else {
         smoothDampVec(controls.target, orbitCenter, targetVel, ORBIT_TIME, dt);
     }
