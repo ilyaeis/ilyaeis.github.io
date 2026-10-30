@@ -62,6 +62,8 @@ def metrics(log):
     cam = np.array([x['cam'] for x in f])
     look = np.array([x['look'] for x in f])
     comet = np.array([x['comet'] for x in f])
+    head = np.array([x['head'] for x in f])
+    fwd = np.array([x['fwd'] for x in f])
     ray = np.array([x['ray'] for x in f])
     up = np.array([x['up'] for x in f])
     # Orientation frame from the screen-center ray (shift included) and camera up
@@ -91,6 +93,9 @@ def metrics(log):
         'cam_jerk': np.linalg.norm(jerk, axis=1),
         'look_speed': np.linalg.norm(np.gradient(look, t, axis=0), axis=1),
         'cam_comet': np.linalg.norm(cam - comet, axis=1),
+        # Comet head angle from the view axis (no panel shift); half the vertical FOV is 30 deg
+        'head_off': np.degrees(np.arccos(np.clip(np.einsum('ij,ij->i', fwd, (head - cam) /
+                    np.linalg.norm(head - cam, axis=1, keepdims=True)), -1, 1))),
         'shift': np.array([x['shift'] for x in f]),
     }
 
@@ -123,6 +128,8 @@ def summary(name, m):
         print(f'  {key:10s} max {m[key].max():8.1f}  p99 {p99:7.1f}  limit {lim:5g} {unit:7s} spikes {len(sp)}')
         for k, t, ph, st, v in sorted(sp, key=lambda s: -s[4])[:5]:
             print(f'      frame {k:5d}  t {t:6.2f}s  {ph:11s} stop {st:2d}  {v:8.1f}')
+    trav = m['phase'] == 2
+    print(f'  head off-axis in TRAVEL: max {m["head_off"][trav].max():.1f} deg (half vertical FOV is 30)')
     print(f'  total spikes: {total}')
     return total
 
@@ -145,7 +152,7 @@ def phase_marks(ax, m):
 PANELS = [('rot_speed', 'rotation deg/s'), ('rot_accel', 'rot. accel deg/s2'),
           ('cam_speed', 'camera speed u/s'), ('cam_accel', 'camera accel u/s2'),
           ('cam_jerk', 'camera jerk u/s3'), ('look_speed', 'look speed u/s'),
-          ('cam_comet', 'camera-comet dist u')]
+          ('cam_comet', 'camera-comet dist u'), ('head_off', 'head off-axis deg')]
 COLORS = ['#2a6fdb', '#d9622b']
 
 
