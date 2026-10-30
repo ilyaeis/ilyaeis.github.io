@@ -200,12 +200,16 @@ function ribbonReveal(o, samples) {
     o.g.setDrawRange(0, Math.max(0, Math.floor(samples) - 1) * 12);
 }
 
-// Stroke-font text as static segments; left edge at x, vertical middle at y
-function strokeText(group, str, x, y, height, color, k, alpha) {
+// Stroke-font text as static segments; left edge at x, vertical middle at y.
+// The glyph height is `height`, or less if the line would be wider than maxW.
+function strokeText(group, str, x, y, height, color, k, alpha, maxW = Infinity) {
     const { points } = generateTextLines([str], 120);
-    let minX = Infinity, minY = Infinity, maxY = -Infinity;
-    for (const p of points) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); }
-    const s = height / Math.max(maxY - minY, 1e-3), my = (minY + maxY) / 2;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of points) {
+        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+    }
+    const s = Math.min(height / Math.max(maxY - minY, 1e-3), maxW / Math.max(maxX - minX, 1e-3)), my = (minY + maxY) / 2;
     const segs = [];
     for (let i = 0; i < points.length - 1; i++) {
         if (points[i].c === 1 && points[i + 1].c === 1) segs.push(points[i], points[i + 1]);
@@ -384,7 +388,7 @@ function sortingViz(group) {
                    ['MERGE SORT', opsMerge], ['SHELL SORT', opsShell], ['COCKTAIL SHAKER SORT', opsCocktail]];
     const items = quads(group, N);
     const tips = points(group, N);
-    const names = ALGOS.map(([name]) => strokeText(group, name, -1.18, 0.9, 0.065, C.magenta, 1.1, 0.75));
+    const names = ALGOS.map(([name]) => strokeText(group, name, -1.06, 0.87, 0.065, C.magenta, 1.1, 0.75));
     const base = lineSegs(group, 2);
     brackets(group);
 
@@ -997,22 +1001,25 @@ const BUILDERS = {
 };
 const PREWARM = 2.0;                     // s simulated at build, so a viz never starts empty
 
-// withLabel: the name sits under the viz (fly-bys; project stops get
-// their label from world.js, traced by the comet)
-const FLYBY_LABEL_H = 0.2;
-export function buildProjectViz(label, { withLabel = false } = {}) {
+// title / skills: a title and a smaller skills line under the viz
+// (fly-bys; project stops get their label from world.js, traced by the comet)
+const FLYBY_TITLE_H = 0.2;
+const FLYBY_SKILLS_H = 0.1;
+const FLYBY_TEXT_W = 2 * HALF_W;         // both lines fit the viz width
+export const FLYBY_TEXT_BOTTOM = -HALF_H - 0.62; // lowest text y (local units)
+export function buildProjectViz(label, { title = null, skills = null } = {}) {
     pxScale = window.innerHeight * renderer.getPixelRatio() / (2 * Math.tan(Math.PI / 6));
     const group = new THREE.Group();
     const vis = curVis = { value: 1 };
     const builder = BUILDERS[label];
     const update = builder ? builder(group) : () => {};
-    if (withLabel) {
-        const t = strokeText(group, label, 0, -HALF_H - 0.3, FLYBY_LABEL_H, C.magenta, 1.5, 1);
-        // centre it: strokeText puts the left edge at x
+    const centred = t => {               // strokeText puts the left edge at x = 0
         let maxX = -Infinity;
         for (let i = 0; i < t.n; i++) maxX = Math.max(maxX, t.pos[i * 3]);
         t.obj.position.x = -maxX / 2;
-    }
+    };
+    if (title) centred(strokeText(group, title, 0, -HALF_H - 0.27, FLYBY_TITLE_H, C.magenta, 1.5, 1, FLYBY_TEXT_W));
+    if (skills) centred(strokeText(group, skills, 0, -HALF_H - 0.55, FLYBY_SKILLS_H, C.pink, 1.0, 0.75, FLYBY_TEXT_W));
     for (let t = 0; t < PREWARM; t += 1 / 30) update(1 / 30);
     group.traverse(o => { o.frustumCulled = false; });
     // v = 0..1: fade with distance; `shown` = allowed at all (inside the tunnel)

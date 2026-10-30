@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { ATTRACTORS, rk4Step, isMobile, getPaletteColor } from './attractors.js';
 import { generateTextLines, generateRockWithLabel } from './strokeFont.js';
 import * as tunnel from './tunnel.js';
-import { buildProjectViz } from './projectViz.js';
+import { buildProjectViz, FLYBY_TEXT_BOTTOM } from './projectViz.js';
 
 export const StopType = { TEXT: 0, ROCK: 1, LANDING: 2, PROJECT: 3 };
 
@@ -77,14 +77,15 @@ const MILESTONES = [
         more: { href: 'https://github.com/ilyaeis/load-balancing-experiments', label: 'github' }
     }},
     { label: 'FLOW', sizeFactor: 0.55, seed: 23, panel: {
-        title: 'flow',
+        title: 'Flow — workout tracker app',
         subtitle: 'Offline workout tracker · Dart/Flutter · private',
         dates: '2026',
         items: [
             { text: 'Log sets with live timers.' },
             { text: 'Volume, load (ACWR), records and body measurements; custom formulas.' },
             { text: 'JSON, CSV and PDF export; CI with golden-image tests.' },
-            { text: 'In daily use.' }
+            { text: 'In daily use.' },
+            { text: 'Skills: mobile app development (Flutter/Dart), data modelling, testing and CI.' }
         ]
     }},
     { label: 'MONTE CARLO', sizeFactor: 0.65, seed: 112, panel: {
@@ -115,17 +116,19 @@ const MILESTONES = [
         items: [
             { text: 'A graphing calculator that plots functions and does maths with no internet connection.' },
             { text: 'Built with Iļja Volinskis at Riga State Classical Gymnasium.' },
-            { text: '4th place in the Riga Business School (RTU) programming competition for secondary school students: 27 entries, 10 finalists, final on 10 June 2023.' }
+            { text: '4th place in the Riga Business School (RTU) programming competition for secondary school students: 27 entries, 10 finalists, final on 10 June 2023.' },
+            { text: 'Skills: algorithms for parsing and plotting maths, teamwork, presenting to a jury.' }
         ],
         more: { href: 'https://rbs.lv/blog/2023/06/12/event-search-app-wins-programming-competition-for-high-school-students/', label: 'competition results' }
     }},
     { label: 'SORTING', sizeFactor: 0.6, seed: 91, panel: {
-        title: 'sort_visualization',
+        title: 'Sorting visualizer (sort_visualization)',
         subtitle: 'C++ · SFML',
         dates: '2022',
         items: [
             { text: '16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control.' },
-            { text: 'Source: sort_visualization on GitHub.', href: 'https://github.com/ilyaeis/sort_visualization' }
+            { text: 'Source: sort_visualization on GitHub.', href: 'https://github.com/ilyaeis/sort_visualization' },
+            { text: 'Skills: C++, algorithms and data structures, graphics (SFML). Every line written by hand, before AI tools.' }
         ],
         more: { href: 'https://github.com/ilyaeis', label: 'all repositories' }
     }}
@@ -167,11 +170,11 @@ const PROJECT_FRAME_MARGIN = 0.1;        // world units around the viz bounds
 const PROJECT_FRAME_RADIUS = 0.16;       // corner radius
 const PROJECT_LABEL_GAP = 0.14;          // frame bottom → label top
 const PROJECT_DENSITY = 200;             // 2D stroke points per unit (trace speed is per point)
-// Fly-bys: smaller projects on the tunnel wall between the stops
-const FLYBY_SCALE = 0.7;
-const FLYBY_OFFSET = 2.7;                // centre this far off the axis: clear of the camera, inside the wall
-const FLYBY_LIFT = 0.8;                  // offset direction: side + this × up (upper left / upper right)
-const FLYBY_TURN = 1.15;                 // rad: plane turned from facing the axis towards the approaching comet
+// Fly-bys: smaller projects on the tunnel centreline between the stops;
+// the comet spirals round each one (orchestrator)
+const FLYBY_SCALE = 0.8;
+const FLYBY_FIRST_AT = 0.4;              // the fly-by before the first stop sits at this share of its s
+const FLYBY_SIDE = 2.1;                  // viz centre this far beside the axis (left, right, left): the camera passes it, not through it
 
 // Random scatter — each stop hops far from the previous one in a
 // random 3D direction (lightly biased outward so the journey keeps
@@ -207,11 +210,12 @@ const ROUTE = [
     { type: StopType.PROJECT, milestone: 9, paletteIdx: 2 },   // SORTING
     { type: StopType.LANDING, paletteIdx: 4 },
 ];
-// Fly-by projects (no stop, no panel): `before` = the project stop they hang in front of
+// Fly-by projects (no stop, no panel): `before` = the project stop they hang in front of;
+// title and skills line say what each one is and shows
 const FLYBYS = [
-    { milestone: 4, before: 0 },          // BALANCER
-    { milestone: 6, before: 1 },          // MONTE CARLO
-    { milestone: 7, before: 2 },          // NEAT
+    { milestone: 4, before: 0, title: 'LOAD BALANCING LAB', skills: 'NETWORKING · DISTRIBUTED SYSTEMS · PYTHON' },
+    { milestone: 6, before: 1, title: 'MONTE CARLO FINANCE', skills: 'RISK MODELLING · STATISTICS · PYTHON' },
+    { milestone: 7, before: 2, title: 'NEUROEVOLUTION AI', skills: 'MACHINE LEARNING · GAME AI · PYTHON' },
 ];
 
 // ── Stop shader ────────────────────────────────────────────────────
@@ -679,28 +683,28 @@ export function buildWorld(scene) {
         prev = center;
     }
 
-    // Fly-bys: on the wall, turned towards the approaching comet
+    // Fly-bys: just beside the centreline, facing the approaching comet.
+    // The comet spirals round an axis along the tunnel through the centre
+    // of viz + text. `offset` = that centre minus the centreline point,
+    // `radius` = half-diagonal of viz + text (world units).
     const sOfStop = stops.filter(st => st.type === StopType.PROJECT).map(st => st.tunnelS);
     for (const fb of FLYBYS) {
-        const s = fb.before === 0 ? sOfStop[0] / 2 : (sOfStop[fb.before - 1] + sOfStop[fb.before]) / 2;
+        // (the first one a little early: the warp-in flight needs room after it to reframe the stop)
+        const s = fb.before === 0 ? sOfStop[0] * FLYBY_FIRST_AT : (sOfStop[fb.before - 1] + sOfStop[fb.before]) / 2;
         const label = MILESTONES[fb.milestone].label;
-        const viz = buildProjectViz(label, { withLabel: true });
+        const viz = buildProjectViz(label, { title: fb.title, skills: fb.skills });
         const c = tunnel.centreWorld(s, new THREE.Vector3());
         const T = tunnel.tangentWorld(s, new THREE.Vector3());
         tunnel.frameWorld(s, _r, _u);
-        // Alternate sides: upper left, upper right, upper left
-        const side = flybys.length % 2 ? 1 : -1;
-        const radial = _r.clone().multiplyScalar(side).addScaledVector(_u, FLYBY_LIFT).normalize();
-        const pos = c.clone().addScaledVector(radial, FLYBY_OFFSET);
-        // Plane normal (towards the viewer): between "into the tube" and "back down the tube"
-        const n = radial.clone().negate().multiplyScalar(Math.cos(FLYBY_TURN)).addScaledVector(T, -Math.sin(FLYBY_TURN)).normalize();
-        const fr = new THREE.Vector3().crossVectors(_u, n).normalize();
-        const fu = new THREE.Vector3().crossVectors(n, fr).normalize();
-        viz.group.position.copy(pos);
-        viz.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(fr, fu, n));
+        const top = viz.halfH, bottom = FLYBY_TEXT_BOTTOM;  // local y range
+        const mid = (top + bottom) / 2 * FLYBY_SCALE;
+        const offset = _r.clone().multiplyScalar(flybys.length % 2 ? FLYBY_SIDE : -FLYBY_SIDE);
+        viz.group.position.copy(c).add(offset).addScaledVector(_u, -mid);
+        viz.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(_r, _u, T.clone().negate()));
         viz.group.scale.setScalar(FLYBY_SCALE);
         scene.add(viz.group);
-        flybys.push({ label, s, viz });
+        const radius = Math.hypot(viz.halfW, (top - bottom) / 2) * FLYBY_SCALE;
+        flybys.push({ label, s, viz, radius, T, offset, center: c.clone().add(offset) });
     }
 
     tunnel.build(scene);
