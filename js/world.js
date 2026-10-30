@@ -82,6 +82,17 @@ const MILESTONES = [
             { text: 'In daily use.' }
         ]
     }},
+    { label: 'MONTE CARLO', sizeFactor: 0.65, seed: 112, panel: {
+        title: 'Monte Carlo Methods in Finance',
+        subtitle: 'Python · NumPy · SciPy · pandas · arch',
+        dates: '2026',
+        items: [
+            { text: 'Priced options by simulation and checked them against Black-Scholes; variance reduction cut the variance by up to 1,900x.' },
+            { text: 'Fitted GARCH volatility to S&P 500 returns and backtested three 99% VaR models over 12 years (Kupiec test).' },
+            { text: 'Efficient frontier from 30,000 random portfolios and CAPM betas. A study project from my RTU Financial Engineering courses.' }
+        ],
+        more: { href: 'https://github.com/ilyaeis/monte-carlo-finance', label: 'github' }
+    }},
     { label: 'NEAT', sizeFactor: 0.65, seed: 64, panel: {
         title: 'projects_with_NEAT',
         subtitle: 'Neuroevolution · Python',
@@ -134,10 +145,10 @@ const SCENERY_SPIN = 0.04;               // rad/s about local Y
 // leg i = flight into stops[i]; leg 0 is the intro corkscrew into the text,
 // leg 1 (text -> rock 1) has the first galaxy. Attractor k % ATTRACTORS.length is reused
 // when there are more legs than attractors.
-// No galaxies on the entry leg (5) or inside the projects universe (6-9).
-const SCENERY_LEGS = [1, 2, 3, 4, 10];
+// No galaxies on the entry leg (5) or inside the projects universe (6-10).
+const SCENERY_LEGS = [1, 2, 3, 4, 11];
 
-// Projects universe: a sphere shell drawn as one spiral line; the five project rocks sit inside it
+// Projects universe: a sphere shell drawn as one spiral line; the six project rocks sit inside it
 const UNIVERSE_RADIUS = 28;
 const UNIVERSE_HOP = [34, 42];           // GIRAFFE -> shell centre: UNIVERSE_RADIUS + rand(...)
 const UNIVERSE_ROCK_R = 0.55;            // rocks sit at this x radius from the centre
@@ -154,8 +165,8 @@ const UNIVERSE_DEFS = {
     projects: {
         palette: 2,
         slots: [
-            { x: -0.95, rho: 0.25, phi: 0 }, { x: -0.45, rho: 0.85, phi: 144 }, { x: 0.00, rho: 0.90, phi: 288 },
-            { x: 0.45, rho: 0.85, phi: 72 },  { x: 0.95, rho: 0.25, phi: 216 },
+            { x: -0.95, rho: 0.25, phi: 0 },   { x: -0.57, rho: 0.85, phi: 150 }, { x: -0.19, rho: 0.90, phi: 300 },
+            { x: 0.19, rho: 0.90, phi: 90 },   { x: 0.57, rho: 0.85, phi: 240 },  { x: 0.95, rho: 0.25, phi: 30 },
         ],
         buildShell: (scene, u, palette) => buildSpiralShell(scene, u.center, u.radius, palette)
     }
@@ -182,7 +193,7 @@ export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 
 // Visit order. Planar stops carry their own paletteIdx (into the
 // ATTRACTORS table) so every scene glows in a different color — the
-// nine milestone rocks are ONE scene and share a single palette.
+// first four milestone rocks are ONE scene and share a single palette.
 // The text block is one stop; the comet traces it, spirals around it and
 // flies on without a tap (orchestrator).
 const ROUTE = [
@@ -196,6 +207,7 @@ const ROUTE = [
     { type: StopType.ROCK,    milestone: 6, paletteIdx: UNIVERSE_DEFS.projects.palette, group: 'projects' },
     { type: StopType.ROCK,    milestone: 7, paletteIdx: UNIVERSE_DEFS.projects.palette, group: 'projects' },
     { type: StopType.ROCK,    milestone: 8, paletteIdx: UNIVERSE_DEFS.projects.palette, group: 'projects' },
+    { type: StopType.ROCK,    milestone: 9, paletteIdx: UNIVERSE_DEFS.projects.palette, group: 'projects' },
     { type: StopType.LANDING, paletteIdx: 4 },
 ];
 
