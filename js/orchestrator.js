@@ -56,7 +56,7 @@ const _loopOffset = new THREE.Vector3(); // trajectory-end → orbit settle offs
 // when a third scene sits near the corridor between stops: the comet
 // flies straight through it on the way.
 let travelLegs = [];       // [{ p0, p1, p2, p3 }]
-let travelFracs = [];      // cumulative end fraction of each leg (by length)
+let travelArc = [];        // arc-length table: [{ s, leg, lt }], s = 0..1 along the whole path
 let travelDuration = 0;
 let corkscrew = false;     // first flight spirals around its curve
 
@@ -67,6 +67,9 @@ const _tan = new THREE.Vector3();
 
 // View state
 const textFacePos = new THREE.Vector3(); // face-on camera target
+const faceCenter = new THREE.Vector3();  // stop center the face-align glides around
+const faceSph = new THREE.Spherical(), _sph = new THREE.Spherical();
+const faceR = { x: 0, v: 0 }, facePhi = { x: 0, v: 0 }, faceTheta = { x: 0, v: 0 }; // springs
 let camAligned = false;    // once true, stop steering — user gets control
 let userDragging = false;  // true while the user holds a rotate/zoom gesture
 let loopT = 0;             // planar-stop loop parameter
@@ -82,6 +85,9 @@ const TRAVEL_SPEED = 9.0;            // world units per second
 const TRAVEL_MIN = 2.5;              // seconds
 const TRAVEL_MAX = 7.0;
 const TRAVEL_POINTS_PER_FRAME = 30;  // comet substeps along the path
+const CAM_PATH_WINDOW = 0.2;         // s: half-width of the path smoothing the camera follows
+const CAM_PATH_SAMPLES = 9;          // path samples per frame for that smoothing
+const TRAVEL_ARC_SAMPLES = 256;      // arc-length table samples per leg (even speed, no jump at leg joins)
 const LAUNCH_FLASH = 0.8;            // extra HDR intensity leaving the intro
 
 // Fly-by: a scenery galaxy within this corridor of the flight line (and
@@ -103,6 +109,8 @@ const CORK_FOLLOW_DIST = 4.0;        // chase distance on the corkscrew launch s
 const HOVER_LOOKAHEAD = 5.0;         // seconds of loop motion to aim along
 
 // Viewing
+const FACE_ALIGN_TIME = 0.6;         // s: smooth time of the camera onto the face-on pose
+const FACE_ALIGN_MAX_TURN = THREE.MathUtils.degToRad(70); // rad/s: glide speed cap around the stop
 const LOOP_SUBSTEPS = 8;             // comet substeps on planar-stop loops
 const LOOP_SETTLE_RATE = 1.5;        // how fast the fly-off eases onto the orbit
 
@@ -169,6 +177,12 @@ function simulate(seconds) {
 }
 
 export function onTap() { tapPending = true; }
+
+// Dev only (dev/camlog.html): step without drawing, and read the state
+export function setSkipRender(v) { skipRender = v; }
+export function devState() {
+    return { phase, phaseTime, stopIndex, stopType: stops[stopIndex]?.type ?? -1, worldPos, cometPos };
+}
 
 // Tell the DOM (stopPanel.js) which stop the comet enters or leaves
 function emitStop(phaseName) {
@@ -251,13 +265,36 @@ function legPoint(leg, t, out) {
     return out;
 }
 
-// ── Whole-path evaluation (legs chained by length fraction) ────────
+// ── Whole-path evaluation (by arc length) ──────────────────────────
+// gt is the share of the path length, so the comet speed depends only on
+// the time ease: no speed jump where two legs join, no Bezier speed bumps.
+function buildArcTable() {
+    travelArc = [{ s: 0, leg: 0, lt: 0 }];
+    let len = 0;
+    travelLegs.forEach((leg, i) => {
+        legPoint(leg, 0, _vB);
+        for (let k = 1; k <= TRAVEL_ARC_SAMPLES; k++) {
+            legPoint(leg, k / TRAVEL_ARC_SAMPLES, _vA);
+            len += _vA.distanceTo(_vB);
+            _vB.copy(_vA);
+            travelArc.push({ s: len, leg: i, lt: k / TRAVEL_ARC_SAMPLES });
+        }
+    });
+    for (const e of travelArc) e.s /= len || 1;
+}
+
 function travelPoint(gt, out) {
-    let i = 0;
-    while (i < travelLegs.length - 1 && gt > travelFracs[i]) i++;
-    const start = i === 0 ? 0 : travelFracs[i - 1];
-    const lt = THREE.MathUtils.clamp((gt - start) / (travelFracs[i] - start), 0, 1);
-    return legPoint(travelLegs[i], lt, out);
+    gt = THREE.MathUtils.clamp(gt, 0, 1);
+    let lo = 0, hi = travelArc.length - 1;
+    while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (travelArc[mid].s < gt) lo = mid; else hi = mid;
+    }
+    const a = travelArc[lo], b = travelArc[hi];
+    const f = b.s > a.s ? (gt - a.s) / (b.s - a.s) : 0;
+    // Leg join: the next leg starts at local t = 0
+    const lt = a.leg === b.leg ? a.lt + (b.lt - a.lt) * f : b.lt * f;
+    return legPoint(travelLegs[b.leg], lt, out);
 }
 
 function travelTangent(gt, out) {
@@ -272,8 +309,9 @@ function randSign() { return Math.random() < 0.5 ? -1 : 1; }
 
 // ── Build one flight leg from a start position + direction to a target ──
 // Every transition swoops: the control points get random perpendicular
-// offsets so no two flights arc the same way.
-function buildLeg(startPos, startDir, targetPos, pull = 0.4, arc = 1) {
+// offsets so no two flights arc the same way. keepStartDir leaves p1 on
+// the start direction, so a chained leg joins without a kink.
+function buildLeg(startPos, startDir, targetPos, keepStartDir = false, pull = 0.4, arc = 1) {
     const leg = {
         p0: startPos.clone(),
         p1: new THREE.Vector3(),
@@ -295,8 +333,9 @@ function buildLeg(startPos, startDir, targetPos, pull = 0.4, arc = 1) {
     _arcRight.normalize();
     _arcUp.crossVectors(_arcRight, _vec3).normalize();
     const sign = randSign();
-    leg.p1.addScaledVector(_arcRight, sign * dist * arc * rand(0.15, 0.3));
-    leg.p1.addScaledVector(_arcUp, randSign() * dist * arc * rand(0.05, 0.15));
+    const p1Arc = keepStartDir ? 0 : 1;
+    leg.p1.addScaledVector(_arcRight, p1Arc * sign * dist * arc * rand(0.15, 0.3));
+    leg.p1.addScaledVector(_arcUp, p1Arc * randSign() * dist * arc * rand(0.05, 0.15));
     leg.p2.addScaledVector(_arcRight, -sign * dist * arc * rand(0.1, 0.2));
     leg.p2.addScaledVector(_arcUp, randSign() * dist * arc * rand(0.04, 0.1));
     return leg;
@@ -376,19 +415,37 @@ function pickViaScenery(from, to) {
 
 // ── Face-on camera alignment ───────────────────────────────────────
 // Aim the camera at a planar stop: compute the face-on position once,
-// then ease toward it each frame until arrival — unless the user
-// already took over.
+// then glide toward it each frame until arrival — unless the user
+// already took over. The glide moves in spherical coordinates around
+// the stop (distance, elevation, azimuth), so the camera swings around
+// the side and never cuts over the top or through the stop.
 function beginFaceAlign(stop) {
     const dist = fitFor(stop);
-    const center = stop.center, dir = stop.normal;
-    textFacePos.copy(center).addScaledVector(dir, -dist);
+    faceCenter.copy(stop.center);
+    textFacePos.copy(faceCenter).addScaledVector(stop.normal, -dist);
+    faceSph.setFromVector3(_vec3.subVectors(textFacePos, faceCenter));
+    _sph.setFromVector3(_vec3.subVectors(camera.position, faceCenter));
+    faceR.x = _sph.radius; facePhi.x = _sph.phi; faceTheta.x = _sph.theta;
+    // Start with the camera's current motion (no speed jump on arrival)
+    const v = cam.cameraVel, sp = Math.sin(_sph.phi), cp = Math.cos(_sph.phi);
+    const st = Math.sin(_sph.theta), ct = Math.cos(_sph.theta), r = Math.max(_sph.radius, 1e-3);
+    faceR.v = v.x * sp * st + v.y * cp + v.z * sp * ct;
+    facePhi.v = (v.x * cp * st - v.y * sp + v.z * cp * ct) / r;
+    faceTheta.v = sp > 1e-3 ? (v.x * ct - v.z * st) / (r * sp) : 0;
     camAligned = userDragging; // user already in control → don't steer
 }
 
 // Returns true on the frame the camera arrives (settles)
-function stepFaceAlign(dt, speed = 2.5) {
+function stepFaceAlign(dt) {
     if (camAligned) return false;
-    camera.position.lerp(textFacePos, 1 - Math.exp(-speed * dt));
+    // Shortest way round in azimuth
+    let dTheta = faceSph.theta - faceTheta.x;
+    dTheta = Math.atan2(Math.sin(dTheta), Math.cos(dTheta));
+    cam.smoothDampScalar(faceR, faceSph.radius, FACE_ALIGN_TIME, dt);
+    cam.smoothDampScalar(facePhi, faceSph.phi, FACE_ALIGN_TIME, dt, FACE_ALIGN_MAX_TURN);
+    cam.smoothDampScalar(faceTheta, faceTheta.x + dTheta, FACE_ALIGN_TIME, dt, FACE_ALIGN_MAX_TURN);
+    _sph.set(faceR.x, facePhi.x, faceTheta.x);
+    camera.position.setFromSpherical(_sph).add(faceCenter);
     if (camera.position.distanceToSquared(textFacePos) < 0.0025) {
         camAligned = true;
         return true;
@@ -427,24 +484,15 @@ function setupTravel(destIdx, withCorkscrew) {
         const leg1 = buildFirstLeg(viaPos);
         // Depart the via along leg1's arrival tangent — smooth join
         _vec3.subVectors(leg1.p3, leg1.p2).normalize();
-        travelLegs.push(leg1, buildLeg(viaPos, _vec3, _targetPos));
+        travelLegs.push(leg1, buildLeg(viaPos, _vec3, _targetPos, true));
     } else {
         travelLegs.push(buildFirstLeg(_targetPos));
     }
 
-    // Time + leg fractions proportional to chord length
+    // Time proportional to chord length
     let total = 0;
-    const lens = travelLegs.map(l => {
-        const len = l.p0.distanceTo(l.p3);
-        total += len;
-        return len;
-    });
-    travelFracs = [];
-    let acc = 0;
-    for (const len of lens) {
-        acc += len / total;
-        travelFracs.push(acc);
-    }
+    for (const l of travelLegs) total += l.p0.distanceTo(l.p3);
+    buildArcTable();
     travelDuration = THREE.MathUtils.clamp(total / TRAVEL_SPEED, TRAVEL_MIN, TRAVEL_MAX);
     corkscrew = withCorkscrew;
 
@@ -452,6 +500,7 @@ function setupTravel(destIdx, withCorkscrew) {
     trail.attractorIdx = dest.paletteIdx ?? 0;
 
     stopIndex = destIdx;
+    worldPos.copy(cometPos); // the camera hand-off starts from the real head, not the stop center
     cam.setMode(cam.Mode.FOLLOW, controls);
     // Pre-compose the destination so the camera is already framed on arrival
     cam.setFollowDistance(withCorkscrew ? Math.max(fitFor(dest), CORK_FOLLOW_DIST) : fitFor(dest));
@@ -552,12 +601,32 @@ function updateRocketExit(dt) {
 // speed, then settles into the stop — smoothstep on the path parameter.
 function travelEase(x) { return x * x * (3 - 2 * x); }
 
+// Point the camera follows: the path averaged over ±CAM_PATH_WINDOW s
+// (triangle weights), so tight bends do not whip the camera sideways.
+// The window eases to zero at both ends (smoothstep, no kink), so the
+// flight starts and ends exactly on the path.
+function cameraAnchor(time, out) {
+    const edge = Math.max(0, Math.min(time, travelDuration - time));
+    const w = CAM_PATH_WINDOW * travelEase(Math.min(edge / (2 * CAM_PATH_WINDOW), 1));
+    out.set(0, 0, 0);
+    let sum = 0;
+    for (let k = 0; k < CAM_PATH_SAMPLES; k++) {
+        const s = 2 * (k + 1) / (CAM_PATH_SAMPLES + 1) - 1; // inside -1..1
+        const wt = 1 - Math.abs(s);
+        travelPoint(travelEase(THREE.MathUtils.clamp((time + s * w) / travelDuration, 0, 1)), _vB);
+        out.addScaledVector(_vB, wt);
+        sum += wt;
+    }
+    return out.divideScalar(sum);
+}
+
 // ── TRAVEL (Bezier arc to the next stop) ───────────────────────────
 function updateTravel(dt) {
     // Eased path parameter so motion accelerates and decelerates instead
     // of jumping to constant speed the instant the comet departs.
-    const t = travelEase(Math.min(phaseTime / travelDuration, 1));
-    const prevT = travelEase(Math.max(0, (phaseTime - dt) / travelDuration));
+    // phaseTime is the start of this frame; draw up to its end
+    const t = travelEase(Math.min((phaseTime + dt) / travelDuration, 1));
+    const prevT = travelEase(Math.min(phaseTime / travelDuration, 1));
 
     for (let i = 1; i <= TRAVEL_POINTS_PER_FRAME; i++) {
         const subT = prevT + (t - prevT) * (i / TRAVEL_POINTS_PER_FRAME);
@@ -571,12 +640,15 @@ function updateTravel(dt) {
     }
     trail.pointIntensity = 1.0;
 
-    // Camera follows the smooth base path, not the spiral
-    travelPoint(t, worldPos);
+    // Camera follows the base path (not the spiral), smoothed over time
+    travelPoint(t, cometPos); // the head's true position, for the next leg
+    cameraAnchor(phaseTime + dt, worldPos);
     travelTangent(t, cometDir);
-    cometPos.copy(worldPos); // keep the head position current for the next leg
 
-    if (t >= 1) enterView();
+    if (t >= 1) {
+        enterView();
+        stepFaceAlign(dt); // the camera keeps moving on the hand-off frame
+    }
 }
 
 // ── VIEW (camera orbits the stop; comet rides or loops) ────────────

@@ -2,27 +2,94 @@
 // ORBIT: the target eases onto a fixed center (stops); the user may drag.
 // FOLLOW: a chase camera. It sits behind the comet along the smoothed
 //   travel direction, a little above it, and looks at a point just ahead
-//   of the comet. Only exponential smoothing with one rate — no ramps,
-//   no captured offsets — so the comet is always near screen center.
+//   of the comet, so the comet is always near screen center.
+// Smoothness: every eased value is a critically damped spring (smoothDamp),
+// so speed never jumps. The heading turns as yaw and pitch springs with a
+// capped speed, and the pitch stays off the poles. Mode hand-offs keep the
+// current pose and velocity and blend out the difference, so nothing snaps
+// when the phase changes.
 import * as THREE from 'three';
 
 export const Mode = { ORBIT: 0, FOLLOW: 1 };
 
 // ── Tuning ─────────────────────────────────────────────────────────
-const ORBIT_RATE = 3.0;        // 1/s: target convergence onto the orbit center
-const FOLLOW_RATE = 2.5;       // 1/s: smoothing of chase direction, distance and the hand-off offset
+const ORBIT_TIME = 0.5;        // s: smooth time of the target onto the orbit center
 const FOLLOW_UP = 0.18;        // camera height above the path, × chase distance
 const FOLLOW_AHEAD = 0.35;     // look point ahead of the comet, × chase distance
+const DIST_TIME = 0.6;         // s: smooth time of the chase distance
+const HANDOFF_TIME = 0.6;      // s: smooth time of the blend from the old view into the chase pose
+const TURN_TIME = 0.8;         // s: smooth time of the heading (yaw and pitch)
+const TURN_MAX_SPEED = THREE.MathUtils.degToRad(55);  // rad/s: yaw / pitch speed cap
+const MAX_CHASE_PITCH = THREE.MathUtils.degToRad(50); // the chase view never looks steeper up/down (no spin near the pole)
 
 let currentMode = Mode.ORBIT;
 const orbitCenter = new THREE.Vector3();
+const targetVel = new THREE.Vector3();        // ORBIT target spring velocity
 
 // Chase state
-const chaseDir = new THREE.Vector3(0, 0, -1); // smoothed travel direction
-let chaseDist = 2.5, chaseDistTarget = 2.5;   // current / wanted distance behind the comet
-const lookOffset = new THREE.Vector3();       // target − comet at hand-off; decays to zero
+const chaseDir = new THREE.Vector3(0, 0, -1); // smoothed travel direction (from yaw, pitch)
+const yaw = { x: 0, v: 0 }, pitch = { x: 0, v: 0 }; // heading springs (rad)
+const dist = { x: 2.5, v: 0 };                // chase distance spring
+let chaseDistTarget = 2.5;                    // wanted distance behind the comet
+const camErr = new THREE.Vector3(), camErrVel = new THREE.Vector3();   // hand-off blend (camera)
+const lookErr = new THREE.Vector3(), lookErrVel = new THREE.Vector3(); // hand-off blend (target)
 let chaseFresh = false;                       // first FOLLOW frame: seed from the current view
-const _v = new THREE.Vector3();
+
+// Measured pose velocity (for hand-offs)
+export const cameraVel = new THREE.Vector3(); // read-only outside
+const lookVel = new THREE.Vector3();
+const lastCam = new THREE.Vector3(), lastLook = new THREE.Vector3();
+let hasLast = false;
+
+const _v = new THREE.Vector3(), _axis = new THREE.Vector3();
+const _look = new THREE.Vector3(), _cam = new THREE.Vector3();
+const ZERO = new THREE.Vector3();
+
+// ── Critically damped spring (Unity-style SmoothDamp) ──────────────
+// Exact enough at any dt; the velocity is continuous by construction.
+function dampFactor(smoothTime, dt) {
+    const w = 2 / smoothTime, x = w * dt;
+    return { w, e: 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x) };
+}
+// maxSpeed (optional) caps the speed, as in Unity
+export function smoothDampScalar(state, target, smoothTime, dt, maxSpeed = Infinity) {
+    const { w, e } = dampFactor(smoothTime, dt);
+    const maxChange = maxSpeed * smoothTime;
+    const change = THREE.MathUtils.clamp(state.x - target, -maxChange, maxChange);
+    target = state.x - change;
+    const temp = (state.v + w * change) * dt;
+    state.v = (state.v - w * temp) * e;
+    state.x = target + (change + temp) * e;
+}
+export function smoothDampVec(cur, target, vel, smoothTime, dt) {
+    const { w, e } = dampFactor(smoothTime, dt);
+    _v.subVectors(cur, target);                              // change
+    _axis.copy(vel).addScaledVector(_v, w).multiplyScalar(dt); // temp
+    vel.addScaledVector(_axis, -w).multiplyScalar(e);
+    cur.copy(target).add(_v.add(_axis).multiplyScalar(e));
+}
+
+// Heading as yaw (about world up) and pitch. Yaw is kept when the
+// direction is almost vertical, so a steep dive does not spin the view.
+function seedHeading(dir) {
+    if (dir.x * dir.x + dir.z * dir.z > 1e-4) yaw.x = Math.atan2(dir.x, dir.z);
+    pitch.x = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(dir.y, -1, 1)), -MAX_CHASE_PITCH, MAX_CHASE_PITCH);
+    yaw.v = pitch.v = 0;
+    headingToDir();
+}
+function turnHeading(dir, dt) {
+    let goalYaw = yaw.x;
+    if (dir.x * dir.x + dir.z * dir.z > 0.0025) goalYaw = Math.atan2(dir.x, dir.z);
+    const dYaw = Math.atan2(Math.sin(goalYaw - yaw.x), Math.cos(goalYaw - yaw.x)); // shortest way round
+    const goalPitch = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(dir.y, -1, 1)), -MAX_CHASE_PITCH, MAX_CHASE_PITCH);
+    smoothDampScalar(yaw, yaw.x + dYaw, TURN_TIME, dt, TURN_MAX_SPEED);
+    smoothDampScalar(pitch, goalPitch, TURN_TIME, dt, TURN_MAX_SPEED);
+    headingToDir();
+}
+function headingToDir() {
+    const c = Math.cos(pitch.x);
+    chaseDir.set(c * Math.sin(yaw.x), Math.sin(pitch.x), c * Math.cos(yaw.x));
+}
 
 // ── Screen shift (HTML panel room) ─────────────────────────────────
 // Pushes the scene center toward the left (side layout) or the top
@@ -33,9 +100,13 @@ const _v = new THREE.Vector3();
 export const PANEL_SIDE_QUERY = '(min-width: 700px) and (orientation: landscape)';
 const SHIFT_SIDE_X = 0.25;      // rock center at 25% of width
 const SHIFT_BOTTOM_Y = 0.18;    // rock center at ~32% of height
-const SHIFT_RATE = 1.8;         // ease rate (1/s): ramps during the flight
-let shiftTarget = 0, shiftNow = 0;
-export function setScreenShift(on, immediate = false) { shiftTarget = on ? 1 : 0; if (immediate) shiftNow = shiftTarget; }
+const SHIFT_TIME = 0.8;         // s: smooth time; ramps during the flight
+let shiftTarget = 0;
+const shift = { x: 0, v: 0 };
+export function setScreenShift(on, immediate = false) {
+    shiftTarget = on ? 1 : 0;
+    if (immediate) { shift.x = shiftTarget; shift.v = 0; }
+}
 export function isPanelSideLayout() { return window.matchMedia(PANEL_SIDE_QUERY).matches; }
 
 export function init(controls) { controls.target.set(0, 0, 0); currentMode = Mode.ORBIT; }
@@ -45,7 +116,11 @@ export function setMode(mode, controls) {
     currentMode = mode;
     controls.autoRotate = (mode === Mode.ORBIT);
     if (mode === Mode.FOLLOW) chaseFresh = true;
+    else targetVel.copy(lookVel); // ORBIT: the target keeps its motion and eases onto the center
 }
+
+// Dev only (dev/camlog.html)
+export function devState() { return { mode: currentMode, chaseDist: dist.x, chaseDistTarget, shift: shift.x }; }
 
 export function setOrbitCenter(x, y, z) { orbitCenter.set(x, y, z); }
 
@@ -54,38 +129,60 @@ export function setOrbitCenter(x, y, z) { orbitCenter.set(x, y, z); }
 // Must stay within controls.minDistance..maxDistance (OrbitControls clamps).
 export function setFollowDistance(d) { chaseDistTarget = d; }
 
-export function update(dt, controls, camera, cometPos, cometDir) {
-    if (currentMode === Mode.FOLLOW) {
-        const k = 1 - Math.exp(-FOLLOW_RATE * dt);
-        if (chaseFresh) {
-            // Seamless hand-off: start from the view the user is looking at
-            chaseFresh = false;
-            chaseDir.subVectors(controls.target, camera.position);
-            chaseDist = Math.max(chaseDir.length(), 1e-3);
-            chaseDir.normalize();
-            lookOffset.subVectors(controls.target, cometPos);
-        }
-        _v.copy(chaseDir).lerp(cometDir, k);
-        if (_v.lengthSq() > 1e-6) chaseDir.copy(_v).normalize(); // skip the exact 180° case
-        chaseDist += (chaseDistTarget - chaseDist) * k;
-        lookOffset.multiplyScalar(1 - k);
+// Chase pose for the current heading and distance (no hand-off blend)
+function chasePose(cometPos, camera) {
+    _look.copy(cometPos).addScaledVector(chaseDir, FOLLOW_AHEAD * dist.x);
+    _cam.copy(_look).addScaledVector(chaseDir, -dist.x).addScaledVector(camera.up, FOLLOW_UP * dist.x);
+}
 
-        controls.target.copy(cometPos).addScaledVector(chaseDir, FOLLOW_AHEAD * chaseDist).add(lookOffset);
-        camera.position.copy(controls.target)
-            .addScaledVector(chaseDir, -chaseDist)
-            .addScaledVector(camera.up, FOLLOW_UP * chaseDist);
+export function update(dt, controls, camera, cometPos, cometDir) {
+    if (dt <= 0) return;
+    if (currentMode === Mode.FOLLOW) {
+        if (chaseFresh) {
+            // Hand-off: start from the view the user is looking at
+            _v.subVectors(controls.target, camera.position);
+            dist.x = Math.max(_v.length(), 1e-3);
+            dist.v = 0;
+            seedHeading(_v.normalize()); // pitch is clamped; the blend below absorbs the change
+        } else {
+            turnHeading(cometDir, dt);
+            smoothDampScalar(dist, chaseDistTarget, DIST_TIME, dt);
+        }
+        chasePose(cometPos, camera);
+        if (chaseFresh) {
+            // Keep the current pose and its velocity; blend the difference out.
+            // The pose already moved this frame, so the blend starts next frame.
+            chaseFresh = false;
+            camErr.subVectors(camera.position, _cam);
+            lookErr.subVectors(controls.target, _look);
+            camErrVel.copy(cameraVel);
+            lookErrVel.copy(lookVel);
+        } else {
+            smoothDampVec(camErr, ZERO, camErrVel, HANDOFF_TIME, dt);
+            smoothDampVec(lookErr, ZERO, lookErrVel, HANDOFF_TIME, dt);
+        }
+        controls.target.copy(_look).add(lookErr);
+        camera.position.copy(_cam).add(camErr);
     } else {
-        controls.target.lerp(orbitCenter, 1 - Math.exp(-ORBIT_RATE * dt));
+        smoothDampVec(controls.target, orbitCenter, targetVel, ORBIT_TIME, dt);
     }
 
-    shiftNow += (shiftTarget - shiftNow) * (1 - Math.exp(-SHIFT_RATE * dt));
-    if (shiftNow < 0.002 && shiftTarget === 0) {
+    smoothDampScalar(shift, shiftTarget, SHIFT_TIME, dt);
+    if (shift.x < 0.002 && shiftTarget === 0) {
         if (camera.view?.enabled) camera.clearViewOffset();
     } else {
         const W = window.innerWidth, H = window.innerHeight, side = isPanelSideLayout();
-        camera.setViewOffset(W, H, side ? shiftNow * SHIFT_SIDE_X * W : 0,
-                                   side ? 0 : shiftNow * SHIFT_BOTTOM_Y * H, W, H);
+        camera.setViewOffset(W, H, side ? shift.x * SHIFT_SIDE_X * W : 0,
+                                   side ? 0 : shift.x * SHIFT_BOTTOM_Y * H, W, H);
     }
 
-    controls.update();
+    controls.update(dt); // dt: auto-rotate speed independent of frame rate
+
+    if (hasLast) {
+        cameraVel.subVectors(camera.position, lastCam).divideScalar(dt);
+        lookVel.subVectors(controls.target, lastLook).divideScalar(dt);
+    }
+    lastCam.copy(camera.position);
+    lastLook.copy(controls.target);
+    hasLast = true;
 }
