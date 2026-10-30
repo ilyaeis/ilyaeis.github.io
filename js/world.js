@@ -156,12 +156,17 @@ const SCENERY_SPIN = 0.04;               // rad/s about local Y
 // No galaxies on the warp into the tunnel (5) or inside it (6, 7).
 const SCENERY_LEGS = [1, 2, 3, 4, 8];
 
-// Projects tunnel (tunnel.js): entry point E = GIRAFFE360 + e1 × TUNNEL_HOP,
-// project stops at s = TUNNEL_FIRST + k × TUNNEL_SPACING along the centreline
+// Projects tunnel (tunnel.js): entry point E = GIRAFFE360 + e1 × TUNNEL_HOP.
+// Along s: the warp throat at 0, a rush, the first fly-by at TUNNEL_RUSH,
+// then project stop, fly-by, stop ... each FLYBY_GAP apart, then the exit.
+// The middle of every gap is a fast zone (the comet rushes, the tunnel
+// straightens there).
 const TUNNEL_HOP = [30, 34];
-const TUNNEL_FIRST = 40;                 // s of the first project stop
-const TUNNEL_SPACING = 44;               // s between project stops (~5 s flights)
-const TUNNEL_EXIT_AFTER = 26;            // the tunnel ends this far after the last stop
+const TUNNEL_RUSH = 120;                 // s of the first fly-by (~2 s of rush after the warp in)
+const FLYBY_GAP = 125;                   // s between a fly-by and the next project stop (and stop -> fly-by)
+const TUNNEL_EXIT_AFTER = 140;           // the tunnel ends this far after the last stop (a rush before the warp out)
+const FAST_ZONE_RAMP = 48;               // s: speed / straightness ramps at each end of a fast zone
+const FAST_ZONE_MARGIN = [4, 10, 24];    // fast zones end this far from the throat / a stop or fly-by / the exit (slow there: spiral, framing, arrival, mouth)
 const TUNNEL_PITCH = 0.3;                // |y| of the tunnel axis (keeps stops upright)
 const TUNNEL_CLEAR = 15;                 // other stops stay this far from the tunnel axis
 const EXIT_SPREAD = 0.6;                 // the stop after the tunnel sits within ~±30° of the exit tangent
@@ -173,7 +178,6 @@ const PROJECT_DENSITY = 200;             // 2D stroke points per unit (trace spe
 // Fly-bys: smaller projects on the tunnel centreline between the stops;
 // the comet spirals round each one (orchestrator)
 const FLYBY_SCALE = 0.8;
-const FLYBY_FIRST_AT = 0.4;              // the fly-by before the first stop sits at this share of its s
 const FLYBY_SIDE = 2.1;                  // viz centre this far beside the axis (left, right, left): the camera passes it, not through it
 
 // Random scatter — each stop hops far from the previous one in a
@@ -631,13 +635,14 @@ function placeTunnel(from, viewDir, placed, length) {
         e1.y = THREE.MathUtils.clamp(e1.y, -TUNNEL_PITCH, TUNNEL_PITCH);
         e1.normalize();
         E.copy(from).addScaledVector(e1, rand(TUNNEL_HOP[0], TUNNEL_HOP[1]));
-        tunnel.setFrame(E, e1);
+        const turn = i % 2 ? 1 : -1;     // try both turn directions of the arc
+        tunnel.setFrame(E, e1, turn, length);
         let d = Infinity;
         for (const p of placed) d = Math.min(d, tunnel.axisDistance(p, length));
         const score = d >= TUNNEL_CLEAR ? 10 + e1.dot(viewDir) : d / TUNNEL_CLEAR;
-        if (score > bestScore) { bestScore = score; best = { E: E.clone(), e1: e1.clone() }; }
+        if (score > bestScore) { bestScore = score; best = { E: E.clone(), e1: e1.clone(), turn }; }
     }
-    tunnel.setFrame(best.E, best.e1);
+    tunnel.setFrame(best.E, best.e1, best.turn, length);
 }
 
 // First stop after the tunnel: a hop on from the exit, roughly along the
@@ -667,8 +672,17 @@ export function buildWorld(scene) {
     let prevDef = null;
     let projectK = 0;
     const nProjects = ROUTE.filter(d => d.type === StopType.PROJECT).length;
-    const projectS = k => TUNNEL_FIRST + k * TUNNEL_SPACING;
+    const projectS = k => TUNNEL_RUSH + FLYBY_GAP + 2 * k * FLYBY_GAP;
     tunnelExitS = projectS(nProjects - 1) + TUNNEL_EXIT_AFTER;
+    // Fast zones: the middle of every stretch between throat, fly-bys, stops and exit
+    const anchors = [0, TUNNEL_RUSH];
+    for (let k = 0; k < nProjects; k++) anchors.push(projectS(k), projectS(k) + (k < nProjects - 1 ? FLYBY_GAP : TUNNEL_EXIT_AFTER));
+    const zones = [];
+    const margin = i => i === 0 ? FAST_ZONE_MARGIN[0] : i === anchors.length - 1 ? FAST_ZONE_MARGIN[2] : FAST_ZONE_MARGIN[1];
+    for (let i = 0; i < anchors.length - 1; i++) {
+        zones.push({ a: anchors[i] + margin(i), b: anchors[i + 1] - margin(i + 1) });
+    }
+    tunnel.setZones(zones, FAST_ZONE_RAMP);
     const _r = new THREE.Vector3(), _u = new THREE.Vector3();
 
     for (const def of ROUTE) {
@@ -738,8 +752,7 @@ export function buildWorld(scene) {
     // `radius` = half-diagonal of viz + text (world units).
     const sOfStop = stops.filter(st => st.type === StopType.PROJECT).map(st => st.tunnelS);
     for (const fb of FLYBYS) {
-        // (the first one a little early: the warp-in flight needs room after it to reframe the stop)
-        const s = fb.before === 0 ? sOfStop[0] * FLYBY_FIRST_AT : (sOfStop[fb.before - 1] + sOfStop[fb.before]) / 2;
+        const s = fb.before === 0 ? TUNNEL_RUSH : (sOfStop[fb.before - 1] + sOfStop[fb.before]) / 2;
         const label = MILESTONES[fb.milestone].label;
         const viz = buildProjectViz(label, { title: fb.title, skills: fb.skills });
         const c = tunnel.centreWorld(s, new THREE.Vector3());

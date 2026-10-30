@@ -1,7 +1,11 @@
 // ── Projects tunnel ────────────────────────────────────────────────
 // An endless, snaking tunnel of glowing helical strands and faint rings.
-// The centreline is an analytic curve in a local frame (origin `origin`,
-// local +z = `axis`): x(s), y(s) are sums of sines and z(s) = s. Nothing
+// The centreline is analytic: a base axis that is a wide circular arc
+// (radius TURN: it starts at `origin` along `axis`, turns by TUNNEL_TURN
+// over the tunnel length, so the far end comes back near the start),
+// plus a sideways (x) and up (y) snake, sums of sines. In fast zones
+// (setZones: the stretches between stops, where the comet rushes) the snake
+// flattens to FAST_STRAIGHT, so the path is nearly straight at speed. Nothing
 // is generated on the CPU per frame. The vertex shader re-samples a
 // window [s0 - WINDOW_BACK, s0 + WINDOW_AHEAD] of the curve around the
 // viewer's arc position s0 (setView), so the tunnel never ends.
@@ -26,6 +30,9 @@ export const TUNNEL_RADIUS = 4.5;
 // Centreline: x = A1 sin(2πs/P1 + φ1) + A2 sin(2πs/P2 + φ2), y = B1 sin(2πs/Q1 + φ3) + B2 cos(2πs/Q2 + φ4).
 // Curvature ≤ ~0.055 /unit: at 12 u/s the heading turns ≤ ~40 deg/s.
 const AMP = [3.0, 0.6, 2.0, 0.5];
+export const TUNNEL_TURN = 4.4;          // rad the base axis turns over the tunnel length (~250 deg)
+const FAST_STRAIGHT = 0.1;               // snake amplitude x this in the middle of a fast zone
+const MAX_ZONES = 8;
 const PERIOD = [60, 33, 50, 28];
 const WINDOW_BACK = 22;                  // units of tunnel drawn behind the viewer
 const WINDOW_AHEAD = 44;                 // ... and ahead
@@ -79,30 +86,64 @@ const STREAK_INTENSITY = 1.6;
 // ── Shaders ────────────────────────────────────────────────────────
 const COMMON = /* glsl */`
     uniform vec3 uOrigin, uLX, uLY, uLZ;
+    uniform float uRB, uSigma;
+    uniform vec3 uZones[${MAX_ZONES}];
     uniform vec4 uAmp, uFreq, uPhase;
     uniform float uS0, uTime, uSpin, uOsc, uPulse, uRush, uFade, uFlareIn, uFlareOut, uVortex;
     uniform vec3 uCol0, uCol1, uCol2;
     varying vec3 vColor;
     varying float vAlpha;
 
-    vec2 centreXY(float s) {
+    // Fast zones (a, b, ramp): flat tops with smootherstep (C2) ramps;
+    // the snake envelope and its slope
+    vec2 sstep(float x, float a, float b) {          // smootherstep and its derivative
+        float l = b - a, t = clamp((x - a) / l, 0.0, 1.0);
+        return vec2(t * t * t * (t * (6.0 * t - 15.0) + 10.0), 30.0 * t * t * (1.0 - t) * (1.0 - t) / l);
+    }
+    vec2 envelope(float s) {
+        float f = 0.0, df = 0.0;
+        for (int i = 0; i < ${MAX_ZONES}; i++) {
+            vec3 z = uZones[i];
+            if (z.z <= 0.0 || s <= z.x || s >= z.y) continue;
+            vec2 up = sstep(s, z.x, z.x + z.z), dn = sstep(s, z.y - z.z, z.y);
+            f += up.x * (1.0 - dn.x);
+            df += up.y * (1.0 - dn.x) - up.x * dn.y;
+        }
+        float k = 1.0 - ${FAST_STRAIGHT.toFixed(3)};
+        return vec2(1.0 - k * f, -k * df);
+    }
+    vec2 snakeXY(float s) {
         return vec2(uAmp.x * sin(uFreq.x * s + uPhase.x) + uAmp.y * sin(uFreq.y * s + uPhase.y),
                     uAmp.z * sin(uFreq.z * s + uPhase.z) + uAmp.w * cos(uFreq.w * s + uPhase.w));
     }
-    vec2 centreXYd(float s) {
+    vec2 snakeXYd(float s) {
         return vec2(uAmp.x * uFreq.x * cos(uFreq.x * s + uPhase.x) + uAmp.y * uFreq.y * cos(uFreq.y * s + uPhase.y),
                     uAmp.z * uFreq.z * cos(uFreq.z * s + uPhase.z) - uAmp.w * uFreq.w * sin(uFreq.w * s + uPhase.w));
     }
+    // Base axis (arc) at s: point, tangent, sideways
+    void axisAt(float s, out vec3 A, out vec3 TZ, out vec3 LXs) {
+        float th = s / uRB, c = cos(th), sn = sin(th);
+        A = uOrigin + uRB * sn * uLZ + uSigma * uRB * (1.0 - c) * uLX;
+        TZ = c * uLZ + uSigma * sn * uLX;
+        LXs = c * uLX - uSigma * sn * uLZ;
+    }
     // Centre with the far-only snake wobble
     vec3 centreW(float s) {
-        vec2 c = centreXY(s);
+        vec2 e = envelope(s);
+        vec2 c = snakeXY(s) * e.x;
         float w = ${WOBBLE_AMP.toFixed(3)} * smoothstep(${WOBBLE_NEAR[0].toFixed(1)}, ${WOBBLE_NEAR[1].toFixed(1)}, abs(s - uS0));
         c += w * vec2(sin(0.9 * uTime + 0.21 * s), cos(0.7 * uTime + 0.17 * s));
-        return uOrigin + c.x * uLX + c.y * uLY + s * uLZ;
+        vec3 A, TZ, LXs;
+        axisAt(s, A, TZ, LXs);
+        return A + c.x * LXs + c.y * uLY;
     }
     void frameAt(float s, out vec3 R, out vec3 U) {
-        vec2 d = centreXYd(s);
-        vec3 T = normalize(d.x * uLX + d.y * uLY + uLZ);
+        vec2 e = envelope(s);
+        vec2 c = snakeXY(s), d = snakeXYd(s);
+        vec2 dc = d * e.x + c * e.y;
+        vec3 A, TZ, LXs;
+        axisAt(s, A, TZ, LXs);
+        vec3 T = normalize(TZ * (1.0 - uSigma * c.x * e.x / uRB) + dc.x * LXs + dc.y * uLY);
         R = normalize(cross(T, vec3(0.0, 1.0, 0.0)));
         U = cross(R, T);
     }
@@ -201,6 +242,9 @@ const STREAK_VERTEX = /* glsl */`
 
 // ── State ──────────────────────────────────────────────────────────
 const origin = new THREE.Vector3();
+let RB = 1e6, sigma = 1;                 // base arc radius, turn direction
+const zones = [];                        // fast zones [{ c, h }]
+let lastS = 0;                           // sOf unwrapping (the arc can pass the half turn)
 const LX = new THREE.Vector3(), LY = new THREE.Vector3(), LZ = new THREE.Vector3();
 const freq = PERIOD.map(p => 2 * Math.PI / p);
 const phase = [0, 0, 0, 0];
@@ -215,12 +259,50 @@ function cy(s) { return AMP[2] * Math.sin(freq[2] * s + phase[2]) + AMP[3] * Mat
 function dcx(s) { return AMP[0] * freq[0] * Math.cos(freq[0] * s + phase[0]) + AMP[1] * freq[1] * Math.cos(freq[1] * s + phase[1]); }
 function dcy(s) { return AMP[2] * freq[2] * Math.cos(freq[2] * s + phase[2]) - AMP[3] * freq[3] * Math.sin(freq[3] * s + phase[3]); }
 
+// 0..1: how deep s is in a fast zone (C2 bumps); its slope in _fd
+let _fd = 0;
+function sstep(x, a, b) {                // smootherstep; derivative in _sd
+    const l = b - a, t = Math.min(Math.max((x - a) / l, 0), 1);
+    _sd = 30 * t * t * (1 - t) * (1 - t) / l;
+    return t * t * t * (t * (6 * t - 15) + 10);
+}
+let _sd = 0;
+export function fastness(s) {
+    let f = 0; _fd = 0;
+    for (const z of zones) {
+        if (s <= z.a || s >= z.b) continue;
+        const up = sstep(s, z.a, z.a + z.r), dup = _sd;
+        const dn = sstep(s, z.b - z.r, z.b), ddn = _sd;
+        f += up * (1 - dn);
+        _fd += dup * (1 - dn) - up * ddn;
+    }
+    return f;
+}
+const _A = new THREE.Vector3(), _TZ = new THREE.Vector3(), _LXs = new THREE.Vector3();
+function axisAt(s) {
+    const th = s / RB, c = Math.cos(th), sn = Math.sin(th);
+    _A.copy(origin).addScaledVector(LZ, RB * sn).addScaledVector(LX, sigma * RB * (1 - c));
+    _TZ.copy(LZ).multiplyScalar(c).addScaledVector(LX, sigma * sn);
+    _LXs.copy(LX).multiplyScalar(c).addScaledVector(LZ, -sigma * sn);
+}
 export function centreWorld(s, out) {
-    const x = cx(s), y = cy(s);
-    return out.copy(origin).addScaledVector(LX, x).addScaledVector(LY, y).addScaledVector(LZ, s);
+    const e = 1 - (1 - FAST_STRAIGHT) * fastness(s);
+    axisAt(s);
+    return out.copy(_A).addScaledVector(_LXs, cx(s) * e).addScaledVector(LY, cy(s) * e);
 }
 export function tangentWorld(s, out) {
-    return out.set(0, 0, 0).addScaledVector(LX, dcx(s)).addScaledVector(LY, dcy(s)).add(LZ).normalize();
+    const f = fastness(s), k = 1 - FAST_STRAIGHT;
+    const e = 1 - k * f, de = -k * _fd;
+    const x = cx(s), y = cy(s);
+    axisAt(s);
+    return out.copy(_TZ).multiplyScalar(1 - sigma * x * e / RB)
+        .addScaledVector(_LXs, dcx(s) * e + x * de).addScaledVector(LY, dcy(s) * e + y * de).normalize();
+}
+// Fast zones along s ([{ a, b }]: start, end), flat tops with ramps of up to
+// `ramp` units at each end; set before placing anything
+export function setZones(list, ramp) {
+    zones.length = 0;
+    for (const z of list.slice(0, MAX_ZONES)) zones.push({ a: z.a, b: z.b, r: Math.min(ramp, (z.b - z.a) / 2) });
 }
 const _Y = new THREE.Vector3(0, 1, 0);
 // Upright frame (right, up) around the tangent, as planar stops use it
@@ -230,27 +312,43 @@ export function frameWorld(s, right, up) {
     right.crossVectors(T, _Y).normalize();
     up.crossVectors(right, T).normalize();
 }
-// Arc parameter of a world point (its local z; exact on the centreline)
-export function sOf(p) { return (p.x - origin.x) * LZ.x + (p.y - origin.y) * LZ.y + (p.z - origin.z) * LZ.z; }
-// Distance from p to the tunnel axis segment [0, length] (for placement)
+// Arc parameter of a world point: its angle round the base arc (exact on
+// the axis, close on the centreline), unwrapped next to the last result
+export function sOf(p) {
+    const vx = p.x - origin.x, vy = p.y - origin.y, vz = p.z - origin.z;
+    const z = vx * LZ.x + vy * LZ.y + vz * LZ.z, x = vx * LX.x + vy * LX.y + vz * LX.z;
+    let s = RB * Math.atan2(z, RB - sigma * x);
+    const turn = 2 * Math.PI * RB;
+    s += Math.round((lastS - s) / turn) * turn;
+    lastS = s;
+    return s;
+}
+// Distance from p to the base axis over s in [0, length] (for placement)
 export function axisDistance(p, length) {
-    const s = THREE.MathUtils.clamp(sOf(p), 0, length);
-    return p.distanceTo(origin.clone().addScaledVector(LZ, s));
+    let d = Infinity;
+    for (let s = 0; s <= length; s += 3) { axisAt(s); d = Math.min(d, p.distanceTo(_A)); }
+    return d;
 }
 
 // ── Build ──────────────────────────────────────────────────────────
-// Sets the frame only (placement uses it before the geometry exists)
-export function setFrame(o, axis) {
+// Sets the frame only (placement uses it before the geometry exists):
+// start point, start direction, turn direction (+1 / -1), tunnel length
+export function setFrame(o, axis, turn, length) {
     origin.copy(o);
     LZ.copy(axis).normalize();
     LX.crossVectors(_Y, LZ).normalize();
     LY.crossVectors(LZ, LX).normalize();
+    sigma = turn;
+    RB = length / TUNNEL_TURN;
+    lastS = 0;
     for (let i = 0; i < 4; i++) phase[i] = Math.random() * Math.PI * 2;
 }
 
 export function build(scene) {
     uniforms = {
         uOrigin: { value: origin }, uLX: { value: LX }, uLY: { value: LY }, uLZ: { value: LZ },
+        uRB: { value: RB }, uSigma: { value: sigma },
+        uZones: { value: Array.from({ length: MAX_ZONES }, (_, i) => new THREE.Vector3(zones[i]?.a ?? 0, zones[i]?.b ?? 0, zones[i]?.r ?? 0)) },
         uAmp: { value: new THREE.Vector4(...AMP) },
         uFreq: { value: new THREE.Vector4(...freq) },
         uPhase: { value: new THREE.Vector4(...phase) },

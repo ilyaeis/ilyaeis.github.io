@@ -86,7 +86,8 @@ while (t < Math.min(MAX_TIME, endAt)) {
         comet: v3(o.worldPos), head: v3(o.cometPos),
         cam: v3(camera.position), look: v3(controls.target),
         fwd: v3(fwd), up: v3(up), ray: v3(ray),
-        dist: r(c.chaseDist), distTarget: r(c.chaseDistTarget), shift: r(c.shift)
+        dist: r(c.chaseDist), distTarget: r(c.chaseDistTarget), shift: r(c.shift),
+        tunnel: o.tunnelFlight ? 1 : 0, hs: r(o.headS)
     });
 
     // End 3 s after the tour loops back to the first rock
