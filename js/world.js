@@ -50,9 +50,9 @@ const MILESTONES = [
         dates: '2022 – 2026',
         items: [
             { text: 'load-balancing-experiments — DNS/anycast, queueing sim, consistent hashing (Python)', href: 'https://github.com/ilyaeis/load-balancing-experiments' },
+            { text: 'flow — offline workout tracker I use daily (Flutter, private)' },
             { text: 'projects_with_NEAT — neuroevolution agents learning games (Python)', href: 'https://github.com/ilyaeis/projects_with_NEAT' },
-            { text: 'RTU_program_parser — timetable scraper (Python, Selenium, pandas)', href: 'https://github.com/ilyaeis/RTU_program_parser' },
-            { text: 'This site — three.js comet journey, no build step', href: 'https://github.com/ilyaeis/ilyaeis.github.io' }
+            { text: 'sort_visualization — 16 sorting algorithms animated (C++, SFML)', href: 'https://github.com/ilyaeis/sort_visualization' }
         ],
         more: { href: 'https://github.com/ilyaeis', label: 'all repositories' }
     }}
