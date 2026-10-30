@@ -55,15 +55,56 @@ const MILESTONES = [
         ],
         more: { href: 'resume.html', label: 'full resume' }
     }},
-    { label: 'PROJECTS', sizeFactor: 0.6, seed: 91, panel: {
-        title: 'Selected projects',
-        subtitle: 'github.com/ilyaeis',
-        dates: '2022 – 2026',
+    { label: 'BALANCER', sizeFactor: 0.6, seed: 105, panel: {
+        title: 'load-balancing-experiments',
+        subtitle: 'RTU networks project · Python',
+        dates: '2026',
         items: [
-            { text: 'load-balancing-experiments — DNS/anycast, queueing sim, consistent hashing (Python)', href: 'https://github.com/ilyaeis/load-balancing-experiments' },
-            { text: 'flow — offline workout tracker I use daily (Flutter, private)' },
-            { text: 'projects_with_NEAT — neuroevolution agents learning games (Python)', href: 'https://github.com/ilyaeis/projects_with_NEAT' },
-            { text: 'sort_visualization — 16 sorting algorithms animated (C++, SFML)', href: 'https://github.com/ilyaeis/sort_visualization' }
+            { text: 'DNS round robin and anycast, measured from Riga.' },
+            { text: 'Queueing simulation of load-balancing policies, including power of two choices.' },
+            { text: 'Consistent, rendezvous and Maglev hashing; a mini load balancer with health checks.' }
+        ],
+        more: { href: 'https://github.com/ilyaeis/load-balancing-experiments', label: 'github' }
+    }},
+    { label: 'FLOW', sizeFactor: 0.55, seed: 23, panel: {
+        title: 'flow',
+        subtitle: 'Offline workout tracker · Dart/Flutter · private',
+        dates: '2026',
+        items: [
+            { text: 'Log sets with live timers.' },
+            { text: 'Volume, load (ACWR), records and body measurements; custom formulas.' },
+            { text: 'JSON, CSV and PDF export; CI with golden-image tests.' },
+            { text: 'In daily use.' }
+        ]
+    }},
+    { label: 'NEAT', sizeFactor: 0.65, seed: 64, panel: {
+        title: 'projects_with_NEAT',
+        subtitle: 'Neuroevolution · Python',
+        dates: '2025',
+        items: [
+            { text: 'NEAT agents learn Flappy Bird and Pong.' },
+            { text: 'A documented attempt at multi-snake survival.' }
+        ],
+        more: { href: 'https://github.com/ilyaeis/projects_with_NEAT', label: 'github' }
+    }},
+    { label: 'CALCULATOR', sizeFactor: 0.7, seed: 37, panel: {
+        title: 'Offline Graphing Calculator',
+        subtitle: 'RBS programming competition · 4th place',
+        dates: '2023',
+        items: [
+            { text: 'A graphing calculator that plots functions and does maths with no internet connection.' },
+            { text: 'Built with Iļja Volinskis at Riga State Classical Gymnasium.' },
+            { text: '4th place in the Riga Business School (RTU) programming competition for secondary school students: 27 entries, 10 finalists, final on 10 June 2023.' }
+        ],
+        more: { href: 'https://rbs.lv/blog/2023/06/12/event-search-app-wins-programming-competition-for-high-school-students/', label: 'competition results' }
+    }},
+    { label: 'SORTING', sizeFactor: 0.6, seed: 91, panel: {
+        title: 'sort_visualization',
+        subtitle: 'C++ · SFML',
+        dates: '2022',
+        items: [
+            { text: '16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control.' },
+            { text: 'Source: sort_visualization on GitHub.', href: 'https://github.com/ilyaeis/sort_visualization' }
         ],
         more: { href: 'https://github.com/ilyaeis', label: 'all repositories' }
     }}
@@ -86,9 +127,9 @@ const SCENERY_STANDOFF = 0.35;           // center sits this × leg length besid
 const SCENERY_STANDOFF_MIN = 5.0;
 const SCENERY_SPIN = 0.04;               // rad/s about local Y
 // leg i = flight into stops[i]; leg 0 is the intro corkscrew into the text,
-// leg 1 (text -> rock 1) has the first galaxy. Attractor k % 5 is reused
+// leg 1 (text -> rock 1) has the first galaxy. Attractor k % ATTRACTORS.length is reused
 // when there are more legs than attractors.
-const SCENERY_LEGS = [1, 2, 3, 4, 5, 6];
+const SCENERY_LEGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 // Random scatter — each stop hops far from the previous one in a
 // random 3D direction (lightly biased outward so the journey keeps
@@ -110,7 +151,7 @@ export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 
 // Visit order. Planar stops carry their own paletteIdx (into the
 // ATTRACTORS table) so every scene glows in a different color — the
-// five milestone rocks are ONE scene and share a single palette.
+// nine milestone rocks are ONE scene and share a single palette.
 // The text block is one stop; the comet traces it, spirals around it and
 // flies on without a tap (orchestrator).
 const ROUTE = [
@@ -120,6 +161,10 @@ const ROUTE = [
     { type: StopType.ROCK,    milestone: 2, paletteIdx: 1 },
     { type: StopType.ROCK,    milestone: 3, paletteIdx: 1 },
     { type: StopType.ROCK,    milestone: 4, paletteIdx: 1 },
+    { type: StopType.ROCK,    milestone: 5, paletteIdx: 1 },
+    { type: StopType.ROCK,    milestone: 6, paletteIdx: 1 },
+    { type: StopType.ROCK,    milestone: 7, paletteIdx: 1 },
+    { type: StopType.ROCK,    milestone: 8, paletteIdx: 1 },
     { type: StopType.LANDING, paletteIdx: 4 },
 ];
 
