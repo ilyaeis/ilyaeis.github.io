@@ -256,6 +256,9 @@ export function setRocketCharging() {
     dashDist = (hw / INTRO_SCALE) * 0.4;
 }
 
+// Hidden inside the projects tunnel (the walls are see-through)
+export function setIntroVisible(v) { if (introAnchor) introAnchor.visible = v; }
+
 export function hideRocket() {
     rocketMode = 'gone';
     if (rocket) rocket.visible = false;

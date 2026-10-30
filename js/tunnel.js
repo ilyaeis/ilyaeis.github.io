@@ -208,8 +208,9 @@ export function tangentWorld(s, out) {
 }
 const _Y = new THREE.Vector3(0, 1, 0);
 // Upright frame (right, up) around the tangent, as planar stops use it
+const _T = new THREE.Vector3();
 export function frameWorld(s, right, up) {
-    const T = tangentWorld(s, new THREE.Vector3());
+    const T = tangentWorld(s, _T);
     right.crossVectors(T, _Y).normalize();
     up.crossVectors(right, T).normalize();
 }
