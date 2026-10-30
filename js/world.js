@@ -19,8 +19,11 @@ const LANDING_LINES = ['GET IN TOUCH', CONTACT_EMAIL];
 const MILESTONES = [
     { label: 'RVKG', sizeFactor: 0.9, seed: 42, panel: {
         title: 'Riga State Classical Gymnasium',
-        subtitle: 'Rīgas Valsts klasiskā ģimnāzija · Riga',
-        items: [{ text: 'Secondary education in Riga.' }]
+        subtitle: 'Programming and Mathematics track · Riga',
+        items: [
+            { text: 'Specialised track in programming and mathematics (today named "Programming + AI").' },
+            { text: 'School projects in Programming I and II; one became the Offline Graphing Calculator (2023).' }
+        ]
     }},
     { label: 'RTU', sizeFactor: 0.7, seed: 73, panel: {
         title: 'Riga Technical University',
