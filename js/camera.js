@@ -17,6 +17,7 @@ const ORBIT_TIME = 0.5;        // s: smooth time of the target onto the orbit ce
 const FOLLOW_UP = 0.18;        // camera height above the path, × chase distance
 const FOLLOW_AHEAD = 0.35;     // look point ahead of the comet, × chase distance
 const DIST_TIME = 0.6;         // s: smooth time of the chase distance
+const DIST_MAX_SPEED = 0.8;    // u/s: a big change (rock -> wide project frame) eases in, so the hand-off blend does not swing the view
 const HANDOFF_TIME = 0.6;      // s: smooth time of the blend from the old view into the chase pose
 const TURN_TIME = 0.8;         // s: smooth time of the heading (yaw and pitch)
 const TURN_MAX_SPEED = THREE.MathUtils.degToRad(55);  // rad/s: yaw / pitch speed cap
@@ -33,6 +34,11 @@ const dist = { x: 2.5, v: 0 };                // chase distance spring
 let chaseDistTarget = 2.5;                    // wanted distance behind the comet
 const camErr = new THREE.Vector3(), camErrVel = new THREE.Vector3();   // hand-off blend (camera)
 const lookErr = new THREE.Vector3(), lookErrVel = new THREE.Vector3(); // hand-off blend (target)
+// The blend errors chase a goal that itself eases to zero (two springs in a
+// row), so the blend starts with zero acceleration: no jolt at departures
+// from wide stops, where the orbit pose is far from the chase pose.
+const camErrGoal = new THREE.Vector3(), camErrGoalVel = new THREE.Vector3();
+const lookErrGoal = new THREE.Vector3(), lookErrGoalVel = new THREE.Vector3();
 let chaseFresh = false;                       // first FOLLOW frame: seed from the current view
 
 // Measured pose velocity (for hand-offs)
@@ -146,7 +152,7 @@ export function update(dt, controls, camera, cometPos, cometDir) {
             seedHeading(_v.normalize()); // pitch is clamped; the blend below absorbs the change
         } else {
             turnHeading(cometDir, dt);
-            smoothDampScalar(dist, chaseDistTarget, DIST_TIME, dt);
+            smoothDampScalar(dist, chaseDistTarget, DIST_TIME, dt, DIST_MAX_SPEED);
         }
         chasePose(cometPos, camera);
         if (chaseFresh) {
@@ -157,9 +163,13 @@ export function update(dt, controls, camera, cometPos, cometDir) {
             lookErr.subVectors(controls.target, _look);
             camErrVel.copy(cameraVel);
             lookErrVel.copy(lookVel);
+            camErrGoal.copy(camErr); camErrGoalVel.set(0, 0, 0);
+            lookErrGoal.copy(lookErr); lookErrGoalVel.set(0, 0, 0);
         } else {
-            smoothDampVec(camErr, ZERO, camErrVel, HANDOFF_TIME, dt);
-            smoothDampVec(lookErr, ZERO, lookErrVel, HANDOFF_TIME, dt);
+            smoothDampVec(camErrGoal, ZERO, camErrGoalVel, HANDOFF_TIME / 2, dt);
+            smoothDampVec(lookErrGoal, ZERO, lookErrGoalVel, HANDOFF_TIME / 2, dt);
+            smoothDampVec(camErr, camErrGoal, camErrVel, HANDOFF_TIME / 2, dt);
+            smoothDampVec(lookErr, lookErrGoal, lookErrVel, HANDOFF_TIME / 2, dt);
         }
         controls.target.copy(_look).add(lookErr);
         camera.position.copy(_cam).add(camErr);
