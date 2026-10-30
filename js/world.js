@@ -22,6 +22,8 @@ const MILESTONES = [
         subtitle: 'Programming and Mathematics track · Riga',
         items: [
             { text: 'Specialised track in programming and mathematics (today named "Programming + AI").' },
+            { text: 'Took part in the Latvian state mathematics olympiads.' },
+            { text: 'Completed the Small Mathematics University (Mazā matemātikas universitāte) at the University of Latvia.' },
             { text: 'School projects in Programming I and II; one became the Offline Graphing Calculator (2023).' }
         ]
     }},
