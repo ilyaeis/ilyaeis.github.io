@@ -28,9 +28,19 @@ const MILESTONES = [
         dates: '2024 – 2028 (expected)',
         items: [
             { text: 'Qualification: senior data analysis specialist. Maths, statistics and programming applied to finance.' },
-            { text: 'Coursework: mathematical analysis and algebra, probability and statistics, econometrics, time-series analysis, stochastic analysis, Monte Carlo methods, portfolio analysis, actuarial mathematics, data structures and algorithms, databases/SQL, computer networks, programming (Java, C++).' },
-            { text: 'MI Talantu programma (AI talent programme), C++ and Python · Nov 2024 – Jan 2025.' }
+            { text: 'Coursework: mathematical analysis and algebra, probability and statistics, econometrics, time-series analysis, stochastic analysis, Monte Carlo methods, portfolio analysis, actuarial mathematics, data structures and algorithms, databases/SQL, computer networks, programming (Java, C++).' }
         ]
+    }},
+    { label: 'AI TALENT', sizeFactor: 0.65, seed: 58, panel: {
+        title: 'AI Talent Programme',
+        subtitle: 'Ponder · Mākslīgā intelekta talantu programma',
+        dates: 'Nov 2024 – Jan 2025',
+        items: [
+            { text: 'Selective programme for young people strong in IT and maths. Entry by logic test and interview.' },
+            { text: 'Intensive training in C++, Python, maths and AI development, with mentors from the industry.' },
+            { text: 'It led to my R&D Engineer role at Giraffe360.' }
+        ],
+        more: { href: 'https://www.ponder.lv/mi-programma', label: 'ponder.lv' }
     }},
     { label: 'GIRAFFE360', sizeFactor: 0.55, seed: 17, panel: {
         title: 'Giraffe360',
@@ -76,8 +86,9 @@ const SCENERY_STANDOFF = 0.35;           // center sits this × leg length besid
 const SCENERY_STANDOFF_MIN = 5.0;
 const SCENERY_SPIN = 0.04;               // rad/s about local Y
 // leg i = flight into stops[i]; leg 0 is the intro corkscrew into the text,
-// leg 1 (text -> rock 1) has the first galaxy
-const SCENERY_LEGS = [1, 2, 3, 4, 5];
+// leg 1 (text -> rock 1) has the first galaxy. Attractor k % 5 is reused
+// when there are more legs than attractors.
+const SCENERY_LEGS = [1, 2, 3, 4, 5, 6];
 
 // Random scatter — each stop hops far from the previous one in a
 // random 3D direction (lightly biased outward so the journey keeps
@@ -99,7 +110,7 @@ export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 
 // Visit order. Planar stops carry their own paletteIdx (into the
 // ATTRACTORS table) so every scene glows in a different color — the
-// four milestone rocks are ONE scene and share a single palette.
+// five milestone rocks are ONE scene and share a single palette.
 // The text block is one stop; the comet traces it, spirals around it and
 // flies on without a tap (orchestrator).
 const ROUTE = [
@@ -108,6 +119,7 @@ const ROUTE = [
     { type: StopType.ROCK,    milestone: 1, paletteIdx: 1 },
     { type: StopType.ROCK,    milestone: 2, paletteIdx: 1 },
     { type: StopType.ROCK,    milestone: 3, paletteIdx: 1 },
+    { type: StopType.ROCK,    milestone: 4, paletteIdx: 1 },
     { type: StopType.LANDING, paletteIdx: 4 },
 ];
 
@@ -282,7 +294,7 @@ function buildScenery(scene) {
     const dir = new THREE.Vector3();
     const mid = new THREE.Vector3();
 
-    for (let k = 0; k < ATTRACTORS.length; k++) {
+    for (let k = 0; k < SCENERY_LEGS.length; k++) {
         const leg = SCENERY_LEGS[k];
         const a = stops[leg - 1].center, b = stops[leg].center;
         const L = a.distanceTo(b);
@@ -310,7 +322,7 @@ function buildScenery(scene) {
             if (d > bestD) { bestD = d; center = cand.clone(); }
         }
 
-        const attr = ATTRACTORS[k];
+        const attr = ATTRACTORS[k % ATTRACTORS.length];
         let s = [...attr.initialCondition];
         const step = () => {
             s = rk4Step(attr.derivatives, s[0], s[1], s[2], attr.dt, attr.params);
