@@ -15,7 +15,7 @@ import {
 import * as cam from './camera.js';
 import * as intro from './intro3d.js';
 import {
-    buildWorld, stops, StopType, planePointToWorld, scenery, updateScenery,
+    buildWorld, stops, StopType, planePointToWorld, scenery, updateScenery, lightStop,
     getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL
 } from './world.js';
 
@@ -26,7 +26,8 @@ export const Phase = {
     INTRO: 0,
     ROCKET_EXIT: 1,   // first tap: the rocket morphs into the comet in place
     TRAVEL: 2,
-    VIEW: 3
+    VIEW: 3,
+    PASS: 4           // flying through a trait word: trace it at speed, then go on with no tap
 };
 
 // ── State ──────────────────────────────────────────────────────────
@@ -37,6 +38,9 @@ let tapPending = false;
 let totalTime = 0;
 
 let trail = null;          // the comet
+const EASE_SMOOTH = 0, EASE_LINEAR = 1, EASE_OUT = 2;
+let travelEaseMode = EASE_SMOOTH;
+let firstHoldIdx = 1;      // first stop that is not a pass-through word (loop-back target)
 let stopIndex = -1;        // VIEW: current stop · TRAVEL: destination
 
 const worldPos = new THREE.Vector3();   // what the FOLLOW camera tracks
@@ -113,6 +117,16 @@ const TRACE_MAX_PER_FRAME = 300;     // stroke-point budget cap per frame
 const TRACE_STROKE_INTENSITY = 1.4;  // bold strokes (c=1) → HDR/bloom
 const TRACE_LINK_INTENSITY = 0.4;    // faint pen-travel strokes (c=0)
 
+// Pass-through words — the three trait words are waypoints, not stops.
+// The comet races through each word's strokes and flies straight on.
+const WORD_TRACE_DURATION = isMobile ? 0.85 : 0.7;   // seconds through one word
+const WORD_TRACE_MAX_PER_FRAME = isMobile ? 400 : 600; // stroke-point budget cap per frame
+const WORD_LEG_DURATION = isMobile ? 1.0 : 0.9;      // seconds, word -> next word (linear, no settle)
+const WORD_DEPART_PULL = 0.25;       // first control point: x chord length along the exit tangent (0.4 for normal legs)
+const WORD_ARC = 0.5;                // x the random sideways arc of a normal leg
+const WORD_FIT_MARGIN = 1.8;         // camera backs off more than the fit so the next words show ahead
+
+// Only applies to a non-pass-through TEXT stop (none today)
 const VIEW_TAP_DELAY = {
     [StopType.TEXT]: 2.0,
     [StopType.ROCK]: 2.0,            // the HTML panel takes ~0.9 s to appear
@@ -130,6 +144,7 @@ export function init() {
     tapPromptEl = document.querySelector('.tap-prompt');
     trail = createTrailSystem(COMET_CAPACITY);
     buildWorld(scene); // the dim world exists from frame one
+    firstHoldIdx = Math.max(0, stops.findIndex(s => !s.passThrough));
     intro.init(scene, camera);
     cam.init(controls);
     // The moment the user grabs the view, stop any in-progress camera
@@ -157,7 +172,9 @@ function emitStop(phaseName) {
     }));
 }
 
-// Dev only: land the comet at stop n instantly (?stop=N, ?leg=N)
+// Dev only: land the comet at stop n instantly (?stop=N, ?leg=N).
+// ?stop=0..2 starts in ORBIT, so the first word leg has the slow FOLLOW
+// ramp (debug-only cosmetic).
 function jumpTo(n) {
     intro.hideRocket(); hideTapPrompt();
     stopIndex = n;
@@ -209,6 +226,7 @@ function computeFitDistance(points, scale, availW = 1, availH = 1) {
 // reaches a stop, so it can pre-compose the scene during the flight:
 // face-on, backed off by the fit distance (rocks leave room for the panel).
 function fitFor(stop) {
+    if (stop.passThrough) return computeFitDistance(stop.points2d, stop.scale) * WORD_FIT_MARGIN;
     if (stop.type !== StopType.ROCK) return computeFitDistance(stop.points2d, stop.scale);
     const [w, h] = cam.isPanelSideLayout() ? [ROCK_FIT_SIDE, 1] : [1, ROCK_FIT_BOTTOM];
     return computeFitDistance(stop.points2d, stop.scale, w, h);
@@ -254,7 +272,7 @@ function randSign() { return Math.random() < 0.5 ? -1 : 1; }
 // ── Build one flight leg from a start position + direction to a target ──
 // Every transition swoops: the control points get random perpendicular
 // offsets so no two flights arc the same way.
-function buildLeg(startPos, startDir, targetPos) {
+function buildLeg(startPos, startDir, targetPos, pull = 0.4, arc = 1) {
     const leg = {
         p0: startPos.clone(),
         p1: new THREE.Vector3(),
@@ -264,7 +282,7 @@ function buildLeg(startPos, startDir, targetPos) {
 
     // Control point 1: extend from start in the departure direction
     const dist = startPos.distanceTo(targetPos);
-    leg.p1.copy(startDir).normalize().multiplyScalar(dist * 0.4).add(startPos);
+    leg.p1.copy(startDir).normalize().multiplyScalar(dist * pull).add(startPos);
 
     // Control point 2: approach target gently from the flight direction
     _vec3.copy(targetPos).sub(startPos).normalize();
@@ -276,10 +294,10 @@ function buildLeg(startPos, startDir, targetPos) {
     _arcRight.normalize();
     _arcUp.crossVectors(_arcRight, _vec3).normalize();
     const sign = randSign();
-    leg.p1.addScaledVector(_arcRight, sign * dist * rand(0.15, 0.3));
-    leg.p1.addScaledVector(_arcUp, randSign() * dist * rand(0.05, 0.15));
-    leg.p2.addScaledVector(_arcRight, -sign * dist * rand(0.1, 0.2));
-    leg.p2.addScaledVector(_arcUp, randSign() * dist * rand(0.04, 0.1));
+    leg.p1.addScaledVector(_arcRight, sign * dist * arc * rand(0.15, 0.3));
+    leg.p1.addScaledVector(_arcUp, randSign() * dist * arc * rand(0.05, 0.15));
+    leg.p2.addScaledVector(_arcRight, -sign * dist * arc * rand(0.1, 0.2));
+    leg.p2.addScaledVector(_arcUp, randSign() * dist * arc * rand(0.04, 0.1));
     return leg;
 }
 
@@ -321,6 +339,7 @@ function buildHoverLeg(p0, p1, p3) {
 // First leg of a flight: hover stops swoop out of their loop motion.
 function buildFirstLeg(target) {
     const fromStop = stopIndex >= 0 ? stops[stopIndex] : null;
+    if (fromStop?.passThrough) return buildLeg(cometPos, cometDir, target, WORD_DEPART_PULL, WORD_ARC);
     if (fromStop && !tracing) {
         loopPos(fromStop, loopT + HOVER_LOOKAHEAD, _future);
         return buildHoverLeg(cometPos, _future, target);
@@ -379,6 +398,8 @@ function stepFaceAlign(dt, speed = 2.5) {
 // ── Travel setup ───────────────────────────────────────────────────
 function setupTravel(destIdx, withCorkscrew) {
     const dest = stops[destIdx];
+    const wordLeg = !!stops[stopIndex]?.passThrough;   // departing a pass-through word
+    const wordToWord = wordLeg && dest.passThrough;
 
     emitStop('leave'); // before stopIndex moves to the destination
 
@@ -390,7 +411,7 @@ function setupTravel(destIdx, withCorkscrew) {
     // Swing past a scenery galaxy when one sits near the flight line.
     // The flight starts from the comet's *actual* head — cometPos — not
     // the stop center, so the trail flows on instead of snapping back.
-    const via = pickViaScenery(cometPos, _targetPos);
+    const via = wordToWord ? null : pickViaScenery(cometPos, _targetPos);
     travelLegs = [];
     if (via) {
         // Near edge of the galaxy, not its center: the closest point on the
@@ -426,7 +447,10 @@ function setupTravel(destIdx, withCorkscrew) {
         acc += len / total;
         travelFracs.push(acc);
     }
-    travelDuration = THREE.MathUtils.clamp(total / TRAVEL_SPEED, TRAVEL_MIN, TRAVEL_MAX);
+    travelDuration = wordToWord
+        ? WORD_LEG_DURATION
+        : THREE.MathUtils.clamp(total / TRAVEL_SPEED, TRAVEL_MIN, TRAVEL_MAX);
+    travelEaseMode = !wordLeg ? EASE_SMOOTH : dest.passThrough ? EASE_LINEAR : EASE_OUT;
     corkscrew = withCorkscrew;
 
     // Comet glows in the destination's palette
@@ -467,6 +491,7 @@ export function update(dt) {
         case Phase.ROCKET_EXIT:    updateRocketExit(dt); break;
         case Phase.TRAVEL:         updateTravel(dt); break;
         case Phase.VIEW:           updateView(dt); break;
+        case Phase.PASS:           updatePass(dt); break;
     }
 
     phaseTime += dt;
@@ -533,12 +558,18 @@ function updateRocketExit(dt) {
 // speed, then settles into the stop — smoothstep on the path parameter.
 function travelEase(x) { return x * x * (3 - 2 * x); }
 
+function applyEase(x) {
+    if (travelEaseMode === EASE_LINEAR) return x;
+    if (travelEaseMode === EASE_OUT) return 1 - (1 - x) * (1 - x);
+    return travelEase(x);
+}
+
 // ── TRAVEL (Bezier arc to the next stop) ───────────────────────────
 function updateTravel(dt) {
     // Eased path parameter so motion accelerates and decelerates instead
     // of jumping to constant speed the instant the comet departs.
-    const t = travelEase(Math.min(phaseTime / travelDuration, 1));
-    const prevT = travelEase(Math.max(0, (phaseTime - dt) / travelDuration));
+    const t = applyEase(Math.min(phaseTime / travelDuration, 1));
+    const prevT = applyEase(Math.max(0, (phaseTime - dt) / travelDuration));
 
     for (let i = 1; i <= TRAVEL_POINTS_PER_FRAME; i++) {
         const subT = prevT + (t - prevT) * (i / TRAVEL_POINTS_PER_FRAME);
@@ -562,6 +593,7 @@ function updateTravel(dt) {
 
 // ── VIEW (camera orbits the stop; comet rides or loops) ────────────
 function enterView() {
+    if (stops[stopIndex].passThrough) { enterPass(); return; }
     const stop = stops[stopIndex];
 
     cam.setMode(cam.Mode.ORBIT, controls);
@@ -578,6 +610,27 @@ function enterView() {
     enterPhase(Phase.VIEW);
 }
 
+function enterPass() {
+    const stop = stops[stopIndex];
+    // Stay on the chase camera (no orbit hand-off): it settles on the
+    // word's face-on framing while the comet races through the strokes.
+    // setMode is a no-op mid-journey; it matters for ?stop=N (starts in ORBIT).
+    cam.setMode(cam.Mode.FOLLOW, controls);
+    cam.setFollowAim(computeArrivalOffset(stop, _vec3));
+    tracing = true; traceCursor = 0; traceAcc = 0;
+    emitStop('enter');   // panel-less: stopPanel hides (already hidden)
+    enterPhase(Phase.PASS);
+}
+
+function updatePass(dt) {
+    const stop = stops[stopIndex];
+    tracePlanar(stop, dt, WORD_TRACE_DURATION, WORD_TRACE_MAX_PER_FRAME);
+    lightStop(stop, traceCursor);
+    worldPos.copy(stop.center);   // camera frames the word, not the racing head
+    // tracePlanar clears `tracing` on the last stroke point: fly straight on, no tap
+    if (!tracing) setupTravel(stopIndex + 1, false);
+}
+
 // World position of a planar stop's stroke point at a given index
 // (clamped into range), mapped through the stop's plane basis.
 function traceWorld(stop, idx, out) {
@@ -590,10 +643,10 @@ function traceWorld(stop, idx, out) {
 // order at a speed that completes one full pass in TRACE_DURATION. Bold
 // letter strokes (c=1) glow; faint connectors (c=0) stay dim. When the
 // last point is reached, hand off to the viewing loop.
-function tracePlanar(stop, dt) {
+function tracePlanar(stop, dt, duration = TRACE_DURATION, maxPerFrame = TRACE_MAX_PER_FRAME) {
     const n = stop.points2d.length;
-    traceAcc += (n / TRACE_DURATION) * dt;
-    let budget = Math.min(Math.floor(traceAcc), TRACE_MAX_PER_FRAME);
+    traceAcc += (n / duration) * dt;
+    let budget = Math.min(Math.floor(traceAcc), maxPerFrame);
     traceAcc -= budget;
 
     for (let i = 0; i < budget && traceCursor < n - 1; i++) {
@@ -681,8 +734,8 @@ function updateView(dt) {
         tapPending = false;
         hideTapPrompt();
 
-        // After the landing, the tour loops back to the first rock (stop 1)
-        const next = stopIndex === stops.length - 1 ? 1 : stopIndex + 1;
+        // After the landing, the tour loops back to the first rock
+        const next = stopIndex === stops.length - 1 ? firstHoldIdx : stopIndex + 1;
         setupTravel(next, false);
     }
 }
