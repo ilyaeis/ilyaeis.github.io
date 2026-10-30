@@ -24,10 +24,11 @@ const MILESTONES = [
     }},
     { label: 'RTU', sizeFactor: 0.7, seed: 73, panel: {
         title: 'Riga Technical University',
-        subtitle: 'BSc Financial Engineering',
-        dates: '2024 – present',
+        subtitle: 'Professional Bachelor, Financial Engineering',
+        dates: '2024 – 2028 (expected)',
         items: [
-            { text: 'Coursework: data structures & algorithms, computer networks, databases/SQL, Java, C++.' },
+            { text: 'Qualification: senior data analysis specialist. Maths, statistics and programming applied to finance.' },
+            { text: 'Coursework: mathematical analysis and algebra, probability and statistics, econometrics, time-series analysis, stochastic analysis, Monte Carlo methods, portfolio analysis, actuarial mathematics, data structures and algorithms, databases/SQL, computer networks, programming (Java, C++).' },
             { text: 'MI Talantu programma (AI talent programme), C++ and Python · Nov 2024 – Jan 2025.' }
         ]
     }},
