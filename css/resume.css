@@ -1,0 +1,167 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+    padding: 1.5rem 1.25rem 4rem;
+}
+
+main {
+    max-width: 44rem;
+    margin: 0 auto;
+}
+
+a {
+    color: #e0e0e0;
+    text-decoration-color: #888;
+    text-underline-offset: 0.2em;
+}
+
+a:hover,
+a:focus-visible {
+    color: #fff;
+    text-decoration-color: #e0e0e0;
+}
+
+.back {
+    display: inline-block;
+    margin-bottom: 2rem;
+    color: #888;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+}
+
+.back:hover,
+.back:focus-visible {
+    color: #e0e0e0;
+}
+
+h1 {
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+}
+
+.contact {
+    color: #888;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.summary {
+    margin-top: 1.25rem;
+}
+
+h2 {
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #888;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.35rem;
+    margin: 2.25rem 0 1rem;
+}
+
+h3 {
+    font-size: 1.05rem;
+    font-weight: 500;
+}
+
+.note {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+ul {
+    padding-left: 1.2rem;
+}
+
+li {
+    margin-top: 0.4rem;
+}
+
+.projects li {
+    margin-top: 0.7rem;
+}
+
+.meta {
+    color: #888;
+}
+
+dl.skills dt {
+    float: left;
+    clear: left;
+    width: 6rem;
+    color: #888;
+}
+
+dl.skills dd {
+    margin-left: 6rem;
+    margin-bottom: 0.4rem;
+}
+
+@media (max-width: 30rem) {
+    dl.skills dt {
+        float: none;
+        width: auto;
+    }
+    dl.skills dd {
+        margin-left: 0;
+    }
+}
+
+@media print {
+    @page {
+        margin: 1.5cm;
+    }
+    body {
+        background: #fff;
+        color: #000;
+        font-size: 10.5pt;
+        line-height: 1.4;
+        padding: 0;
+    }
+    main {
+        max-width: none;
+    }
+    a,
+    a:hover {
+        color: #000;
+        text-decoration: none;
+    }
+    .back {
+        display: none;
+    }
+    .contact,
+    .note,
+    .meta,
+    h2,
+    dl.skills dt {
+        color: #333;
+    }
+    h2 {
+        border-bottom-color: #999;
+        margin-top: 1.2rem;
+    }
+    h1 {
+        font-size: 20pt;
+    }
+    li,
+    .projects li {
+        margin-top: 0.2rem;
+    }
+    li,
+    section {
+        break-inside: avoid;
+    }
+}

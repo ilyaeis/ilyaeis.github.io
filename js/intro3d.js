@@ -1,6 +1,6 @@
 // ── 3D Intro ───────────────────────────────────────────────────────
 // The landing page lives inside the WebGL scene: extruded 3D name,
-// tagline and LinkedIn icon, plus a 3D rocket that is already flying
+// tagline and LinkedIn + GitHub icons, plus a 3D rocket that is already flying
 // loops when the page loads. Everything is parented to the camera
 // (HUD-style) so it stays on screen while keeping real depth.
 
@@ -11,13 +11,12 @@ import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
 
 const FONT_URL = 'https://cdn.jsdelivr.net/npm/three@0.162.0/examples/fonts/helvetiker_regular.typeface.json';
 export const LINKEDIN_URL = 'https://www.linkedin.com/in/i%C4%BCja-safronovs-eis';
+export const GITHUB_URL = 'https://github.com/ilyaeis';
 
-const HUD_DIST = 2.0;           // camera-space depth of the HUD layer (rocket, corner icon)
+const HUD_DIST = 2.0;           // camera-space depth of the HUD layer (light target)
 const NAME_SIZE = 0.13;
 const TAGLINE_SIZE = 0.045;
 const ICON_SIZE = 0.085;
-const CORNER_MARGIN = 38;       // px from screen corner for the parked icon
-const CORNER_SCALE = 0.55;
 
 // Intro text/icon/rocket live in WORLD space at the orbit center, so
 // dragging the view rotates them together with the starfield
@@ -25,13 +24,15 @@ const INTRO_SCALE = 0.6;        // compensates for the closer orbit distance
 const INTRO_VIEW_DIST = 1.2;    // initial camera orbit radius
 const TEXT_INTRO_Y = 0.02;
 const ICON_INTRO_Y = -0.33;
+const ICON_X = 0.075;           // horizontal offset of each icon from center
 
 let camera = null;
 
 // Groups — anchor is in world space; rocket is a camera child (HUD)
 let introAnchor = null;   // world-space anchor facing the initial camera
 let textGroup = null;     // name + tagline
-let iconGroup = null;     // LinkedIn tile
+let linkedinGroup = null; // LinkedIn tile
+let githubGroup = null;   // GitHub mark
 let rocket = null;        // the 3D rocket
 let flame = null;         // exhaust flame mesh (flickers)
 
@@ -40,28 +41,17 @@ const iconMats = [];
 const rocketMats = [];
 
 // Modes
-let textMode = 'intro';     // intro | exiting | gone
-let iconMode = 'intro';     // intro | tocorner | corner
 let rocketMode = 'idle';    // idle | charging | gone
 
 let time = 0;
-let exitT = 0;              // text exit timer
-let iconT = 0;              // icon-to-corner timer
 let chargeT = 0;            // rocket charge timer
 let appearT = 0;            // fade-in timer once assets load
 
-let fromScale = 1;          // icon scale when leaving for the corner
-const _qFrom = new THREE.Quaternion();
-const _qIdent = new THREE.Quaternion();
 const _rocketFrom = new THREE.Vector3();   // rocket position when the morph starts
 const _qRocketFrom = new THREE.Quaternion();
 const _rocketDir = new THREE.Vector3();    // anchor-space nose heading at morph start
 let dashDist = 1;           // how far the streak travels while morphing
-const _v = new THREE.Vector3();
-const _v2 = new THREE.Vector3();
-const _from = new THREE.Vector3();
 
-const EXIT_DURATION = 0.8;
 export const CHARGE_DURATION = 1.1;
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -70,21 +60,9 @@ function viewExtents(dist) {
     return { hw: tanV * camera.aspect * dist, hh: tanV * dist };
 }
 
-function screenToCam(px, py, dist, out) {
-    const { hw, hh } = viewExtents(dist);
-    out.set(
-        ((px / window.innerWidth) * 2 - 1) * hw,
-        (-(py / window.innerHeight) * 2 + 1) * hh,
-        -dist
-    );
-    return out;
-}
-
 function setOpacity(mats, o) {
     for (const m of mats) m.opacity = o;
 }
-
-function smoothstep(t) { return t * t * (3 - 2 * t); }
 
 // ── Build: text ────────────────────────────────────────────────────
 function buildText(font) {
@@ -115,13 +93,13 @@ function buildText(font) {
     }
 
     makeLine('Ilja Safronovs', NAME_SIZE, nameMat, 0.10);
-    makeLine('student. problem solver. builder.', TAGLINE_SIZE, tagMat, -0.06);
+    makeLine('R&D engineer. student. builder.', TAGLINE_SIZE, tagMat, -0.06);
 }
 
-// ── Build: LinkedIn icon ───────────────────────────────────────────
-function buildIcon(svgData) {
+// ── Build: icons (LinkedIn, GitHub) ────────────────────────────────
+function buildIcon(svgData, group, color) {
     const mat = new THREE.MeshStandardMaterial({
-        color: 0x2c7bb8, metalness: 0.3, roughness: 0.45, transparent: true, opacity: 0
+        color, metalness: 0.3, roughness: 0.45, transparent: true, opacity: 0
     });
     iconMats.push(mat);
 
@@ -136,7 +114,7 @@ function buildIcon(svgData) {
     const s = ICON_SIZE / 50;
     inner.scale.set(s, -s, s);
     inner.position.set(-ICON_SIZE / 2, ICON_SIZE / 2, 0);
-    iconGroup.add(inner);
+    group.add(inner);
 }
 
 // ── Build: rocket (points +X) ──────────────────────────────────────
@@ -218,29 +196,19 @@ export function init(scene, cam) {
 
     textGroup = new THREE.Group();
     textGroup.position.y = TEXT_INTRO_Y;
-    iconGroup = new THREE.Group();
-    iconGroup.position.y = ICON_INTRO_Y;
+    linkedinGroup = new THREE.Group();
+    linkedinGroup.position.set(-ICON_X, ICON_INTRO_Y, 0);
+    githubGroup = new THREE.Group();
+    githubGroup.position.set(ICON_X, ICON_INTRO_Y, 0);
     introAnchor.add(textGroup);
-    introAnchor.add(iconGroup);
+    introAnchor.add(linkedinGroup);
+    introAnchor.add(githubGroup);
 
     buildRocket();
 
     new FontLoader().load(FONT_URL, font => buildText(font));
-    new SVGLoader().load('svg/linkedin.svg', data => buildIcon(data));
-}
-
-function cornerPos(out) {
-    return screenToCam(
-        window.innerWidth - CORNER_MARGIN,
-        window.innerHeight - CORNER_MARGIN,
-        HUD_DIST, out
-    );
-}
-
-export function onResize() {
-    // Intro layout is world-space (resize-agnostic); only the
-    // corner-parked icon is anchored to screen pixels
-    if (iconMode === 'corner') cornerPos(iconGroup.position);
+    new SVGLoader().load('svg/linkedin.svg', data => buildIcon(data, linkedinGroup, 0x2c7bb8));
+    new SVGLoader().load('svg/github.svg', data => buildIcon(data, githubGroup, 0xdddddd));
 }
 
 // ── Rocket idle flight (lazy loops around the intro text) ──────────
@@ -272,19 +240,6 @@ function aimRocketAlongPath(t) {
 }
 
 // ── Mode setters (driven by the orchestrator) ──────────────────────
-export function startExit() {
-    if (textMode === 'intro') { textMode = 'exiting'; exitT = 0; }
-    if (iconMode === 'intro') {
-        // Re-parent to the camera (keeping world transform) so the icon
-        // can glide to a screen-fixed corner from wherever the view is
-        camera.attach(iconGroup);
-        iconMode = 'tocorner'; iconT = 0;
-        _from.copy(iconGroup.position);
-        _qFrom.copy(iconGroup.quaternion);
-        fromScale = iconGroup.scale.x;
-    }
-}
-
 // Morph the rocket into the comet streak from exactly where it is right
 // now — no fly-to-center step. We freeze its current idle transform and
 // accelerate straight along its nose, stretching it into a line.
@@ -299,10 +254,6 @@ export function setRocketCharging() {
     // line grows out of its tip
     const { hw } = viewExtents(INTRO_VIEW_DIST);
     dashDist = (hw / INTRO_SCALE) * 0.4;
-}
-
-export function rocketChargeDone() {
-    return rocketMode === 'charging' && chargeT >= CHARGE_DURATION;
 }
 
 export function hideRocket() {
@@ -323,7 +274,11 @@ export function getRocketDirWorld(out) {
 }
 
 export function getIconObject() {
-    return iconGroup;
+    return linkedinGroup;
+}
+
+export function getGithubIconObject() {
+    return githubGroup;
 }
 
 // ── Per-frame update ───────────────────────────────────────────────
@@ -334,44 +289,20 @@ export function update(dt, totalTime) {
     // Fade everything in once built
     const fadeIn = Math.min(appearT / 0.8, 1);
 
-    // Text: float gently, exit by shrinking + fading
-    if (textGroup && textMode !== 'gone') {
+    // Text: float gently
+    if (textGroup) {
         textGroup.rotation.y = 0.14 * Math.sin(time * 0.5);
         textGroup.rotation.x = 0.05 * Math.sin(time * 0.7 + 1.0);
-        if (textMode === 'intro') {
-            setOpacity(textMats, fadeIn);
-        } else {
-            exitT += dt;
-            const k = smoothstep(Math.min(exitT / EXIT_DURATION, 1));
-            textGroup.scale.setScalar(1 - 0.35 * k);
-            setOpacity(textMats, (1 - k) * fadeIn);
-            if (k >= 1) {
-                textMode = 'gone';
-                introAnchor.remove(textGroup);
-            }
-        }
+        setOpacity(textMats, fadeIn);
     }
 
-    // Icon: bob during intro, glide to corner, then stay pinned
-    if (iconGroup) {
-        if (iconMode === 'intro') {
-            iconGroup.position.y = ICON_INTRO_Y + 0.012 * Math.sin(time * 1.3);
-            iconGroup.rotation.y = 0.25 * Math.sin(time * 0.9);
-            setOpacity(iconMats, fadeIn);
-        } else if (iconMode === 'tocorner') {
-            iconT += dt;
-            const k = smoothstep(Math.min(iconT / EXIT_DURATION, 1));
-            cornerPos(_v);
-            iconGroup.position.lerpVectors(_from, _v, k);
-            iconGroup.scale.setScalar(fromScale + (CORNER_SCALE - fromScale) * k);
-            // Turn back to face the screen from whatever angle it had
-            iconGroup.quaternion.slerpQuaternions(_qFrom, _qIdent, k);
-            if (k >= 1) iconMode = 'corner';
-        } else {
-            // Pinned: gentle idle shimmer so it still reads as 3D
-            iconGroup.rotation.y = 0.18 * Math.sin(time * 0.6);
-        }
+    // Icons: bob and sway
+    for (const g of [linkedinGroup, githubGroup]) {
+        if (!g) continue;
+        g.position.y = ICON_INTRO_Y + 0.012 * Math.sin(time * 1.3);
+        g.rotation.y = 0.25 * Math.sin(time * 0.9);
     }
+    setOpacity(iconMats, fadeIn);
 
     // Rocket
     if (rocket && rocketMode !== 'gone') {

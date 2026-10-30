@@ -1,24 +1,61 @@
 // ── Static World ───────────────────────────────────────────────────
 // Builds every journey stop as pre-existing geometry at load: the
-// trait text, milestone rocks, pre-integrated attractor curves and
-// the contact landing are scattered randomly through 3D space, each
-// glowing in its own palette from frame one. The comet (orchestrator)
-// flies between them — sometimes straight through a third scene.
+// trait text, milestone rocks and the contact landing are scattered
+// randomly through 3D space, each glowing in its own palette from
+// frame one. Five strange attractors hang beside the flight legs as
+// dim, slowly spinning scenery ("galaxies"). The comet (orchestrator)
+// flies between the stops and swings past a galaxy on the way.
 
 import * as THREE from 'three';
 import { ATTRACTORS, rk4Step, isMobile, getPaletteColor } from './attractors.js';
 import { generateTextLines, generateRockWithLabel } from './strokeFont.js';
 
-export const StopType = { TEXT: 0, ATTRACTOR: 1, ROCK: 2, LANDING: 3 };
+export const StopType = { TEXT: 0, ROCK: 1, LANDING: 2 };
 
 // ── Content ────────────────────────────────────────────────────────
 export const CONTACT_EMAIL = 'ilya.safronos@gmail.com';
 const TEXT_LINES = ['CREATIVE.', 'ADAPTIVE.', 'CURIOUS.'];
 const LANDING_LINES = ['GET IN TOUCH', CONTACT_EMAIL];
 const MILESTONES = [
-    { label: 'GYMNASIUM', sublabel: 'RIGA', sizeFactor: 1.0, seed: 42 },
-    { label: 'BACHELOR IN', sublabel: 'FINANCIAL ENGINEERING', sizeFactor: 0.55, seed: 73 },
-    { label: 'GIRAFFE360', sublabel: null, sizeFactor: 0.35, seed: 17 },
+    { label: 'RVKG', sizeFactor: 0.9, seed: 42, panel: {
+        title: 'Riga State Classical Gymnasium',
+        subtitle: 'Rīgas Valsts klasiskā ģimnāzija · Riga',
+        items: [{ text: 'Secondary education in Riga.' }]
+    }},
+    { label: 'RTU', sizeFactor: 0.7, seed: 73, panel: {
+        title: 'Riga Technical University',
+        subtitle: 'BSc Financial Engineering',
+        dates: '2024 – present',
+        items: [
+            { text: 'Coursework: data structures & algorithms, computer networks, databases/SQL, Java, C++.' },
+            { text: 'MI Talantu programma (AI talent programme), C++ and Python · Nov 2024 – Jan 2025.' }
+        ]
+    }},
+    { label: 'GIRAFFE360', sizeFactor: 0.55, seed: 17, panel: {
+        title: 'Giraffe360',
+        subtitle: 'R&D Engineer · Riga',
+        dates: '2025 – present',
+        items: [
+            { text: '3D Gaussian Splatting pipeline: 360° captures → navigable 3D scenes (Python, PyTorch, CUDA).' },
+            { text: 'Read research papers, implemented new methods in the pipeline by hand.' },
+            { text: 'OpenAI API: prompts and descriptions for tour videos (AWS worker, S3).' },
+            { text: 'Diffusion-based artifact fixing (Difix, NVIDIA Fixer); mesh generation.' },
+            { text: 'GPU training/eval with ClearML, Docker, GitLab CI.' }
+        ],
+        more: { href: 'resume.html', label: 'full resume' }
+    }},
+    { label: 'PROJECTS', sizeFactor: 0.6, seed: 91, panel: {
+        title: 'Selected projects',
+        subtitle: 'github.com/ilyaeis',
+        dates: '2022 – 2026',
+        items: [
+            { text: 'load-balancing-experiments — DNS/anycast, queueing sim, consistent hashing (Python)', href: 'https://github.com/ilyaeis/load-balancing-experiments' },
+            { text: 'projects_with_NEAT — neuroevolution agents learning games (Python)', href: 'https://github.com/ilyaeis/projects_with_NEAT' },
+            { text: 'RTU_program_parser — timetable scraper (Python, Selenium, pandas)', href: 'https://github.com/ilyaeis/RTU_program_parser' },
+            { text: 'This site — three.js comet journey, no build step', href: 'https://github.com/ilyaeis/ilyaeis.github.io' }
+        ],
+        more: { href: 'https://github.com/ilyaeis', label: 'all repositories' }
+    }}
 ];
 
 // ── Tuning ─────────────────────────────────────────────────────────
@@ -26,9 +63,18 @@ export const TEXT_SCALE = 0.22;          // world units per 2D unit (text/landin
 export const ROCK_SCALE = 0.4;           // world units per 2D unit (rocks)
 const STROKE_INTENSITY = 1.5;            // bold letter strokes (HDR → bloom)
 const LINK_INTENSITY = 0.35;             // faint pen-travel strokes
-const ATTRACTOR_POINTS = isMobile ? 6000 : 12000;
-const ATTRACTOR_WARMUP = 500;            // integration steps before recording
-const ATTRACTOR_ALPHA = 0.35;            // per-point alpha of static curves
+
+// Attractor scenery ("galaxies"): static dim curves beside the flight legs
+const SCENERY_POINTS = isMobile ? 6000 : 12000;
+const SCENERY_WARMUP = 500;              // integration steps before recording
+const SCENERY_ALPHA = 0.28;              // per-point alpha
+const SCENERY_SCALE_FRAC = 0.16;         // curve radius ≈ frac × leg length
+const SCENERY_SCALE_MIN = 2.0;           // world units (curve radius)
+const SCENERY_SCALE_MAX = 6.0;
+const SCENERY_STANDOFF = 0.35;           // center sits this × leg length beside the leg midpoint
+const SCENERY_STANDOFF_MIN = 5.0;
+const SCENERY_SPIN = 0.04;               // rad/s about local Y
+const SCENERY_LEGS = [1, 2, 3, 4, 5];    // leg i = flight into stops[i]; stops[0] is the TEXT (leg 0 is the intro corkscrew)
 
 // Random scatter — each stop hops far from the previous one in a
 // random 3D direction (lightly biased outward so the journey keeps
@@ -48,18 +94,14 @@ export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 
 // Visit order. Planar stops carry their own paletteIdx (into the
 // ATTRACTORS table) so every scene glows in a different color — the
-// three meteor rocks are ONE scene and share a single palette.
+// four milestone rocks are ONE scene and share a single palette.
 const ROUTE = [
-    { type: StopType.TEXT,      paletteIdx: 0 },
-    { type: StopType.ATTRACTOR, attractorIdx: 0 },
-    { type: StopType.ROCK,      milestone: 0, paletteIdx: 1 },
-    { type: StopType.ROCK,      milestone: 1, paletteIdx: 1 },
-    { type: StopType.ROCK,      milestone: 2, paletteIdx: 1 },
-    { type: StopType.ATTRACTOR, attractorIdx: 1 },
-    { type: StopType.ATTRACTOR, attractorIdx: 2 },
-    { type: StopType.ATTRACTOR, attractorIdx: 3 },
-    { type: StopType.ATTRACTOR, attractorIdx: 4 },
-    { type: StopType.LANDING,   paletteIdx: 4 },
+    { type: StopType.TEXT,    paletteIdx: 0 },
+    { type: StopType.ROCK,    milestone: 0, paletteIdx: 1 },
+    { type: StopType.ROCK,    milestone: 1, paletteIdx: 1 },
+    { type: StopType.ROCK,    milestone: 2, paletteIdx: 1 },
+    { type: StopType.ROCK,    milestone: 3, paletteIdx: 1 },
+    { type: StopType.LANDING, paletteIdx: 4 },
 ];
 
 // ── Stop shader ────────────────────────────────────────────────────
@@ -102,6 +144,7 @@ function getStopMaterial() {
 
 // ── State ──────────────────────────────────────────────────────────
 export let stops = [];
+export let scenery = [];
 let mailPlane = null;
 export function getMailPlane() { return mailPlane; }
 
@@ -163,7 +206,7 @@ function buildPlanarStop(def, center, right, up, palette) {
     let points;
     if (def.type === StopType.ROCK) {
         const ms = MILESTONES[def.milestone];
-        ({ points } = generateRockWithLabel(ms.sizeFactor, ms.seed, ms.label, ms.sublabel));
+        ({ points } = generateRockWithLabel(ms.sizeFactor, ms.seed, ms.label, null));
     } else {
         ({ points } = generateTextLines(
             def.type === StopType.LANDING ? LANDING_LINES : TEXT_LINES));
@@ -214,43 +257,80 @@ function buildPlanarStop(def, center, right, up, palette) {
     };
 }
 
-// ── Attractor stop (pre-integrated curve) ──────────────────────────
-function buildAttractorStop(def, center) {
-    const attr = ATTRACTORS[def.attractorIdx];
-    let s = [...attr.initialCondition];
+// ── Attractor scenery (pre-integrated curves) ─────────────────────
+// Each curve sits beside one flight leg so the comet can swing past it.
+function buildScenery(scene) {
+    scenery = [];
+    const perp = new THREE.Vector3();
+    const base = new THREE.Vector3();
+    const cand = new THREE.Vector3();
+    const dir = new THREE.Vector3();
+    const mid = new THREE.Vector3();
 
-    function step() {
-        s = rk4Step(attr.derivatives, s[0], s[1], s[2], attr.dt, attr.params);
-        for (let j = 0; j < 3; j++) {
-            if (Math.abs(s[j]) > 150) s[j] *= 150 / Math.abs(s[j]);
-            if (!isFinite(s[j])) { s = [...attr.initialCondition]; break; }
+    for (let k = 0; k < ATTRACTORS.length; k++) {
+        const leg = SCENERY_LEGS[k];
+        const a = stops[leg - 1].center, b = stops[leg].center;
+        const L = a.distanceTo(b);
+        mid.addVectors(a, b).multiplyScalar(0.5);
+        dir.subVectors(b, a).normalize();
+
+        const radius = THREE.MathUtils.clamp(L * SCENERY_SCALE_FRAC, SCENERY_SCALE_MIN, SCENERY_SCALE_MAX);
+        const standoff = Math.max(L * SCENERY_STANDOFF, SCENERY_STANDOFF_MIN) + radius * 0.5;
+
+        // Perpendicular basis, then try random angles; keep the one that
+        // sits farthest from every stop and every earlier galaxy.
+        base.crossVectors(dir, new THREE.Vector3(0, 1, 0));
+        if (base.lengthSq() < 1e-6) base.set(1, 0, 0);
+        base.normalize();
+        const base2 = new THREE.Vector3().crossVectors(dir, base).normalize();
+
+        let center = null, bestD = -1;
+        for (let t = 0; t < PLACE_TRIES; t++) {
+            const ang = Math.random() * Math.PI * 2;
+            perp.copy(base).multiplyScalar(Math.cos(ang)).addScaledVector(base2, Math.sin(ang));
+            cand.copy(mid).addScaledVector(perp, standoff);
+            let d = Infinity;
+            for (const st of stops) d = Math.min(d, cand.distanceTo(st.center));
+            for (const sc of scenery) d = Math.min(d, cand.distanceTo(sc.center));
+            if (d > bestD) { bestD = d; center = cand.clone(); }
         }
+
+        const attr = ATTRACTORS[k];
+        let s = [...attr.initialCondition];
+        const step = () => {
+            s = rk4Step(attr.derivatives, s[0], s[1], s[2], attr.dt, attr.params);
+            for (let j = 0; j < 3; j++) {
+                if (Math.abs(s[j]) > 150) s[j] *= 150 / Math.abs(s[j]);
+                if (!isFinite(s[j])) { s = [...attr.initialCondition]; break; }
+            }
+        };
+        for (let i = 0; i < SCENERY_WARMUP; i++) step();
+
+        const n = SCENERY_POINTS;
+        const positions = new Float32Array(n * 3);
+        const colors = new Float32Array(n * 3);
+        const alphas = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+            step();
+            // Relative to the origin: the line is moved to `center` so
+            // its spin pivots there.
+            positions[i * 3]     = (s[0] - attr.center[0]) * attr.scale * radius;
+            positions[i * 3 + 1] = (s[1] - attr.center[1]) * attr.scale * radius;
+            positions[i * 3 + 2] = (s[2] - attr.center[2]) * attr.scale * radius;
+            const col = getPaletteColor(attr.palette, i / (n - 1));
+            colors[i * 3] = col.r; colors[i * 3 + 1] = col.g; colors[i * 3 + 2] = col.b;
+            alphas[i] = SCENERY_ALPHA;
+        }
+
+        const line = buildStopLine(positions, colors, alphas);
+        line.position.copy(center);
+        scene.add(line);
+        scenery.push({ attractorIdx: k, center, radius, line });
     }
+}
 
-    for (let i = 0; i < ATTRACTOR_WARMUP; i++) step();
-
-    const n = ATTRACTOR_POINTS;
-    const positions = new Float32Array(n * 3);
-    const colors = new Float32Array(n * 3);
-    const alphas = new Float32Array(n);
-
-    for (let i = 0; i < n; i++) {
-        step();
-        positions[i * 3]     = (s[0] - attr.center[0]) * attr.scale + center.x;
-        positions[i * 3 + 1] = (s[1] - attr.center[1]) * attr.scale + center.y;
-        positions[i * 3 + 2] = (s[2] - attr.center[2]) * attr.scale + center.z;
-
-        const col = getPaletteColor(attr.palette, i / (n - 1));
-        colors[i * 3]     = col.r;
-        colors[i * 3 + 1] = col.g;
-        colors[i * 3 + 2] = col.b;
-        alphas[i] = ATTRACTOR_ALPHA;
-    }
-
-    return {
-        line: buildStopLine(positions, colors, alphas),
-        rideState: s // comet riding resumes the integration from here
-    };
+export function updateScenery(dt) {
+    for (const s of scenery) s.line.rotation.y += SCENERY_SPIN * dt;
 }
 
 // ── Mail hit-plane ─────────────────────────────────────────────────
@@ -314,16 +394,14 @@ export function buildWorld(scene) {
             .crossVectors(normal, new THREE.Vector3(0, 1, 0)).normalize();
         const up = new THREE.Vector3().crossVectors(right, normal).normalize();
 
-        const paletteIdx = def.attractorIdx ?? def.paletteIdx ?? 0;
+        const paletteIdx = def.paletteIdx ?? 0;
         const palette = ATTRACTORS[paletteIdx].palette;
-        const built = def.type === StopType.ATTRACTOR
-            ? buildAttractorStop(def, center)
-            : buildPlanarStop(def, center, right, up, palette);
+        const built = buildPlanarStop(def, center, right, up, palette);
 
         const stop = {
             type: def.type,
-            attractorIdx: def.attractorIdx,
             paletteIdx,
+            panel: def.type === StopType.ROCK ? MILESTONES[def.milestone].panel : undefined,
             center,
             right,
             up,
@@ -334,6 +412,8 @@ export function buildWorld(scene) {
         stops.push(stop);
         prev = center;
     }
+
+    buildScenery(scene);
 
     const landing = stops[stops.length - 1];
     scene.add(buildMailPlane(landing));

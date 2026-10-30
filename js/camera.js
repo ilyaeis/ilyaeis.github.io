@@ -53,6 +53,20 @@ export function setFollowAim(offset) {
     else hasFollowAim = false;
 }
 
+// ── Screen shift (HTML panel room) ─────────────────────────────────
+// Pushes the scene center toward the left (side layout) or the top
+// (bottom layout) so an HTML panel can sit beside the stop. Pure
+// projection offset (camera.setViewOffset): orbit target and user
+// rotation still pivot on the stop center.
+// Keep PANEL_SIDE_QUERY identical to the media query in css/style.css.
+export const PANEL_SIDE_QUERY = '(min-width: 700px) and (orientation: landscape)';
+const SHIFT_SIDE_X = 0.25;      // rock center at 25% of width
+const SHIFT_BOTTOM_Y = 0.18;    // rock center at ~32% of height
+const SHIFT_RATE = 1.8;         // ease rate (1/s): ramps during the flight
+let shiftTarget = 0, shiftNow = 0;
+export function setScreenShift(on, immediate = false) { shiftTarget = on ? 1 : 0; if (immediate) shiftNow = shiftTarget; }
+export function isPanelSideLayout() { return window.matchMedia(PANEL_SIDE_QUERY).matches; }
+
 export function init(controls) {
     controls.target.set(0, 0, 0);
     currentMode = Mode.ORBIT;
@@ -117,6 +131,15 @@ export function update(dt, controls, camera, pointPosition) {
         const rampT = Math.min(modeTimer / ORBIT_RAMP, 1);
         const speed = easeSpeed(rampT, ORBIT_LERP_START, ORBIT_LERP_END);
         controls.target.lerp(orbitCenter, Math.min(1, speed * dt));
+    }
+
+    shiftNow += (shiftTarget - shiftNow) * (1 - Math.exp(-SHIFT_RATE * dt));
+    if (shiftNow < 0.002 && shiftTarget === 0) {
+        if (camera.view?.enabled) camera.clearViewOffset();
+    } else {
+        const W = window.innerWidth, H = window.innerHeight, side = isPanelSideLayout();
+        camera.setViewOffset(W, H, side ? shiftNow * SHIFT_SIDE_X * W : 0,
+                                   side ? 0 : shiftNow * SHIFT_BOTTOM_Y * H, W, H);
     }
 
     controls.update();

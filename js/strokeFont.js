@@ -579,42 +579,48 @@ export function generateRockWithLabel(sizeFactor, seed, label, sublabel, density
 
     const outlineCount = allPoints.length;
 
-    // ── Label text below rock ──────────────────────────────────────
-    const labelScale = Math.max(0.35, sizeFactor * 0.45);
-    const { points: labelPts, width: labelW } = generateSingleLine(label, density);
+    if (label) {
+        // ── Label text below rock ──────────────────────────────────────
+        const { points: labelPts, width: labelW } = generateSingleLine(label, density);
+        // Label must stay clearly narrower than the rock (<= 80% of its width)
+        let rMin = Infinity, rMax = -Infinity;
+        for (const v of outline) { rMin = Math.min(rMin, v.x); rMax = Math.max(rMax, v.x); }
+        const labelScale = Math.min(Math.max(0.35, sizeFactor * 0.45),
+                                    0.8 * (rMax - rMin) / Math.max(labelW, 1e-6));
 
-    const labelX = -labelW * labelScale / 2; // centered
-    const labelY = -sizeFactor * 1.2 - 0.2;  // below rock
+        const labelX = -labelW * labelScale / 2; // centered
+        const labelY = -sizeFactor * 1.2 - 0.2;  // below rock
 
-    // Faint transition curve: outline end → label start
-    const last = allPoints[allPoints.length - 1];
-    const firstLX = labelPts.length > 0 ? labelPts[0].x * labelScale + labelX : 0;
-    const firstLY = labelPts.length > 0 ? labelPts[0].y * labelScale + labelY : labelY;
+        // Faint transition curve: outline end → label start
+        const last = allPoints[allPoints.length - 1];
+        const firstLX = labelPts.length > 0 ? labelPts[0].x * labelScale + labelX : 0;
+        const firstLY = labelPts.length > 0 ? labelPts[0].y * labelScale + labelY : labelY;
 
-    emitConnector(allPoints, last.x, last.y, firstLX, firstLY, density,
-        { sag: 0.15 * sizeFactor, densityFactor: 0.08, minPts: 5 });
+        emitConnector(allPoints, last.x, last.y, firstLX, firstLY, density,
+            { sag: 0.15 * sizeFactor, densityFactor: 0.08, minPts: 5 });
 
-    for (const p of labelPts) {
-        allPoints.push({ x: p.x * labelScale + labelX, y: p.y * labelScale + labelY, c: p.c });
-    }
+        for (const p of labelPts) {
+            allPoints.push({ x: p.x * labelScale + labelX, y: p.y * labelScale + labelY, c: p.c });
+        }
 
-    // ── Sublabel (e.g. city) ───────────────────────────────────────
-    if (sublabel) {
-        const subScale = labelScale * 0.85;
-        const { points: subPts, width: subW } = generateSingleLine(sublabel, density);
+        // ── Sublabel (e.g. city) ───────────────────────────────────────
+        if (sublabel) {
+            const subScale = labelScale * 0.85;
+            const { points: subPts, width: subW } = generateSingleLine(sublabel, density);
 
-        const subX = -subW * subScale / 2;
-        const subY = labelY - 0.8 * labelScale;
+            const subX = -subW * subScale / 2;
+            const subY = labelY - 0.8 * labelScale;
 
-        const prev = allPoints[allPoints.length - 1];
-        const fsx = subPts.length > 0 ? subPts[0].x * subScale + subX : 0;
-        const fsy = subPts.length > 0 ? subPts[0].y * subScale + subY : subY;
+            const prev = allPoints[allPoints.length - 1];
+            const fsx = subPts.length > 0 ? subPts[0].x * subScale + subX : 0;
+            const fsy = subPts.length > 0 ? subPts[0].y * subScale + subY : subY;
 
-        emitConnector(allPoints, prev.x, prev.y, fsx, fsy, density,
-            { sag: 0.1, densityFactor: 0.08, minPts: 4 });
+            emitConnector(allPoints, prev.x, prev.y, fsx, fsy, density,
+                { sag: 0.1, densityFactor: 0.08, minPts: 4 });
 
-        for (const p of subPts) {
-            allPoints.push({ x: p.x * subScale + subX, y: p.y * subScale + subY, c: p.c });
+            for (const p of subPts) {
+                allPoints.push({ x: p.x * subScale + subX, y: p.y * subScale + subY, c: p.c });
+            }
         }
     }
 
