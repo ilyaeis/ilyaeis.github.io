@@ -76,7 +76,7 @@ function buildText(font) {
 
     function makeLine(str, size, mat, y) {
         const geo = new TextGeometry(str, {
-            font, size, height: size * 0.3,
+            font, size, depth: size * 0.3,
             curveSegments: 6,
             bevelEnabled: true, bevelThickness: size * 0.02,
             bevelSize: size * 0.015, bevelSegments: 2
