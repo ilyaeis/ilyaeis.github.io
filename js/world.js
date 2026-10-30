@@ -32,11 +32,11 @@ const MILESTONES = [
         ]
     }},
     { label: 'AI TALENT', sizeFactor: 0.65, seed: 58, panel: {
-        title: 'AI Talent Programme',
+        title: 'AI Talent Program',
         subtitle: 'Ponder · Mākslīgā intelekta talantu programma',
         dates: 'Nov 2024 – Jan 2025',
         items: [
-            { text: 'Selective programme for young people strong in IT and maths. Entry by logic test and interview.' },
+            { text: 'Selective program for young people strong in IT and maths. Entry by logic test and interview.' },
             { text: 'Intensive training in C++, Python, maths and AI development, with mentors from the industry.' },
             { text: 'It led to my R&D Engineer role at Giraffe360.' }
         ],
