@@ -1,0 +1,162 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/jsonresume.org/master/packages/schema/schema.json",
+  "basics": {
+    "name": "Ilja Safronovs",
+    "label": "R&D Engineer, 3D reconstruction (Gaussian splatting)",
+    "email": "ilya.safronos@gmail.com",
+    "url": "https://ilyaeis.github.io/",
+    "summary": "R&D Engineer working on 3D reconstruction (Gaussian splatting, artifact fixing, meshes) at Giraffe360, and a Financial Engineering student at Riga Technical University. I build things to understand them.",
+    "location": { "city": "Riga", "countryCode": "LV" },
+    "profiles": [
+      { "network": "GitHub", "username": "ilyaeis", "url": "https://github.com/ilyaeis" },
+      { "network": "LinkedIn", "url": "https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" }
+    ]
+  },
+  "work": [
+    {
+      "name": "Giraffe360",
+      "position": "R&D Engineer",
+      "url": "https://www.giraffe360.com/",
+      "location": "Riga",
+      "startDate": "2025",
+      "summary": "Giraffe360 makes cameras and software for real-estate virtual tours.",
+      "highlights": [
+        "Develop a 3D Gaussian Splatting reconstruction pipeline that turns 360° camera captures into navigable 3D scenes (Python, PyTorch, CUDA).",
+        "Read new 3DGS research papers, then implemented the promising methods myself in the production pipeline and tested them against it (for example fused bilateral grids, selective Adam, densification strategies). This was hand-written work, before AI coding agents.",
+        "Built an LLM service (OpenAI API) that writes prompts and narration descriptions for virtual-tour videos: vision-capable models read panorama crops and floor-plan data, then a second pass refines the text. Added multi-language support and prompt tuning, with tests. Python worker on AWS that reads project data and images from S3.",
+        "Work on the \"fixer\" stage: diffusion-based models (Difix, then NVIDIA Fixer) that repair artifacts in rendered views of a reconstruction, used to refine the result.",
+        "Work on mesh generation from reconstructions, including combining meshes with Gaussian splats.",
+        "Started an MCP server for the team's task board, so AI agents can read and create tasks and log decisions (Node.js).",
+        "Training and evaluation runs on GPU with experiment tracking (ClearML), Docker deployments, GitLab CI.",
+        "Build multi-agent AI-coding workflows for large code audits and refactors."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Riga Technical University",
+      "area": "Financial Engineering",
+      "studyType": "Professional Bachelor",
+      "startDate": "2024",
+      "endDate": "2028",
+      "courses": [
+        "Mathematical analysis and algebra", "Probability and statistics", "Econometrics",
+        "Time-series analysis", "Stochastic analysis", "Monte Carlo methods", "Portfolio analysis",
+        "Actuarial mathematics", "Data structures and algorithms", "Databases/SQL",
+        "Computer networks", "Programming (Java, C++)"
+      ]
+    },
+    {
+      "institution": "AI Talent Program (Ponder)",
+      "area": "C++, Python, maths and AI development",
+      "studyType": "Program",
+      "startDate": "2024-11",
+      "endDate": "2025-01",
+      "url": "https://www.ponder.lv/mi-programma"
+    },
+    {
+      "institution": "Riga State Classical Gymnasium",
+      "area": "Programming and Mathematics track"
+    }
+  ],
+  "awards": [
+    {
+      "title": "4th place, Riga Business School (RTU) programming competition for secondary school students (27 entries)",
+      "date": "2023-06-10",
+      "awarder": "Riga Business School",
+      "summary": "Offline Graphing Calculator, built with Iļja Volinskis."
+    }
+  ],
+  "projects": [
+    {
+      "name": "load-balancing-experiments",
+      "startDate": "2026",
+      "description": "Seven reproducible experiments for an RTU networks project: DNS round robin and anycast measured from Riga, a queueing simulation of load-balancing policies, consistent / rendezvous / Maglev hashing, a mini load balancer with health checks, packet capture.",
+      "url": "https://github.com/ilyaeis/load-balancing-experiments",
+      "keywords": ["Python"]
+    },
+    {
+      "name": "flow",
+      "startDate": "2026",
+      "description": "Offline workout tracker (private). Log sets with live timers; analysis of volume, load (ACWR), records and body measurements; custom formulas, JSON/CSV/PDF export, CI with golden-image tests. In daily use.",
+      "keywords": ["Dart", "Flutter"]
+    },
+    {
+      "name": "monte-carlo-finance",
+      "startDate": "2026",
+      "description": "Monte Carlo option pricing with variance reduction (up to 1,900x), GARCH volatility, VaR backtests with the Kupiec test, efficient frontier from 30,000 portfolios and CAPM.",
+      "url": "https://github.com/ilyaeis/monte-carlo-finance",
+      "keywords": ["Python", "NumPy", "SciPy", "pandas"]
+    },
+    {
+      "name": "Portfolio journey",
+      "startDate": "2025",
+      "description": "A tap-driven WebGL world: RK4-integrated strange attractors, a single-stroke vector font, bloom, one continuous comet trail. No build step.",
+      "url": "https://ilyaeis.github.io/",
+      "keywords": ["three.js", "WebGL"]
+    },
+    {
+      "name": "Offline Graphing Calculator",
+      "startDate": "2023",
+      "description": "Graphing calculator that works offline; 4th place of 27 entries in the Riga Business School (RTU) programming competition. With Iļja Volinskis."
+    },
+    {
+      "name": "crypto-quant-lab",
+      "startDate": "2026",
+      "description": "59 backtested versions of drift and volatility-targeting rules on 6 coins with a 1% fee. Source recovered from Python 3.12 bytecode; all 153 functions verified.",
+      "url": "https://github.com/ilyaeis/crypto-quant-lab",
+      "keywords": ["Python"]
+    },
+    {
+      "name": "projects_with_NEAT",
+      "startDate": "2025",
+      "description": "Neuroevolution (NEAT) agents that learn Flappy Bird and Pong; a documented attempt at multi-snake survival.",
+      "url": "https://github.com/ilyaeis/projects_with_NEAT",
+      "keywords": ["Python"]
+    },
+    {
+      "name": "RTU_program_parser",
+      "startDate": "2025",
+      "description": "Scrapes the RTU timetable and finds extra lectures that fit a student's own schedule; exports to Excel. With Aleksejs Peņkovs.",
+      "url": "https://github.com/ilyaeis/RTU_program_parser",
+      "keywords": ["Python", "Selenium", "pandas"]
+    },
+    {
+      "name": "Snake + maze generator",
+      "startDate": "2024",
+      "endDate": "2025",
+      "description": "DFS maze generation, dynamic terrain (lava, forest, rivers), BFS path-finding.",
+      "url": "https://github.com/ilyaeis/Snake_plus_Maze_Path_algorithm_gen_2",
+      "keywords": ["Python", "Pygame"]
+    },
+    {
+      "name": "bezier-curve-js",
+      "startDate": "2023",
+      "description": "Interactive Bezier-curve drawing tool.",
+      "url": "https://github.com/ilyaeis/bezier-curve-js",
+      "keywords": ["JavaScript"]
+    },
+    {
+      "name": "sort_visualization",
+      "startDate": "2022",
+      "description": "16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control.",
+      "url": "https://github.com/ilyaeis/sort_visualization",
+      "keywords": ["C++", "SFML"]
+    }
+  ],
+  "skills": [
+    { "name": "Languages", "keywords": ["Python", "C++", "Dart/Flutter", "JavaScript", "Java", "SQL"] },
+    { "name": "3D / ML", "keywords": ["3D Gaussian Splatting", "diffusion-based artifact fixing", "mesh generation", "PyTorch", "CUDA", "OpenAI API / LLM prompting", "neuroevolution (NEAT)", "three.js/WebGL"] },
+    { "name": "Tools", "keywords": ["Linux", "Docker", "AWS S3", "Git/GitLab CI", "ClearML", "Pygame", "Selenium", "pandas"] }
+  ],
+  "languages": [
+    { "language": "Latvian" },
+    { "language": "English" },
+    { "language": "Russian" }
+  ],
+  "meta": {
+    "canonical": "https://ilyaeis.github.io/resume.html",
+    "version": "v1.0.0",
+    "lastModified": "2026-10-31"
+  }
+}
