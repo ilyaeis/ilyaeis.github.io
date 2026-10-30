@@ -1,20 +1,21 @@
 // ── Orchestrator ───────────────────────────────────────────────────
 // Tap-driven state machine over a pre-built static world (world.js).
 // The trail is a short fading comet: it travels Bezier arcs between
-// stops, rides attractor curves, and at planar stops draws the element's
-// trajectory once then loops around it while the user views.
+// stops, swings past attractor "galaxies" (scenery), and at planar stops
+// draws the element's trajectory once then loops around it while the
+// user views.
 
 import * as THREE from 'three';
 import {
-    ATTRACTORS, controls, camera, scene,
+    controls, camera, scene,
     createTrailSystem, addTrailToScene, clearTrail,
     pushPointWorld, updateTrailAttributes, updateTrailGlow,
-    rk4Step, addJourneyTime, render, isPaused, isMobile
+    addJourneyTime, render, isPaused, isMobile
 } from './attractors.js';
 import * as cam from './camera.js';
 import * as intro from './intro3d.js';
 import {
-    buildWorld, stops, StopType, planePointToWorld,
+    buildWorld, stops, StopType, planePointToWorld, scenery, updateScenery,
     getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL
 } from './world.js';
 
@@ -67,8 +68,6 @@ const _tan = new THREE.Vector3();
 const textFacePos = new THREE.Vector3(); // face-on camera target
 let camAligned = false;    // once true, stop steering — user gets control
 let userDragging = false;  // true while the user holds a rotate/zoom gesture
-let rideS = [0, 0, 0];     // attractor ride integration state
-let drawAcc = 0;           // fractional point budget (dt-based)
 let loopT = 0;             // planar-stop loop parameter
 let tracing = false;       // VIEW: comet is drawing the element's strokes once
 let traceCursor = 0;       // index into the stop's stroke points
@@ -84,10 +83,11 @@ const TRAVEL_MAX = 7.0;
 const TRAVEL_POINTS_PER_FRAME = 30;  // comet substeps along the path
 const LAUNCH_FLASH = 0.8;            // extra HDR intensity leaving the intro
 
-// Fly-through: a stop within this corridor of the flight line (and not
-// too near either end) becomes a via point the comet passes through
-const VIA_BAND = [0.2, 0.8];         // projection range along the flight line
-const VIA_MAX_PERP = 0.5;            // × flight distance
+// Fly-by: a scenery galaxy within this corridor of the flight line (and
+// not too near either end) becomes a via point the comet swings past
+const VIA_BAND = [0.15, 0.85];       // projection range along the flight line
+const VIA_MAX_PERP = 0.6;            // × flight distance
+const VIA_RIM = 0.7;                 // via point sits at this × galaxy radius from its center
 const VIA_JITTER = 0.8;              // random offset so it never dead-centers
 
 // Corkscrew (replaces the old vortex stop) — the first flight spirals
@@ -101,8 +101,6 @@ const CORK_RADIUS = 1.4;             // peak spiral radius (mid-flight)
 const HOVER_LOOKAHEAD = 5.0;         // seconds of loop motion to aim along
 
 // Viewing
-const RIDE_POINTS_PER_SEC = 12000;   // comet speed along attractor curves
-const RIDE_MAX_PER_FRAME = 500;
 const LOOP_SUBSTEPS = 8;             // comet substeps on planar-stop loops
 const LOOP_SETTLE_RATE = 1.5;        // how fast the fly-off eases onto the orbit
 
@@ -117,8 +115,7 @@ const TRACE_LINK_INTENSITY = 0.4;    // faint pen-travel strokes (c=0)
 
 const VIEW_TAP_DELAY = {
     [StopType.TEXT]: 2.0,
-    [StopType.ATTRACTOR]: 3.0,
-    [StopType.ROCK]: 1.5,
+    [StopType.ROCK]: 2.0,            // the HTML panel takes ~0.9 s to appear
     [StopType.LANDING]: 1.5
 };
 
@@ -142,10 +139,37 @@ export function init() {
         camAligned = true;
     });
     controls.addEventListener('end', () => { userDragging = false; });
-    showTapPrompt();
+    const q = new URLSearchParams(location.search);
+    const stopQ = Number(q.get('stop')), legQ = Number(q.get('leg'));
+    if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
+    else if (q.has('leg') && Number.isInteger(legQ) && legQ >= 1 && stops[legQ]) { jumpTo(legQ - 1); setupTravel(legQ, false); }
+    else showTapPrompt();
 }
 
 export function onTap() { tapPending = true; }
+
+// Tell the DOM (stopPanel.js) which stop the comet enters or leaves
+function emitStop(phaseName) {
+    const stop = stops[stopIndex];
+    if (!stop) return;
+    window.dispatchEvent(new CustomEvent('journey:stop', {
+        detail: { phase: phaseName, index: stopIndex, type: stop.type, panel: stop.panel || null }
+    }));
+}
+
+// Dev only: land the comet at stop n instantly (?stop=N, ?leg=N)
+function jumpTo(n) {
+    intro.hideRocket(); hideTapPrompt();
+    stopIndex = n;
+    const stop = stops[n];
+    trail.fade = 1; trail.attractorIdx = stop.paletteIdx ?? 0; clearTrail(trail); addTrailToScene(trail);
+    traceWorld(stop, 0, cometPos); worldPos.copy(stop.center);
+    cam.setOrbitCenter(stop.center.x, stop.center.y, stop.center.z);
+    controls.target.copy(stop.center);
+    camera.position.copy(stop.center).add(computeArrivalOffset(stop, _vec3));
+    cam.setScreenShift(stop.type === StopType.ROCK, true);
+    enterView();
+}
 
 function showTapPrompt() { if (tapPromptEl) tapPromptEl.classList.add('visible'); }
 function hideTapPrompt() { if (tapPromptEl) tapPromptEl.classList.remove('visible'); }
@@ -157,10 +181,14 @@ function enterPhase(newPhase) {
     tapPending = false; // taps don't queue across phases — each stop wants its own
 }
 
+// Share of the viewport the rock may fill (the HTML panel takes the rest)
+const ROCK_FIT_SIDE = 0.5;           // side layout: half the width
+const ROCK_FIT_BOTTOM = 0.55;        // bottom layout: ~55% of the height
+
 // ── Camera fit distance ────────────────────────────────────────────
 // Distance at which a 2D point set (scaled to world units, centered on
 // the orbit target) fits inside the camera view, with a small margin.
-function computeFitDistance(points, scale) {
+function computeFitDistance(points, scale, availW = 1, availH = 1) {
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const p of points) {
         if (p.x < minX) minX = p.x;
@@ -172,22 +200,22 @@ function computeFitDistance(points, scale) {
     const w = 2 * Math.max(Math.abs(minX), Math.abs(maxX)) * scale;
     const h = 2 * Math.max(Math.abs(minY), Math.abs(maxY)) * scale;
     const tanV = Math.tan(camera.fov * Math.PI / 360);
-    const fit = 1.25 * Math.max((h / 2) / tanV, (w / 2) / (tanV * camera.aspect));
+    const fit = 1.25 * Math.max((h / 2) / (tanV * availH), (w / 2) / (tanV * camera.aspect * availW));
     return THREE.MathUtils.clamp(fit, controls.minDistance, controls.maxDistance);
 }
 
 // ── Arrival camera offset ──────────────────────────────────────────
 // The camera→target offset the chase camera should settle into as it
 // reaches a stop, so it can pre-compose the scene during the flight:
-//   · planar stops → face-on, backed off by the fit distance
-//   · attractors   → the orbit pose (radius/elevation) from its table
+// face-on, backed off by the fit distance (rocks leave room for the panel).
+function fitFor(stop) {
+    if (stop.type !== StopType.ROCK) return computeFitDistance(stop.points2d, stop.scale);
+    const [w, h] = cam.isPanelSideLayout() ? [ROCK_FIT_SIDE, 1] : [1, ROCK_FIT_BOTTOM];
+    return computeFitDistance(stop.points2d, stop.scale, w, h);
+}
+
 function computeArrivalOffset(dest, out) {
-    if (dest.type === StopType.ATTRACTOR) {
-        const c = ATTRACTORS[dest.attractorIdx].camera;
-        const horiz = c.radius * Math.cos(c.elevation);
-        return out.set(0, c.radius * Math.sin(c.elevation), horiz); // azimuth 0; auto-rotate takes over
-    }
-    const dist = computeFitDistance(dest.points2d, dest.scale);
+    const dist = fitFor(dest);
     return out.copy(dest.normal).multiplyScalar(-dist);
 }
 
@@ -290,23 +318,22 @@ function buildHoverLeg(p0, p1, p3) {
     return leg;
 }
 
-// First leg of a flight: hover stops swoop out of their loop motion;
-// attractor stops depart along the live flow direction.
+// First leg of a flight: hover stops swoop out of their loop motion.
 function buildFirstLeg(target) {
     const fromStop = stopIndex >= 0 ? stops[stopIndex] : null;
-    if (fromStop && fromStop.type !== StopType.ATTRACTOR && !tracing) {
+    if (fromStop && !tracing) {
         loopPos(fromStop, loopT + HOVER_LOOKAHEAD, _future);
         return buildHoverLeg(cometPos, _future, target);
     }
-    // Mid-trace (or attractor): depart along the live heading
+    // Mid-trace: depart along the live heading
     return buildLeg(cometPos, cometDir, target);
 }
 
-// ── Fly-through pick ───────────────────────────────────────────────
-// A stop sitting near the corridor between the comet and its target
-// (not too close to either end) becomes a via point — the comet
-// passes through that scene instead of flying around it.
-function pickViaStop(destIdx, from, to) {
+// ── Fly-by pick ────────────────────────────────────────────────────
+// A scenery galaxy sitting near the corridor between the comet and its
+// target (not too close to either end) becomes a via point. Returns the
+// galaxy.
+function pickViaScenery(from, to) {
     _vA.subVectors(to, from);
     const abLenSq = _vA.lengthSq();
     if (abLenSq < 1e-6) return null;
@@ -314,16 +341,14 @@ function pickViaStop(destIdx, from, to) {
 
     let best = null;
     let bestPerp = VIA_MAX_PERP * abLen;
-    for (let k = 0; k < stops.length; k++) {
-        if (k === destIdx || k === stopIndex) continue;
-        const c = stops[k].center;
-        const s = (_vB.subVectors(c, from).dot(_vA)) / abLenSq;
+    for (const g of scenery) {
+        const s = (_vB.subVectors(g.center, from).dot(_vA)) / abLenSq;
         if (s < VIA_BAND[0] || s > VIA_BAND[1]) continue;
         _vec3.copy(from).addScaledVector(_vA, s); // closest point on the line
-        const perp = _vec3.distanceTo(c);
+        const perp = _vec3.distanceTo(g.center);
         if (perp < bestPerp) {
             bestPerp = perp;
-            best = stops[k];
+            best = g;
         }
     }
     return best;
@@ -333,8 +358,9 @@ function pickViaStop(destIdx, from, to) {
 // Aim the camera at a planar stop: compute the face-on position once,
 // then ease toward it each frame until arrival — unless the user
 // already took over.
-function beginFaceAlign(center, dir, points, scale) {
-    const dist = computeFitDistance(points, scale);
+function beginFaceAlign(stop) {
+    const dist = fitFor(stop);
+    const center = stop.center, dir = stop.normal;
     textFacePos.copy(center).addScaledVector(dir, -dist);
     camAligned = userDragging; // user already in control → don't steer
 }
@@ -350,38 +376,31 @@ function stepFaceAlign(dt, speed = 2.5) {
     return false;
 }
 
-// ── Attractor-space → world (comet riding a static curve) ─────────
-function rideTipWorld(stop, s, out) {
-    const attr = ATTRACTORS[stop.attractorIdx];
-    return out.set(
-        (s[0] - attr.center[0]) * attr.scale + stop.center.x,
-        (s[1] - attr.center[1]) * attr.scale + stop.center.y,
-        (s[2] - attr.center[2]) * attr.scale + stop.center.z
-    );
-}
-
 // ── Travel setup ───────────────────────────────────────────────────
 function setupTravel(destIdx, withCorkscrew) {
     const dest = stops[destIdx];
 
-    // Attractor stops: aim at the curve tip so the comet lands ON the
-    // curve and keeps riding; planar stops: aim at the FIRST stroke point
-    // so the comet flies straight into the start of the trajectory (no
-    // spoke through the center) and begins tracing from there.
-    if (dest.type === StopType.ATTRACTOR) {
-        rideTipWorld(dest, dest.rideState, _targetPos);
-    } else {
-        traceWorld(dest, 0, _targetPos);
-    }
+    emitStop('leave'); // before stopIndex moves to the destination
 
-    // Route through a third scene when one sits near the flight line
-    // (checked before stopIndex moves to the destination). The flight
-    // starts from the comet's *actual* head — cometPos — not the stop
-    // center, so the trail flows on instead of snapping back.
-    const via = pickViaStop(destIdx, cometPos, _targetPos);
+    // Aim at the FIRST stroke point so the comet flies straight into the
+    // start of the trajectory (no spoke through the center) and begins
+    // tracing from there.
+    traceWorld(dest, 0, _targetPos);
+
+    // Swing past a scenery galaxy when one sits near the flight line.
+    // The flight starts from the comet's *actual* head — cometPos — not
+    // the stop center, so the trail flows on instead of snapping back.
+    const via = pickViaScenery(cometPos, _targetPos);
     travelLegs = [];
     if (via) {
-        const viaPos = via.center.clone().add(new THREE.Vector3(
+        // Near edge of the galaxy, not its center: the closest point on the
+        // flight line, pushed back out to the rim on that side
+        _vA.subVectors(_targetPos, cometPos);
+        const s = _vB.subVectors(via.center, cometPos).dot(_vA) / _vA.lengthSq();
+        _vec3.copy(cometPos).addScaledVector(_vA, s);
+        const viaPos = _vec3.sub(via.center).normalize()
+            .multiplyScalar(via.radius * VIA_RIM).add(via.center).clone()
+            .add(new THREE.Vector3(
             rand(-VIA_JITTER, VIA_JITTER),
             rand(-VIA_JITTER, VIA_JITTER),
             rand(-VIA_JITTER, VIA_JITTER)
@@ -417,6 +436,7 @@ function setupTravel(destIdx, withCorkscrew) {
     cam.setMode(cam.Mode.FOLLOW, controls);
     // Pre-compose the destination so the camera is already framed on arrival
     cam.setFollowAim(computeArrivalOffset(dest, _vec3));
+    cam.setScreenShift(dest.type === StopType.ROCK);
     enterPhase(Phase.TRAVEL);
 }
 
@@ -440,6 +460,7 @@ export function update(dt) {
     totalTime += dt;
     addJourneyTime(dt);
     intro.update(dt, totalTime);
+    updateScenery(dt);
 
     switch (phase) {
         case Phase.INTRO:          updateIntro(dt); break;
@@ -546,44 +567,15 @@ function enterView() {
     cam.setMode(cam.Mode.ORBIT, controls);
     cam.setOrbitCenter(stop.center.x, stop.center.y, stop.center.z);
 
-    if (stop.type === StopType.ATTRACTOR) {
-        controls.autoRotateSpeed = ATTRACTORS[stop.attractorIdx].camera.azimuthSpeed;
-        rideS = [...stop.rideState];
-        drawAcc = 0;
-        tracing = false;
-    } else {
-        controls.autoRotateSpeed = 0;
-        beginFaceAlign(stop.center, stop.normal, stop.points2d, stop.scale);
-        loopT = 0;
-        tracing = true;    // draw the element's trajectory once before looping
-        traceCursor = 0;
-        traceAcc = 0;
-    }
+    controls.autoRotateSpeed = 0;
+    beginFaceAlign(stop);
+    loopT = 0;
+    tracing = true;    // draw the element's trajectory once before looping
+    traceCursor = 0;
+    traceAcc = 0;
 
+    emitStop('enter');
     enterPhase(Phase.VIEW);
-}
-
-// Comet rides the attractor: live RK4 along the same dynamics that
-// produced the static curve, so the bright head retraces its shape
-function rideAttractor(stop, dt) {
-    const attr = ATTRACTORS[stop.attractorIdx];
-    drawAcc += RIDE_POINTS_PER_SEC * dt;
-    let budget = Math.min(Math.floor(drawAcc), RIDE_MAX_PER_FRAME);
-    drawAcc -= budget;
-
-    for (let i = 0; i < budget; i++) {
-        rideS = rk4Step(attr.derivatives, rideS[0], rideS[1], rideS[2], attr.dt, attr.params);
-        for (let j = 0; j < 3; j++) {
-            if (Math.abs(rideS[j]) > 150) rideS[j] *= 150 / Math.abs(rideS[j]);
-            if (!isFinite(rideS[j])) { rideS = [...attr.initialCondition]; break; }
-        }
-        rideTipWorld(stop, rideS, _vec3);
-        pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
-    }
-
-    // Heading = attractor flow direction (used when departing)
-    const d = attr.derivatives(rideS[0], rideS[1], rideS[2], attr.params);
-    cometDir.set(d[0], d[1], d[2]).normalize();
 }
 
 // World position of a planar stop's stroke point at a given index
@@ -668,21 +660,16 @@ function loopPlanar(stop, dt) {
 function updateView(dt) {
     const stop = stops[stopIndex];
 
-    if (stop.type === StopType.ATTRACTOR) {
-        rideAttractor(stop, dt);
-        rideTipWorld(stop, rideS, cometPos); // comet head rides the curve
+    // Face the stop during the first moments, then hand the camera
+    // back so the user can zoom/rotate freely
+    if (stepFaceAlign(dt) && stop.type === StopType.ROCK) {
+        controls.autoRotateSpeed = 0.3;
+    }
+    if (tracing) {
+        tracePlanar(stop, dt); // draw the trajectory once, then loop
     } else {
-        // Face the stop during the first moments, then hand the camera
-        // back so the user can zoom/rotate freely
-        if (stepFaceAlign(dt) && stop.type === StopType.ROCK) {
-            controls.autoRotateSpeed = 0.3;
-        }
-        if (tracing) {
-            tracePlanar(stop, dt); // draw the trajectory once, then loop
-        } else {
-            loopPlanar(stop, dt);
-            loopPosSettled(stop, loopT, cometPos); // comet head rides the orbit
-        }
+        loopPlanar(stop, dt);
+        loopPosSettled(stop, loopT, cometPos); // comet head rides the orbit
     }
 
     worldPos.copy(stop.center); // camera stays stable
@@ -694,11 +681,7 @@ function updateView(dt) {
         tapPending = false;
         hideTapPrompt();
 
-        // Attractor stops remember the ride tip so the next visit's
-        // approach lands back on the curve where the comet left it
-        if (stop.type === StopType.ATTRACTOR) stop.rideState = [...rideS];
-
-        // After the landing, the tour loops back to the first attractor
+        // After the landing, the tour loops back to the first rock (stop 1)
         const next = stopIndex === stops.length - 1 ? 1 : stopIndex + 1;
         setupTravel(next, false);
     }

@@ -64,3 +64,172 @@ body {
     0%, 100% { opacity: 0.6; }
     50% { opacity: 1; }
 }
+
+/* Corner nav — persistent HTML links above the canvas */
+.site-nav {
+    position: fixed;
+    top: 1.25rem;
+    right: 1.5rem;
+    z-index: 10;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    color: #888;
+}
+
+.site-nav a {
+    color: inherit;
+    text-decoration: none;
+    margin-left: 1.2rem;
+}
+
+.site-nav a:hover,
+.site-nav a:focus-visible {
+    color: #e0e0e0;
+    outline: 1px solid #888;
+}
+
+/* Shown only when JavaScript is off */
+.fallback {
+    position: fixed;
+    top: 50%;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    text-align: center;
+    padding: 0 1rem;
+}
+
+.fallback a {
+    color: inherit;
+}
+
+/* Milestone panel — HTML text beside the rock. Filled by js/stopPanel.js.
+   The media query string must match PANEL_SIDE_QUERY in js/camera.js. */
+.stop-panel {
+    position: fixed;
+    z-index: 5;
+    color: #e0e0e0;
+    opacity: 0;
+    pointer-events: none;
+    letter-spacing: 0.04em;
+    transition: opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s;
+}
+
+.stop-panel.visible {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+}
+
+.stop-panel[hidden] { display: none; }
+.stop-panel [hidden] { display: none; }
+
+.stop-panel-dates {
+    color: #888;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.6rem;
+}
+
+.stop-panel-title {
+    font-size: 1.5rem;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    line-height: 1.25;
+    color: #f0f0f0;
+}
+
+.stop-panel-subtitle {
+    color: #aaa;
+    font-size: 0.9rem;
+    font-weight: 300;
+    margin-top: 0.4rem;
+}
+
+.stop-panel-items {
+    list-style: none;
+    margin-top: 1.5rem;
+}
+
+.stop-panel-items li {
+    letter-spacing: 0.02em;
+    font-size: 0.95rem;
+    font-weight: 300;
+    line-height: 1.5;
+    color: #c8c8c8;
+    padding-left: 0.9rem;
+    border-left: 1px solid #3a3a3a;
+}
+
+.stop-panel-items li + li { margin-top: 0.8rem; }
+
+.stop-panel a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid #555;
+}
+
+.stop-panel a:hover,
+.stop-panel a:focus-visible {
+    color: #fff;
+    border-bottom-color: #aaa;
+    outline: 1px solid #888;
+    outline-offset: 2px;
+}
+
+.stop-panel a.stop-panel-more {
+    display: inline-block;
+    align-self: flex-start;
+    margin-top: 1.6rem;
+    color: #888;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+}
+
+.stop-panel-more::after { content: ' \2192'; }
+
+/* Bottom layout (default): rock above, panel below */
+.stop-panel {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 48vh;
+    overflow-y: auto;
+    touch-action: pan-y;
+    padding: 1.25rem 1.25rem 4.5rem;
+    transform: translateY(18px);
+    background: linear-gradient(180deg, rgba(10, 10, 10, 0), rgba(10, 10, 10, 0.85) 25%);
+}
+.stop-panel-title { font-size: 1.25rem; }
+.stop-panel-items { margin-top: 1rem; }
+.stop-panel-items li { font-size: 0.9rem; }
+
+/* Side layout: panel on the right, rock on the left */
+@media (min-width: 700px) and (orientation: landscape) {
+    .stop-panel {
+        left: auto;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: min(46vw, 540px);
+        max-height: none;
+        overflow: visible;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 3rem 3.5rem 3rem 2.5rem;
+        transform: translateX(18px);
+        background: linear-gradient(90deg, rgba(10, 10, 10, 0), rgba(10, 10, 10, 0.75) 30%);
+    }
+    .stop-panel[hidden] { display: none; }
+    .stop-panel-title { font-size: 1.5rem; }
+    .stop-panel-items { margin-top: 1.5rem; }
+    .stop-panel-items li { font-size: 0.95rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stop-panel { transition: none; }
+}
+
+.stop-panel.visible { transform: none; }

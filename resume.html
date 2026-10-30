@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ilja Safronovs — Resume</title>
+    <meta name="description" content="Resume of Ilja Safronovs — R&amp;D Engineer working on 3D Gaussian splatting reconstruction at Giraffe360, and Financial Engineering student at Riga Technical University.">
+    <meta name="author" content="Ilja Safronovs">
+    <meta name="theme-color" content="#0a0a0a">
+    <link rel="canonical" href="https://ilyaeis.github.io/resume.html">
+    <link rel="me" href="https://github.com/ilyaeis">
+
+    <!-- Social previews -->
+    <meta property="og:type" content="profile">
+    <meta property="og:url" content="https://ilyaeis.github.io/resume.html">
+    <meta property="og:title" content="Ilja Safronovs — Resume">
+    <meta property="og:description" content="R&amp;D Engineer working on 3D Gaussian splatting reconstruction at Giraffe360. Financial Engineering student at Riga Technical University.">
+    <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Ilja Safronovs",
+        "url": "https://ilyaeis.github.io/",
+        "email": "mailto:ilya.safronos@gmail.com",
+        "jobTitle": "R&D Engineer",
+        "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
+        "alumniOf": { "@type": "CollegeOrUniversity", "name": "Riga Technical University" },
+        "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
+        "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "Mesh Generation", "PyTorch", "CUDA", "Python", "C++", "Dart", "Flutter", "JavaScript", "Financial Engineering"],
+        "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
+    }
+    </script>
+
+    <link rel="stylesheet" href="css/resume.css">
+</head>
+<body>
+<main>
+    <a class="back" href="./">← back to the journey</a>
+
+    <header>
+        <h1>Ilja Safronovs</h1>
+        <p class="contact">
+            Riga, Latvia ·
+            <a href="mailto:ilya.safronos@gmail.com">ilya.safronos@gmail.com</a> ·
+            <a href="https://github.com/ilyaeis" rel="me">github.com/ilyaeis</a> ·
+            <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me">LinkedIn</a>
+        </p>
+        <p class="summary">R&amp;D Engineer working on 3D reconstruction (Gaussian splatting,
+            artifact fixing, meshes) at Giraffe360, and a Financial Engineering student at
+            Riga Technical University. I build things to understand them.</p>
+    </header>
+
+    <section>
+        <h2>Experience</h2>
+        <h3>Giraffe360 — Riga · R&amp;D Engineer · 2025 – present</h3>
+        <p class="note">Giraffe360 makes cameras and software for real-estate virtual tours.</p>
+        <ul>
+            <li>Develop a 3D Gaussian Splatting reconstruction pipeline that turns 360° camera captures into navigable 3D scenes (Python, PyTorch, CUDA).</li>
+            <li>Read new 3DGS research papers, then implemented the promising methods myself in the production pipeline and tested them against it (for example fused bilateral grids, selective Adam, densification strategies). This was hand-written work, before AI coding agents.</li>
+            <li>Built an LLM service (OpenAI API) that writes prompts and narration descriptions for virtual-tour videos: vision-capable models read panorama crops and floor-plan data, then a second pass refines the text. Added multi-language support and prompt tuning, with tests. Python worker on AWS that reads project data and images from S3.</li>
+            <li>Work on the “fixer” stage: diffusion-based models (Difix, then NVIDIA Fixer) that repair artifacts in rendered views of a reconstruction, used to refine the result.</li>
+            <li>Work on mesh generation from reconstructions, including combining meshes with Gaussian splats.</li>
+            <li>Started an MCP server for the team’s task board, so AI agents can read and create tasks and log decisions (Node.js).</li>
+            <li>Training and evaluation runs on GPU with experiment tracking (ClearML), Docker deployments, GitLab CI.</li>
+            <li>Build multi-agent AI-coding workflows for large code audits and refactors.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Education</h2>
+        <h3>Riga Technical University — BSc Financial Engineering · 2024 – present</h3>
+        <p class="note">Coursework incl. data structures &amp; algorithms, computer networks, databases/SQL, Java, C++.</p>
+        <h3>MI Talantu programma (AI talent programme) · Nov 2024 – Jan 2025</h3>
+        <p class="note">C++ and Python.</p>
+        <h3>Riga State Classical Gymnasium (Rīgas Valsts klasiskā ģimnāzija)</h3>
+    </section>
+
+    <section>
+        <h2>Projects</h2>
+        <ul class="projects">
+            <li><a href="https://github.com/ilyaeis/load-balancing-experiments">load-balancing-experiments</a> <span class="meta">(2026, Python)</span> — seven reproducible experiments for an RTU networks project: DNS round robin and anycast measured from Riga, a queueing simulation of load-balancing policies (“power of two choices”), consistent / rendezvous / Maglev hashing, a mini load balancer with health checks, packet capture.</li>
+            <li>Portfolio journey (<a href="./">this site</a>) <span class="meta">(2025–26, three.js)</span> — a tap-driven WebGL world: RK4-integrated strange attractors, a single-stroke vector font, bloom, one continuous comet trail. No build step.</li>
+            <li><a href="https://github.com/ilyaeis/projects_with_NEAT">projects_with_NEAT</a> <span class="meta">(2025, Python)</span> — neuroevolution (NEAT) agents that learn Flappy Bird, Pong and a snake game.</li>
+            <li><a href="https://github.com/ilyaeis/RTU_program_parser">RTU_program_parser</a> <span class="meta">(2025, Python/Selenium/pandas, with Aleksejs Peņkovs)</span> — scrapes the RTU timetable and finds extra lectures that fit a student’s own schedule; exports to Excel.</li>
+            <li>Snake + maze generator <span class="meta">(2024, Python/Pygame and Java)</span> — DFS maze generation, dynamic terrain, path-finding.</li>
+            <li>wFlow and Fitness <span class="meta">(2025–26, Dart/Flutter, private)</span> — offline workout trackers: log sets with live timers and follow training progress.</li>
+            <li>EisenhowerTODO <span class="meta">(private)</span> — task manager based on the Eisenhower matrix.</li>
+            <li><a href="https://github.com/ilyaeis/bezier-curve-js">bezier-curve-js</a> <span class="meta">(2023, JavaScript)</span> — interactive Bezier-curve drawing tool.</li>
+            <li><a href="https://github.com/ilyaeis/sort_visualization">sort_visualization</a> <span class="meta">(2022, C++)</span> — sorting and shuffle algorithm visualizer.</li>
+            <li>Smaller: GitHub-User-Activity (CLI), BreakReminderApp (a write-up on Windows services and threading gone wrong), World_Simulation. All on <a href="https://github.com/ilyaeis">github.com/ilyaeis</a>.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Skills</h2>
+        <dl class="skills">
+            <dt>Languages</dt><dd>Python, C++, Dart/Flutter, JavaScript, Java, SQL</dd>
+            <dt>3D / ML</dt><dd>3D Gaussian Splatting, diffusion-based artifact fixing, mesh generation, PyTorch, CUDA, OpenAI API / LLM prompting, neuroevolution (NEAT), three.js/WebGL</dd>
+            <dt>Tools</dt><dd>Linux, Docker, AWS S3, Git/GitLab CI, ClearML, Pygame, Selenium, pandas</dd>
+            <dt>Spoken</dt><dd>Latvian, English, Russian</dd>
+        </dl>
+    </section>
+</main>
+</body>
+</html>

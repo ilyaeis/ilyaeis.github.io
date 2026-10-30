@@ -15,8 +15,9 @@ import {
 } from './orchestrator.js';
 import {
     getIconObject,
-    onResize as resizeIntro,
-    LINKEDIN_URL
+    getGithubIconObject,
+    LINKEDIN_URL,
+    GITHUB_URL
 } from './intro3d.js';
 
 (function () {
@@ -24,7 +25,7 @@ import {
 
     // Stars are now part of the 3D scene (see createStarfield in attractors.js)
 
-    // ── 3D clickable hit-testing (LinkedIn icon, landing mail plane) ──
+    // ── 3D clickable hit-testing (LinkedIn/GitHub icons, landing mail plane) ──
     const raycaster = new THREE.Raycaster();
     const pointerNdc = new THREE.Vector2();
 
@@ -39,6 +40,7 @@ import {
     }
 
     function hitsIcon(e) { return hitsObject(e, getIconObject()); }
+    function hitsGithub(e) { return hitsObject(e, getGithubIconObject()); }
     function hitsMail(e) { return hitsObject(e, getMailPlane()); }
 
     // Coalesce hover hit-tests to one raycast per frame — pointermove
@@ -48,7 +50,7 @@ import {
         if (!hoverEvent) {
             requestAnimationFrame(() => {
                 document.body.style.cursor =
-                    (hitsIcon(hoverEvent) || hitsMail(hoverEvent)) ? 'pointer' : '';
+                    (hitsIcon(hoverEvent) || hitsGithub(hoverEvent) || hitsMail(hoverEvent)) ? 'pointer' : '';
                 hoverEvent = null;
             });
         }
@@ -60,15 +62,18 @@ import {
     const TAP_THRESHOLD = 10; // pixels
 
     document.body.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.site-nav, .stop-panel')) return;
         pointerDownPos = { x: e.clientX, y: e.clientY };
     });
 
     document.body.addEventListener('pointerup', (e) => {
+        if (e.target.closest('.site-nav, .stop-panel')) return;
         if (!pointerDownPos) return;
         const dx = e.clientX - pointerDownPos.x;
         const dy = e.clientY - pointerDownPos.y;
         if (Math.sqrt(dx * dx + dy * dy) < TAP_THRESHOLD) {
             if (hitsIcon(e)) window.open(LINKEDIN_URL, '_blank');
+            else if (hitsGithub(e)) window.open(GITHUB_URL, '_blank');
             else if (hitsMail(e)) window.location.href = 'mailto:' + CONTACT_EMAIL;
             else onTap();
         }
@@ -79,8 +84,18 @@ import {
         pointerDownPos = null;
     });
 
-    // Prevent any residual scrolling / bounce on mobile
-    document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+    // Keyboard: Enter / Space advance the journey (links and buttons keep their own behavior)
+    document.addEventListener('keydown', (e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button')) {
+            e.preventDefault();
+            onTap();
+        }
+    });
+
+    // Prevent any residual scrolling / bounce on mobile (nav links stay tappable)
+    document.addEventListener('touchmove', (e) => {
+        if (!e.target.closest('.site-nav, .stop-panel')) e.preventDefault();
+    }, { passive: false });
 
     // ── Animation Loop ─────────────────────────────────────────
     let lastTime = 0;
@@ -119,7 +134,6 @@ import {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
                 resizeAttractor(window.innerWidth, window.innerHeight);
-                resizeIntro();
             }, 150);
         });
 
