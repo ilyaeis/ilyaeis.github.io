@@ -170,6 +170,12 @@ function simulate(seconds) {
 
 export function onTap() { tapPending = true; }
 
+// Dev only (dev/camlog.html): step without drawing, and read the state
+export function setSkipRender(v) { skipRender = v; }
+export function devState() {
+    return { phase, phaseTime, stopIndex, stopType: stops[stopIndex]?.type ?? -1, worldPos, cometPos };
+}
+
 // Tell the DOM (stopPanel.js) which stop the comet enters or leaves
 function emitStop(phaseName) {
     const stop = stops[stopIndex];

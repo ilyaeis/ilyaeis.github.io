@@ -47,6 +47,9 @@ export function setMode(mode, controls) {
     if (mode === Mode.FOLLOW) chaseFresh = true;
 }
 
+// Dev only (dev/camlog.html)
+export function devState() { return { mode: currentMode, chaseDist, chaseDistTarget, shift: shiftNow }; }
+
 export function setOrbitCenter(x, y, z) { orbitCenter.set(x, y, z); }
 
 // How far behind the comet the chase camera trails. Pass the destination's
