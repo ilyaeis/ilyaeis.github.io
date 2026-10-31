@@ -501,6 +501,7 @@ export let flybys = [];                  // { label, s, viz }
 export let tunnelExitS = 0;              // s where the tunnel ends (the warp out)
 let mailPlane = null;
 export function getMailPlane() { return mailPlane; }
+let landingScale = TEXT_SCALE;           // world units per 2D unit of the landing text (smaller on narrow portrait screens)
 
 // The apartment frame (room units -> world): world = position + R(yaw) × room × scale.
 // room.js renders the splat and the objects into it; `objects` lists the
@@ -533,9 +534,11 @@ export function worldToRoom(p, out = new THREE.Vector3()) {
 // centred on the orbit target, fits the view with a small margin.
 // availW / availH: share of the view it may fill (the HTML panel takes the rest).
 export function fitDistance(halfW, halfH, availW = 1, availH = 1) {
+    return THREE.MathUtils.clamp(fitUnclamped(halfW, halfH, availW, availH), controls.minDistance, controls.maxDistance);
+}
+function fitUnclamped(halfW, halfH, availW = 1, availH = 1) {
     const tanV = Math.tan(camera.fov * Math.PI / 360);
-    const fit = 1.25 * Math.max(halfH / (tanV * availH), halfW / (tanV * camera.aspect * availW));
-    return THREE.MathUtils.clamp(fit, controls.minDistance, controls.maxDistance);
+    return 1.25 * Math.max(halfH / (tanV * availH), halfW / (tanV * camera.aspect * availW));
 }
 
 const _vec3 = new THREE.Vector3();
@@ -684,7 +687,7 @@ function projectPoints(label, halfW, halfH) {
 
 // ── Planar stop (text / rock / landing / project) ──────────────────
 function buildPlanarStop(def, center, right, up, palette) {
-    const scale = def.type === StopType.ROCK ? ROCK_SCALE : TEXT_SCALE;
+    const scale = def.type === StopType.ROCK ? ROCK_SCALE : def.type === StopType.LANDING ? landingScale : TEXT_SCALE;
     let points, staticFrom = 0;
     if (def.type === StopType.ROCK) {
         const ms = MILESTONES[def.milestone];
@@ -1136,7 +1139,11 @@ export function buildWorld(scene) {
     const { points: landPts } = generateTextLines(LANDING_LINES);
     let lx = 0, ly = 0;
     for (const p of landPts) { lx = Math.max(lx, Math.abs(p.x)); ly = Math.max(ly, Math.abs(p.y)); }
-    const roomScale = fitDistance(lx * TEXT_SCALE, ly * TEXT_SCALE) / (LANDING_CAM_Z - LANDING_TEXT[2]);
+    // On a narrow portrait screen the email line needs a fit past
+    // controls.maxDistance (the camera cannot back off that far): the
+    // landing text shrinks until it fits at that distance
+    landingScale = TEXT_SCALE * Math.min(1, controls.maxDistance / fitUnclamped(lx * TEXT_SCALE, ly * TEXT_SCALE));
+    const roomScale = fitDistance(lx * landingScale, ly * landingScale) / (LANDING_CAM_Z - LANDING_TEXT[2]);
     apartment.objects = [];
     let afterApartment = false;   // rocks after it are placed clear of it and the tunnel
     let afterChain = [];          // ... as one chain (placeAfterApartment)
