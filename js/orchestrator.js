@@ -77,6 +77,22 @@ const railStartPos = new THREE.Vector3(), railStartLook = new THREE.Vector3(); /
 const railYaw = { x: 0, v: 0 }, railPitch = { x: 0, v: 0 };
 const railPosF = new THREE.Vector3(), railPosV = new THREE.Vector3();
 let railFresh = true;
+const railFrom = new THREE.Vector3();   // centre of the object the indoor flight leaves
+// Total yaw (rad) the rail view turns on this flight: from the view
+// direction `from`, along the path's horizontal heading, to `to`
+function railTurn(from, to) {
+    let turn = 0, prev = yawOf(from);
+    const step = yaw => { const d = Math.atan2(Math.sin(yaw - prev), Math.cos(yaw - prev)); turn += Math.abs(d); prev = yaw; };
+    // the rail's own look direction (the path averaged as in updateTravel)
+    const L = travelWeightedLen, s = apartment.scale;
+    for (let i = 0; i <= 64; i++) {
+        railPathPoint(i / 64 - RAIL_BACK * s / L, RAIL_WINDOW * s / L, _rpB);
+        railPathPoint(i / 64 + RAIL_AHEAD * s / L, 2 * RAIL_WINDOW * s / L, _vC).sub(_rpB);
+        if (Math.hypot(_vC.x, _vC.z) > 0.3 * _vC.length()) step(yawOf(_vC));
+    }
+    step(yawOf(to));
+    return turn;
+}
 // Yaw of a direction (about +Y) and a yaw / pitch blend of two directions
 function yawOf(v) { return Math.atan2(v.x, v.z); }
 function pitchOf(v) { return Math.atan2(v.y, Math.hypot(v.x, v.z)); }
@@ -89,7 +105,7 @@ const _rpA = new THREE.Vector3();
 // Path point at share g averaged over ±halfW (triangle weights). Before the
 // start and past the end the path goes on straight along its end tangents,
 // so no sample sticks to an end (that would kink the camera's motion).
-const _rpT = new THREE.Vector3();
+const _rpT = new THREE.Vector3(), _rpB = new THREE.Vector3();
 function railPathPoint(g, halfW, out) {
     out.set(0, 0, 0);
     let sum = 0;
@@ -220,14 +236,16 @@ const VIA_PULL = 0.3;                // control arm at a via, × leg length (the
 // Indoor camera rail: the camera rides the comet's own path a little behind
 // and above it and looks a little ahead, so it passes the doorways where the
 // comet does (a chase camera lags in the turns and clips the walls)
-const RAIL_BACK = 0.3;               // room units of path behind the comet
+const RAIL_BACK = 0.22;              // room units of path behind the comet
 const RAIL_AHEAD = 0.3;              // ... the look point ahead of it (far: the view turns before the path does)
 const RAIL_UP = 0.07;                // ... above the path
-const RAIL_WINDOW = 0.2;             // room units: the rail path is averaged over ± this (twice that for the look point)
+const RAIL_WINDOW = 0.12;            // room units: the rail path is averaged over ± this (twice that for the look point)
 const INDOOR_AFTER_RAIL = 1.2;       // s: an indoor flight lasts at least this long after the rail took over
 const RAIL_MAX_PITCH = THREE.MathUtils.degToRad(20); // the rail view looks at most this far up or down
 const RAIL_TURN_TIME = 0.8;          // s: smooth time of the rail view heading (yaw, pitch)
 const RAIL_TURN_MAX = THREE.MathUtils.degToRad(60); // rad/s: its speed cap
+const RAIL_TURN_SHARE = 0.8;         // an indoor flight lasts at least its total view turn at this share of that cap
+const RAIL_CLEAR = 0.42;             // room units: the rail camera stays at least half this far from the object it leaves
 const RAIL_FILTER = 0.06;            // s: smooth time of the final rail pose (filters arc-table kinks)
 // s: the camera eases from the departure pose onto the rail; slower for a
 // bigger turn (RAIL_IN_RATE degrees per second of it), so the view never whips
@@ -710,6 +728,7 @@ export function setupTravel(destIdx, withCorkscrew) {
     indoorDoorsEnd = -1;
     if (!inTunnel && toTunnel) tunnel.setUnwrapRef(0);   // the flight heads for the tunnel start (see tunnel.sOf)
     railStartPos.copy(camera.position); railStartLook.copy(controls.target);
+    if (from) railFrom.copy(from.center);
     const vias = viasFor(from, dest);
     const nDoors = indoor ? vias.length : 0;
     if (dest.type === StopType.OBJECT) {
@@ -742,6 +761,9 @@ export function setupTravel(destIdx, withCorkscrew) {
         _vB.subVectors(travelLegs[1].p3, travelLegs[0].p3).setY(0).normalize();
         railIn = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(_vA.angleTo(_vB)) / RAIL_IN_RATE, RAIL_IN[0], RAIL_IN[1]);
         travelDuration = Math.max(travelDuration, railIn + INDOOR_AFTER_RAIL);
+        // the rail view turns at most RAIL_TURN_MAX: a loopy path (the next
+        // object behind the camera) gets the time its total turn needs
+        travelDuration = Math.max(travelDuration, railTurn(_vA, dest.normal) / (RAIL_TURN_MAX * RAIL_TURN_SHARE));
     }
     if (easeC2) {
         // Tunnel flights: time from the weighted length (rush zones count less, spirals more)
@@ -1151,6 +1173,11 @@ function updateTravel(dt) {
             blendDir(d0, d2, w, dy2, d0);
             _railPos.lerp(arrivePos, w);
         }
+        // keep clear of the object the comet left (it climbs over it, and the
+        // camera easing off the VIEW pose would cut through it): a smooth
+        // radial push, distance d -> (rc² + d²) / (2 rc) inside rc
+        const rc = Math.min(RAIL_CLEAR * s, railStartPos.distanceTo(railFrom)), dd = _railPos.distanceTo(railFrom); // (no push at the departure pose)
+        if (dd < rc) _railPos.sub(railFrom).multiplyScalar((rc * rc + dd * dd) / (2 * rc * Math.max(dd, 1e-6))).add(railFrom);
         // a light spring filter on the position: the arc-length table is
         // piecewise linear, and the path average above would pass its tiny
         // kinks on as jerk at high frame rates (the view heading is already smooth)

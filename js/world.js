@@ -276,7 +276,7 @@ const WALL_IN = [0, -0.5, 1];            // crossing it inwards: descending into
 const WALL_OUT = [0, 0.35, -1];          // ... outwards: rising a little
 const ROOM_ROOF = [0.1, 0.75, 0.5];      // above the cut ceiling: the dive into the landing
 const WINDOW_STANDOFF = 16;              // world units outside the window wall: the entry lines up here (the dollhouse view)
-const LANDING_TEXT = [0, -0.05, -0.4];   // contact text centre, in front of the windows
+const LANDING_TEXT = [0, -0.11, -0.4];   // contact text centre, in front of the windows
 const LANDING_CAM_Z = 0.25;              // landing VIEW camera z (inside, sofa side); sets the scale
 const APARTMENT_HOP = [34, 42];          // GIRAFFE360 -> window
 const APARTMENT_DROP = [-0.32, -0.14];   // y of the hop direction (before normalising): the apartment sits lower
@@ -315,9 +315,9 @@ export const OBJECT_SCALE = 0.25;        // object height ≈ 0.25 room units �
 const OBJECT_SPOTS = {
     cherry: { x: -0.62, z: 0.15, cam: [-0.10, -0.17, 0.12], fitMax: 0.6, doors: [] },                    // living room, before the fireplace
     vase:   { x: -1.92, z: 1.12, y: -0.206, scale: 0.16, cam: [-1.88, -0.04, 0.78], fitMax: 0.5, doors: [['LH', -1]] }, // kitchen-diner, on the dining table
-    gpu:    { x: -1.45, z: 0.82, cam: [-1.88, -0.17, 0.82], fitMax: 0.5, doors: [] },                    // kitchen-diner, before the two doorways
+    gpu:    { x: -1.45, z: 0.82, cam: [-1.86, -0.15, 0.66], fitMax: 0.66, doors: [] },                    // kitchen-diner, before the two doorways
     chair:  { x: -0.55, z: 1.72, cam: [-0.88, -0.12, 1.42], fitMax: 0.5, doors: [['CH', 1], ['BED_IN', 1]] }, // bedroom, at the foot of the bed
-    board:  { x: 0.05, z: 1.30, cam: [-0.35, -0.08, 1.33], fitMax: 0.5, doors: [] },                     // bedroom, before the door to the corridor
+    board:  { x: 0.05, z: 1.30, cam: [-0.35, -0.08, 1.33], fitMax: 0.66, doors: [] },                     // bedroom, before the door to the corridor
     robot:  { x: 0.42, z: -0.03, cam: [0.42, -0.17, 0.40], fitMax: 0.6, doors: [['BC', 1], ['LC', -1]] }, // living room, before the bay window (out of the landing view)
 };
 // Object bounds (local units, objects.js): half width and height
@@ -334,7 +334,7 @@ const HALO_POINTS = 120;
 const HALO_DIM_ALPHA = 0.3;              // dim until the comet traces it
 const HALO_FADE_TIME = 0.5;              // s: a ring fades in (out) as its stop becomes (stops being) the focus
 const OBJECT_PAD = 0.15;                 // × height: framing room above and below the object
-const OBJECT_FRAME = 1.25;               // × the halo / object half width: framing room beside it (the fit)
+const OBJECT_FRAME = 1.12;               // × the halo / object half width: framing room beside it (the fit)
 const PLACE_TRIES = 12;
 const MAX_PITCH = 0.55;                  // |y| of hop direction — keeps text upright
 
