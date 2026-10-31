@@ -129,14 +129,14 @@
                 <div class="item-row">
                     <details class="item">
                         <summary><span class="hl">Solved blurry windows and mirrors in sparse-panorama 3DGS.<span class="print"> instagram.com/p/DZsNRB8o772</span></span></summary>
-                        <div class="why">A depth regularizer flattened outdoor views onto the wall. Fixed after 700+ experiments; in production since June 2026. <span class="more-text">This was the main long-standing quality problem. Where a pixel’s accumulated opacity was not yet 1 at the wall, the regularizer also pulled the Gaussians behind the wall and behind windows on that pixel toward the wall depth. I found this root cause myself and changed the regularizer to handle depth differently inside and outside the room, so it acts only up to the wall, not past it. I added a training-time correction for the resulting artifacts. I ran 140+ controlled training runs first, then a month-long campaign of 600+ experiments to cut haze, floaters and flicker. The winning setup shipped as the default on June 1, 2026, and Giraffe360 showcased it publicly.</span></div>
+                        <div class="why">Fixed blurry windows, outdoor views and mirrors; in production since June 2026. <span class="more-text">This was the main long-standing quality problem, and I found its root cause myself. I ran 140+ controlled training runs first, then a month-long campaign of 600+ experiments to cut haze, floaters and flicker. The winning setup shipped as the default on June 1, 2026, and Giraffe360 showcased it publicly.</span></div>
                     </details>
                     <a class="post screen" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post ↗</a>
                 </div>
                 <div class="item-row">
                     <details class="item">
                         <summary><span class="hl">Shipped the looped drone video, from idea to production.<span class="print"> instagram.com/giraffe360/reel/Dd9ODBVIHhE</span></span></summary>
-                        <div class="why">I proposed it, agreed the look with designers, built the camera-path algorithm and shipped it; launched by Giraffe360, Oct 2026. <span class="more-text">A customer asked for it. It was also one of my ideas awarded at the internal hackathon in Feb 2026 (special mention). The original drone code, written by a colleague, was hard to understand and extend, so I first restructured the whole video pipeline to make it easy to configure (the restructuring described below). Then I built the looped drone on top of that setup.</span></div>
+                        <div class="why">I proposed it, restructured the video pipeline so it is easy to extend, then built the loop on it; agreed the look with designers; launched Oct 2026. <span class="more-text">I built the camera-path algorithm. It was one of my ideas awarded at the internal hackathon in Feb 2026 (special mention).</span></div>
                     </details>
                     <a class="post screen" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">Giraffe360 post ↗</a>
                 </div>
@@ -166,7 +166,7 @@
                     </details>
                     <details class="item">
                         <summary><span class="hl">Led the pipeline restructuring and created a 3DGS monorepo.</span></summary>
-                        <div class="why">Led the restructuring (July 2026) and created a monorepo for all 3DGS extensions and client apps: ~3000-line files split, duplication removed, defects fixed. <span class="more-text">I added an automatic check that stops files and functions growing too large. Cleaning up the drone camera path exposed three hidden defects: for example, the camera jerked away when two highlighted features sat close together, and its tilt could drift outside the allowed range. The cleanup also let me fix a long-standing camera-path bug: in rooms higher or lower than the rest of the storey, the camera sat too low and showed the floor. The fix shipped for all video types.</span></div>
+                        <div class="why">Led the restructuring (July 2026) and created a monorepo for all 3DGS extensions and client apps: duplication removed, defects fixed. <span class="more-text">Cleaning up the drone camera path exposed three hidden defects: for example, the camera jerked away when two highlighted features sat close together, and its tilt could drift outside the allowed range. The cleanup also let me fix a long-standing camera-path bug: in rooms higher or lower than the rest of the storey, the camera sat too low and showed the floor. The fix shipped for all video types.</span></div>
                     </details>
                     <details id="splat-viewer" class="item">
                         <summary><span class="hl">Built an embeddable Rust/wgpu splat viewer and a comparison tool.</span></summary>
@@ -186,7 +186,7 @@
                     </details>
                     <details class="item">
                         <summary><span class="hl">Three hackathon ideas recognized; the looped drone shipped.</span></summary>
-                        <div class="why">Internal hackathon, Feb 2026: three of my ideas recognized, two with special mentions. <span class="more-text">The ideas were text and logo inside the scene on video, a video made from still photos (special mention) and a looped drone in each room (special mention). The looped drone then became a shipped feature.</span></div>
+                        <div class="why">Internal hackathon, Feb 2026: three of my ideas recognized, two with special mentions. <span class="more-text">One of them, a looped drone in each room (special mention), then became a shipped feature.</span></div>
                     </details>
                     <details id="mcp-server" class="item">
                         <summary><span class="hl">Built an MCP server for the team task board.</span></summary>

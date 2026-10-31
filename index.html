@@ -93,12 +93,9 @@
                 team’s best; Analytic-Splatting in gsplat at CUDA level (June 2026);
                 led the pipeline restructuring and created a 3DGS monorepo, which
                 let me fix a long-standing camera-path bug</li>
-            <li>Windows, outdoor views and mirrors: the root cause was a local depth
-                regularizer that, where a pixel’s accumulated opacity was not yet 1
-                at the wall, also pulled the Gaussians behind the wall or window
-                toward the wall depth. Fix: depth handled differently inside and
-                outside the room, plus a training-time correction; 140+ controlled
-                training runs, then 600+ more experiments; shipped on 1 June 2026
+            <li>Windows, outdoor views and mirrors: fixed blurry windows, outdoor
+                views and mirrors after 140+ controlled training runs, then 600+
+                more experiments; shipped on 1 June 2026
                 (<a href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post</a>).
                 Led the team that built exterior splats and orbital outdoor videos.</li>
             <li>Benchmarking and evaluation: validation tools and ground-truth

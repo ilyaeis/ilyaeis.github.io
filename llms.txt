@@ -30,7 +30,7 @@ Universe `work`:
 
 Universe `rnd` (Giraffe360 R&D, inside a Gaussian splat of a real apartment):
 - [3DGS reconstruction pipeline](https://ilyaeis.github.io/?go=splatting): 3DGS reconstruction from sparse panorama views; influence accumulation, Analytic-Splatting, the pipeline restructuring.
-- [Windows, outdoor views and mirrors](https://ilyaeis.github.io/?go=windows-mirrors): solved blurry windows, outdoor views and mirrors (a depth regularizer root cause); exterior splats and orbital videos.
+- [Windows, outdoor views and mirrors](https://ilyaeis.github.io/?go=windows-mirrors): solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.
 - [Benchmarking and evaluation](https://ilyaeis.github.io/?go=benchmarking): validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.
 - [Meshes and viewers](https://ilyaeis.github.io/?go=mesh-generation): mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.
 - [MCP server, mentoring, ideas](https://ilyaeis.github.io/?go=task-board-mcp): MCP server for the team task board; mentoring on a new depth algorithm; the looped drone video.

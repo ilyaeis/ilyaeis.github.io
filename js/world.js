@@ -148,7 +148,7 @@ const MILESTONES = [
         subtitle: 'The main long-standing quality problem · solved',
         items: [
             { text: 'Shipped 1 June 2026 after 140+, then 600+ experiments.' },
-            { text: 'Root cause: a depth regularizer flattened outdoor views onto the wall.' }
+            { text: 'Fixed blurry windows, outdoor views and mirrors.' }
         ],
         more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post' }
     }},
@@ -381,7 +381,7 @@ const ROUTE = [
     { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 10, object: 'cherry', paletteIdx: 3,
       summary: '3DGS reconstruction from sparse panorama views; influence accumulation, Analytic-Splatting, the pipeline restructuring.' },
     { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 11, object: 'vase', paletteIdx: 3,
-      summary: 'Solved blurry windows, outdoor views and mirrors (a depth regularizer root cause); exterior splats and orbital videos.' },
+      summary: 'Solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.' },
     { id: 'benchmarking',    universe: 'rnd', type: StopType.OBJECT, milestone: 12, object: 'gpu', paletteIdx: 3,
       summary: 'Validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.' },
     { id: 'mesh-generation', universe: 'rnd', type: StopType.OBJECT, milestone: 13, object: 'chair', paletteIdx: 3,
