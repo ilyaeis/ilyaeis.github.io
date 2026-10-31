@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { SplatMesh, PackedSplats } from '@sparkjsdev/spark';
 
-export const OBJECT_NAMES = ['cherry', 'robot', 'vase', 'chair', 'board', 'gpu'];
+export const OBJECT_NAMES = ['cherry', 'vase', 'chair', 'board', 'gpu'];
 
 // ---------- small math helpers ----------
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -327,98 +327,6 @@ function cherry(count, rng) {
 }
 
 // ======================================================================
-// 2. ROBOT — OpenAI API service
-// ======================================================================
-function robot(count, rng) {
-  const parts = [];
-  const WHITE = [0.86, 0.89, 0.93], GREY = [0.42, 0.46, 0.54], ORANGE = [1.0, 0.5, 0.16], NAVY = [0.04, 0.06, 0.12];
-  const CYAN = [0.55, 1.0, 1.0];
-  const plastic = { amb: 0.36, dif: 0.7, spec: 0.5, shin: 40, rim: 0.2 };
-  // feet
-  for (const sx of [-1, 1]) {
-    parts.push(roundBox({ c: V3(sx * 0.1, 0.035, 0.02), h: V3(0.075, 0.035, 0.1), rad: 0.03, color: () => ORANGE, mat: plastic, skip: [[1, -1]] }));
-    parts.push(tube({ curve: t => V3(sx * 0.1, 0.06 + t * 0.12, 0), radius: 0.042, color: () => GREY, mat: plastic, k: 0.65 }));
-  }
-  // body
-  parts.push(roundBox({
-    c: V3(0, 0.33, 0), h: V3(0.19, 0.15, 0.14), rad: 0.07, w: 1.0, mat: plastic,
-    color: (p, n) => (n.z > 0.95 && Math.abs(p.x) < 0.1 && Math.abs(p.y - 0.345) < 0.06 ? NAVY : p.y < 0.215 ? ORANGE : WHITE),
-  }));
-  // chest panel + glowing core
-  parts.push(plane({
-    origin: V3(0, 0.345, 0.142), ax: V3(0.2, 0, 0), ay: V3(0, 0.12, 0), mask: rrMask(0.2, 0.12, 0.03), w: 2.5,
-    mat: { amb: 0.5, dif: 0.4, spec: 0.8, shin: 60 }, color: () => NAVY,
-  }));
-  parts.push(plane({
-    origin: V3(-0.04, 0.345, 0.146), ax: V3(0.07, 0, 0), ay: V3(0, 0.07, 0), mask: discMask, w: 4, emissive: true,
-    color: (p) => mixC([1, 1, 1], CYAN, smooth(0.005, 0.03, p.distanceTo(V3(-0.04, 0.345, 0.146)))),
-  }));
-  parts.push(halo(V3(-0.04, 0.345, 0.15), 0.05, [0.3, 0.9, 1], 0.14, 3));
-  for (const [i, col] of [[0, [1, 0.8, 0.2]], [1, [0.4, 1, 0.5]]]) {
-    const p0 = V3(0.035 + i * 0.04, 0.345, 0.147);
-    parts.push({ area: 0, fixed: 4, emit(S) { S.ball(p0, 0.011, col); S.ball(p0, 0.022, col, 0.15); S.ball(p0, 0.008, [1, 1, 1]); S.ball(p0, 0.03, col, 0.06); } });
-  }
-  // neck
-  parts.push(tube({ curve: t => V3(0, 0.47 + t * 0.06, 0), radius: 0.05, color: () => GREY, mat: plastic }));
-  // head
-  const HC = V3(0, 0.69, 0);
-  parts.push(roundBox({ c: HC, h: V3(0.24, 0.16, 0.17), rad: 0.075, w: 1.0, mat: plastic, color: (p, n) => {
-    if (n.z > 0.95 && Math.abs(p.x) < 0.175 && Math.abs(p.y - 0.69) < 0.095) {
-      const de = Math.min(Math.hypot(p.x - 0.085, p.y - 0.705), Math.hypot(p.x + 0.085, p.y - 0.705));
-      return de < 0.036 ? [0.3, 0.9, 1, 1] : NAVY;
-    }
-    return WHITE;
-  } }));
-  // face plate
-  parts.push(plane({
-    origin: V3(0, 0.69, 0.172), ax: V3(0.36, 0, 0), ay: V3(0, 0.2, 0), mask: rrMask(0.36, 0.2, 0.06), w: 2.2,
-    mat: { amb: 0.45, dif: 0.35, spec: 0.9, shin: 50, rim: 0.1 },
-    color: (p) => mixC(NAVY, [0.1, 0.16, 0.28], smooth(0.6, 0.78, p.y)),
-  }));
-  // eyes
-  for (const sx of [-1, 1]) {
-    const e = V3(sx * 0.085, 0.705, 0.176);
-    parts.push(plane({
-      origin: e, ax: V3(0.075, 0, 0), ay: V3(0, 0.085, 0), mask: discMask, w: 6, emissive: true, k: 0.55,
-      color: (p) => mixC([0.85, 1, 1], [0.2, 0.85, 1], smooth(0.01, 0.04, p.distanceTo(e))),
-    }));
-    parts.push({ area: 0, fixed: 2, emit(S) { S.ball(e.clone().add(V3(-0.014, 0.018, 0.004)), 0.008, [1, 1, 1]); S.ball(e.clone().add(V3(0.012, -0.012, 0.004)), 0.005, [1, 1, 1]); } });
-    parts.push(halo(e.clone().add(V3(0, 0, 0.01)), 0.06, [0.2, 0.8, 1], 0.13, 3));
-  }
-  // smile
-  parts.push(wire({
-    curve: t => V3((t - 0.5) * 0.09, 0.625 - 0.022 * Math.sin(Math.PI * t), 0.177), r: 0.007, fixed: 14, emissive: true,
-    color: () => CYAN, over: 1.0,
-  }));
-  // ears
-  for (const sx of [-1, 1]) {
-    parts.push(tube({ curve: t => V3(sx * (0.235 + t * 0.035), 0.69, 0), radius: 0.055, color: () => ORANGE, mat: plastic, w: 1.4 }));
-    parts.push(plane({ origin: V3(sx * 0.271, 0.69, 0), ax: V3(0, 0, 0.11), ay: V3(0, 0.11, 0), mask: discMask, flip: sx < 0, color: () => ORANGE, mat: plastic, w: 1.4 }));
-  }
-  // antenna
-  parts.push(wire({ curve: t => V3(0, 0.84 + t * 0.11, 0), r: 0.009, fixed: 12, color: () => GREY, over: 1 }));
-  const AB = V3(0, 0.965, 0);
-  parts.push(surf({
-    f: (u, v) => V3(Math.sin(u * Math.PI) * Math.cos(v * 6.283), Math.cos(u * Math.PI), Math.sin(u * Math.PI) * Math.sin(v * 6.283)).multiplyScalar(0.03).add(AB),
-    flip: true, emissive: true, w: 3, color: (p, n) => mixC([1, 0.35, 0.1], [1, 0.85, 0.5], clamp01(n.dot(KEY))),
-  }));
-  parts.push(halo(AB, 0.07, [1, 0.45, 0.15], 0.13, 3));
-  // arms: right arm down, left arm waving
-  const armR = poly([V3(-0.2, 0.42, 0), V3(-0.27, 0.34, 0.02), V3(-0.29, 0.24, 0.04)]);
-  const armL = poly([V3(0.2, 0.42, 0), V3(0.3, 0.48, 0.02), V3(0.34, 0.6, 0.04)]);
-  for (const arm of [armR, armL]) {
-    parts.push(tube({ curve: arm, radius: 0.034, color: () => GREY, mat: plastic }));
-    const hnd = arm(1).add(arm(1).sub(arm(0.95)).normalize().multiplyScalar(0.03));
-    parts.push(surf({
-      f: (u, v) => V3(Math.sin(u * Math.PI) * Math.cos(v * 6.283), Math.cos(u * Math.PI), Math.sin(u * Math.PI) * Math.sin(v * 6.283)).multiplyScalar(0.05).add(hnd),
-      flip: true, color: () => ORANGE, mat: plastic,
-    }));
-  }
-  const mesh = toMesh(assemble(parts, count, rng));
-  return mesh;
-}
-
-// ======================================================================
 // 3. VASE — windows and mirrors fix (clean half vs noisy half)
 // ======================================================================
 function vase(count, rng) {
@@ -736,18 +644,15 @@ function gpu(count, rng) {
   return mesh;
 }
 
-const BUILDERS = { cherry, robot, vase, chair, board, gpu };
+const BUILDERS = { cherry, vase, chair, board, gpu };
 
 export function buildObject(name, { count = 4000, rng = mulberry32(7) } = {}) {
   const b = BUILDERS[name];
   if (!b) throw new Error('unknown object ' + name);
   const mesh = b(count, rng);
   mesh.name = name;
-  const baseY = mesh.rotation.y;
-  // idle: the objects stand on real surfaces, so they stay put; the toy
-  // robot turns a little, and the GPU fans spin
+  // idle: the objects stand on real surfaces, so they stay put; the GPU fans spin
   mesh.userData.idle = (t) => {
-    if (name === 'robot') mesh.rotation.y = baseY + 0.25 * Math.sin(t * 0.45);
     if (mesh.userData.fans) mesh.userData.fans.forEach((f, i) => { f.rotation.z = -t * (3 + i * 0.4); });
   };
   return mesh;
@@ -756,7 +661,7 @@ export function buildObject(name, { count = 4000, rng = mulberry32(7) } = {}) {
 // Soft dark ellipse under an object (local units), so it sits on the floor.
 // FOOT: half axes (x, z) of each object's footprint.
 // The board hangs on a wall: no shadow.
-export const FOOT = { cherry: [0.4, 0.25], robot: [0.3, 0.2], vase: [0.32, 0.32], chair: [0.3, 0.3], board: null, gpu: [0.6, 0.18] };
+export const FOOT = { cherry: [0.4, 0.25], vase: [0.32, 0.32], chair: [0.3, 0.3], board: null, gpu: [0.6, 0.18] };
 export function contactShadow(rx, rz) {
   const ps = new PackedSplats(), q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
   const col = new THREE.Color(0.03, 0.02, 0.015), p = new THREE.Vector3(), sc = new THREE.Vector3();

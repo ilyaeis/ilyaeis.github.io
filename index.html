@@ -106,14 +106,15 @@
             <li>Meshes and viewers: mesh generation from splats; a point-count
                 reduction stage; an embeddable Rust/wgpu splat viewer; a multi-view
                 comparison tool</li>
-            <li>MCP server, mentoring, ideas: an MCP server for the team task board
-                (Node.js); mentored one junior engineer on a new depth algorithm
-                (mostly his work: minima matching plus OMNI-DC to densify LiDAR
-                depth), now used by the whole team; the looped drone video, my
-                hackathon idea (awarded a special mention), launched by Giraffe360
-                in Oct 2026 (<a tabindex="-1" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">reel</a>)</li>
-            <li>Tour narration (Jul – Oct 2025): a small LLM service that wrote
-                tour narration (OpenAI API, AWS, S3)</li>
+            <li>MCP server and ideas: an MCP server for the team task board
+                (Node.js); the looped drone video, my hackathon idea (awarded a
+                special mention), launched by Giraffe360 in Oct 2026
+                (<a tabindex="-1" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">reel</a>)</li>
+            <li>Depth: one bedroom of the flat is drawn as depth (colour =
+                distance from your eye, the public scene's own depth). Mentored one
+                junior engineer on a new depth algorithm (mostly his work: minima
+                matching plus OMNI-DC to densify LiDAR depth), now used by the
+                whole team</li>
         </ul>
         <h2>Education</h2>
         <ul>
@@ -219,6 +220,7 @@
             <p class="walk-task-title">Find my 6 R&amp;D objects</p>
             <p class="walk-task-sub">This flat is a Gaussian splat; six objects in it are my work at Giraffe360.</p>
         </div>
+        <p class="depth-legend" aria-hidden="true" hidden><span>0.5 m</span><i></i><span>6 m</span></p>
         <div class="walk-actions">
             <button type="button" class="walk-btn walk-collect" hidden>Collect</button>
             <button type="button" class="walk-btn walk-next">Next object</button>
@@ -230,6 +232,7 @@
 
     <script type="module" src="js/stopPanel.js"></script>
     <script type="module" src="js/room.js"></script>
+    <script type="module" src="js/depthRoom.js"></script>
     <script type="module" src="js/dimension.js"></script>
     <script type="module" src="js/agentApi.js"></script>
     <script type="module" src="js/main.js"></script>

@@ -335,6 +335,8 @@ function endPath() { path = null; if (marker) marker.visible = false; }
 // and a line of sight wins. Fixed per object: computed once.
 function objectGoal(h) {
     if (h.goal !== undefined) return h.goal;
+    // a room stop: its fixed goal just inside the door
+    if (h.stop.walkGoal) return (h.goal = nearestFree(...h.stop.walkGoal, 0.3 * M, GOAL_CLEAR));
     const n = worldToRoom(_v.copy(h.stop.center).sub(h.stop.normal)).sub(h.room).setY(0).normalize();
     const d0 = Math.max((h.stop.walkM ?? GUIDE_VIEW_M) * M, (G.eye - h.room.y) / Math.tan(GUIDE_PITCH)), a0 = Math.atan2(n.z, n.x);
     let best = null, bestS = Infinity;
@@ -396,7 +398,21 @@ function onArrive() {
     if (!guide) return;
     const st = guide;
     guide = null;
-    select(st);
+    select(st);   // (a room: turns to face into it, walkLook)
+}
+// Room stops (the depth room): walking into the box opens its panel (no
+// turn); walking out closes it. A guided walk opens it on arrival instead.
+const ROOM_OUT = 0.02;                 // room units: hysteresis on the way out
+function updateRooms() {
+    for (const h of halos) {
+        const b = h.stop.roomBox;
+        if (!b) continue;
+        const m = h.inside ? ROOM_OUT : 0;
+        const inside = pos.x > b.min[0] - m && pos.x < b.max[0] + m && pos.y > b.min[1] - m && pos.y < b.max[1] + m;
+        if (inside && !h.inside && !guide && selected !== h.stop) select(h.stop, false);
+        else if (!inside && h.inside && selected === h.stop) select(null);
+        h.inside = inside;
+    }
 }
 function pathPoint(s) {
     for (let i = 1; i < path.length; i++) {
@@ -595,12 +611,12 @@ function showCollect(stop) {
     }
     syncBar();
 }
-function select(stop) {
+function select(stop, turn = true) {
     selected = stop;
     if (!stop) { panel(null); showCollect(null); return; }
     panel(stop.panel);
     showCollect(stop);
-    turnTo(stop.center);
+    if (turn) turnTo(stop.walkLook ?? stop.center);
 }
 function allFound() {
     selected = null;
@@ -695,7 +711,7 @@ function enterWalk(opts = {}) {
         if (g) {
             // at the object: on its view side, facing it, its panel open
             pos.set(x0 + (g[0] + 0.5) * cell, z0 + (g[1] + 0.5) * cell);
-            const a = aimAt(h.stop.center);
+            const a = aimAt(h.stop.walkLook ?? h.stop.center);
             look.yaw = look.yawT = a.yaw; look.pitch = look.pitchT = a.pitch;
             selected = h.stop; panel(h.stop.panel); showCollect(h.stop);
         }
@@ -757,6 +773,7 @@ function update(dt) {
         arrived = false;
         if (dt > 0) step(dt);
         if (arrived) onArrive();
+        updateRooms();
         walkPose(camera.position, camera.quaternion);
         if (camera.fov !== FOV) { camera.fov = FOV; camera.updateProjectionMatrix(); }
         if (tour) updateTour(dt);
@@ -827,6 +844,7 @@ export function onTap(px, py) {
     let best = null, bestD = Infinity;
     for (const h of halos) {
         const st = h.stop;
+        if (st.roomBox) continue;           // a room opens by walking in
         _sphere.set(st.center, Math.max(st.haloR, st.halfH) * HIT_SCALE);
         if (!ray.ray.intersectSphere(_sphere, _p)) continue;
         const d = _p.distanceTo(ray.ray.origin);
