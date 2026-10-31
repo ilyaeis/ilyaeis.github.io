@@ -8,7 +8,7 @@
 
 import * as THREE from 'three';
 import { scene, renderer, camera, bloomPass, isMobile, setStarVisibility } from './attractors.js';
-import { apartment, getInsideFade, setRoomFade, StopType, catalog } from './world.js';
+import { apartment, getInsideFade, setRoomFade, StopType, catalog, worldToRoom } from './world.js';
 
 // The apartment API for the add-ons (walk.js, depthTool.js): its frame
 // (position, quaternion, scale), room <-> world points and metres per unit
@@ -25,6 +25,11 @@ const APARTMENT_UNIVERSES = ['rnd', 'contact'];
 // so it shows from far: the comet sees it before it dives in.
 const FADE_START = 8;                // opacity 0 at this distance or more (≈ 37 world units)
 const FADE_FULL = 3;                 // opacity 1 at this distance or less
+// A slow network: while the camera is near the apartment (or the skip link
+// holds the comet at the stop before it) and the room is not in yet, a
+// small line says so (`.room-loading`, with the download share when the
+// server sends a length). Once it is in, the room fades in over this long
+const LOAD_FADE_IN = 1.2;            // s
 // Indoors the outside world's lines (rocks, galaxies, intro) and the stars
 // would shine through the walls: they fade as the camera reaches the walls
 const INDOOR_FADE = [0.6, 0.05];     // outside distance where that fade starts .. is done
@@ -49,6 +54,7 @@ const OBJECT_SPLATS = isMobile ? 5000 : 16000;   // per object: fewer read soft 
 const SPARK_OPTIONS = { minAlpha: 1 / 255, maxStdDev: 3.0 };
 
 const creditEl = document.querySelector('.room-credit');
+const loadingEl = document.querySelector('.room-loading');
 
 let bloomOutside = 0.1;               // read from the bloom pass on load
 let group = null;                     // the apartment frame
@@ -59,12 +65,26 @@ export let roomMesh = null;
 export const objectMeshes = [];
 let loading = false;
 let time = 0, lastNow = 0;
+let loadFade = 0;                     // 0 -> 1 over LOAD_FADE_IN once the room is in
+let held = false;                     // the skip link waits for the room (setRoomHold)
+let loadShare = -1;                   // downloaded share of the splat (-1: unknown)
+let failed = false;                   // the last load failed: no loading line (the next stop tries again)
+let resolveReady;
+const ready = new Promise(r => { resolveReady = r; });
 const _p = new THREE.Vector3();
 
-// Camera distance outside the apartment box, room units (0 inside)
+// The apartment for the skip link (main.js): start loading now (hover,
+// focus, click), is it in, and a promise for that
+export function prefetchRoom() { loadRoom(); }
+export function roomReady() { return !!group; }
+export function whenRoomReady() { return ready; }
+// While held, the loading line shows wherever the camera is
+export function setRoomHold(on) { held = on; }
+
+// Camera distance outside the apartment box, room units (0 inside).
+// worldToRoom works before the splat is in (the frame comes from world.js)
 function outsideDistance() {
-    _p.copy(camera.position);
-    group.worldToLocal(_p);
+    worldToRoom(camera.position, _p);
     const b = apartment.box;
     const dx = Math.max(b.min[0] - _p.x, 0, _p.x - b.max[0]);
     const dy = Math.max(b.min[1] - _p.y, 0, _p.y - b.max[1]);
@@ -79,7 +99,10 @@ function tick(now) {
     const dt = lastNow ? Math.min((now - lastNow) / 1000, 0.1) : 0;
     lastNow = now;
     const d = outsideDistance();
-    const a = (1 - THREE.MathUtils.smoothstep(d, FADE_FULL, FADE_START)) * (1 - getInsideFade());
+    if (!group) { showLoading(!failed && (held || (d < FADE_START && getInsideFade() < 0.5))); return; }
+    showLoading(false);
+    loadFade = Math.min(1, loadFade + dt / LOAD_FADE_IN);
+    const a = (1 - THREE.MathUtils.smoothstep(d, FADE_FULL, FADE_START)) * (1 - getInsideFade()) * loadFade;
     const indoor = 1 - THREE.MathUtils.smoothstep(d, INDOOR_FADE[1], INDOOR_FADE[0]);
     setRoomFade(indoor);
     setIntroRoomHidden(indoor > 0.5);
@@ -92,9 +115,21 @@ function tick(now) {
     objects.forEach((m, i) => m.userData.idle(time + i * 1.3));
 }
 
+function showLoading(on) {
+    if (!loadingEl) return;
+    if (on) {
+        // (whole tens only: the line is a status for screen readers too)
+        const text = loadShare >= 0 ? `loading the flat · ${Math.floor(loadShare * 10) * 10} %` : 'loading the flat…';
+        if (loadingEl.textContent !== text) loadingEl.textContent = text;
+    }
+    loadingEl.classList.toggle('visible', on);
+}
+
 async function loadRoom() {
     if (group || loading) return;
     loading = true;
+    failed = false;
+    if (!lastNow) requestAnimationFrame(tick);   // the loading line until the room is in, then the fades
     try {
         // objects.js imports Spark statically, so it stays behind this dynamic import
         const [{ SplatMesh, SparkRenderer }, { buildObject, mulberry32, contactShadow, FOOT }] =
@@ -106,7 +141,8 @@ async function loadRoom() {
         g.position.copy(apartment.position);
         g.quaternion.copy(apartment.quaternion);
         g.scale.setScalar(apartment.scale);
-        const room = new SplatMesh({ url: isMobile ? ROOM_LITE_URL : ROOM_URL });
+        const room = new SplatMesh({ url: isMobile ? ROOM_LITE_URL : ROOM_URL,
+            onProgress: e => { if (e.lengthComputable && e.total > 0) loadShare = e.loaded / e.total; } });
         room.recolor = new THREE.Color(ROOM_BRIGHTNESS, ROOM_BRIGHTNESS, ROOM_BRIGHTNESS);
         meshes.push(room);
         g.add(room);
@@ -136,10 +172,11 @@ async function loadRoom() {
         roomMesh = room;
         scene.add(g);
         g.updateMatrixWorld(true);
-        requestAnimationFrame(tick);
+        resolveReady();
     } catch (err) {
         console.error('apartment load failed', err);
         loading = false;
+        failed = true;
     }
 }
 

@@ -408,6 +408,32 @@ body.panel-open .tap-prompt {
     .dimension { transition: none; }
 }
 
+/* The apartment is still loading (js/room.js): a small calm line over the stop */
+.room-loading {
+    position: fixed;
+    top: calc(3.4rem + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    color: #aaa;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0s linear 0.4s;
+    z-index: 10;
+    pointer-events: none;
+    user-select: none;
+}
+.room-loading.visible { opacity: 1; visibility: visible; transition: opacity 0.4s ease; }
+/* Side layout: over the stop, left of the panel */
+@media (min-width: 700px) and (orientation: landscape) {
+    body.panel-open .room-loading { left: 25%; }
+}
+
 /* Credit for the apartment splat (CC BY 4.0), shown at the apartment stops and the landing */
 .room-credit {
     position: fixed;

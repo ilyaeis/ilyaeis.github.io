@@ -22,6 +22,8 @@ import {
     GITHUB_URL
 } from './intro3d.js';
 import * as walk from './walk.js';
+import { prefetchRoom, roomReady, whenRoomReady, setRoomHold } from './room.js';
+import { catalog, stopById } from './world.js';
 
 (function () {
     'use strict';
@@ -142,12 +144,28 @@ import * as walk from './walk.js';
         }
     });
 
-    // "skip to work" (orchestrator sets its ?go link): fly there without a reload
-    document.querySelector('.intro-skip')?.addEventListener('click', (e) => {
+    // "skip to work" (orchestrator sets its ?go link): fly there without a
+    // reload. The apartment (about 15 MB) starts loading as soon as the link
+    // is hovered, focused or pressed. If it is not in yet on the click, the
+    // comet waits at the stop before (the Giraffe360 rock, its panel to
+    // read, and the loading line) and flies on once it is; a tap there goes
+    // on at once (the loading line shows in the flat until it is in).
+    const skipLink = document.querySelector('.intro-skip');
+    for (const ev of ['pointerenter', 'focus', 'pointerdown']) skipLink?.addEventListener(ev, prefetchRoom);
+    skipLink?.addEventListener('click', (e) => {
         const id = new URL(e.currentTarget.href).searchParams.get('go');
+        const before = catalog.find(c => c.navigable && c.index === (stopById(id)?.index ?? 0) - 1);
         if (!window.journey || !id) return;
         e.preventDefault();
-        window.journey.goTo(id, { mode: 'fly' });
+        prefetchRoom();
+        if (roomReady() || !before) { window.journey.goTo(id, { mode: 'fly' }); return; }
+        window.journey.goTo(before.id, { mode: 'jump' });
+        setRoomHold(true);
+        whenRoomReady().then(() => {
+            setRoomHold(false);
+            const now = window.journey.current();
+            if (now.stop === before.id && now.phase === 'view') window.journey.goTo(id, { mode: 'fly' });
+        });
     });
 
     // Prevent any residual scrolling / bounce on mobile (nav links stay tappable)
