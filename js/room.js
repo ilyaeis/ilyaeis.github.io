@@ -39,6 +39,16 @@ export const ROOM_BRIGHTNESS = 0.42;
 const OBJECT_LIGHT = [0.44, 0.37, 0.29];
 const BLOOM_THRESHOLD_IN_ROOM = 0.75; // the HDR strokes (halo, text, comet) bloom, the white objects do not
 const OBJECT_SPLATS = isMobile ? 5000 : 16000;   // per object: fewer read soft up close
+// SparkRenderer knobs, matched to how the room was trained (gsplat):
+// minAlpha 1/255 cuts the faint tails the trainer also skips (Spark: 0.5/255);
+// maxStdDev 3 is the trainer's splat extent (Spark: √8). blurAmount 0.3 is
+// the screen-space blur of antialiased training (keep it); focalAdjustment 1,
+// preBlurAmount 0 and falloff 1 are Spark's defaults, left as they are.
+// sortRadial stays on (default): no visible change in stills, and the order
+// does not flip when the camera only turns. Colour space: Spark writes linear
+// into the composer target (encodeLinear), and the bloom pass draws it to the
+// screen with sRGB encoding, so the default is right: do not force it off.
+const SPARK_OPTIONS = { minAlpha: 1 / 255, maxStdDev: 3.0 };
 
 const creditEl = document.querySelector('.room-credit');
 
@@ -91,7 +101,7 @@ async function loadRoom() {
         // objects.js imports Spark statically, so it stays behind this dynamic import
         const [{ SplatMesh, SparkRenderer }, { buildObject, mulberry32, contactShadow, FOOT }] =
             await Promise.all([import('@sparkjsdev/spark'), import('./objects.js')]);
-        const spark = new SparkRenderer({ renderer });
+        const spark = new SparkRenderer({ renderer, ...SPARK_OPTIONS });
         spark.renderOrder = -10;   // splats first, so the additive strokes and trail draw over them
         scene.add(spark);
         const g = new THREE.Group();
