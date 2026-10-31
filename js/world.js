@@ -248,7 +248,7 @@ const MIN_SEPARATION = 26;
 // LANDING_TEXT.z room units, so s = fit / 0.65 (about 4.6 world units per
 // room unit on desktop, more on portrait screens). Computed once at build.
 const ROOM_FLOOR = -0.413;
-// Metres per room unit, for the measure tool (depthTool.js). 3.63 assumes a
+// Metres per room unit (metric labels). 3.63 assumes a
 // 1.5 m camera height; calibration on standard fixtures (worktop 900 mm,
 // door 1981 mm; zipnerf-room/scripts/calibrate_scale.py) gives × 0.95, ±3 %.
 // Approximately metric: show "≈", never claim more.

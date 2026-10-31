@@ -50,12 +50,11 @@ import * as walk from './walk.js';
 
     // HTML over the canvas: its pointer events are not taps (a link click
     // must not also advance the journey); .dimension = the open project app,
-    // .room-tools = the apartment toolbar (depthTool.js), .walk-ui = the walk
-    // mode buttons and HUD (walk.js)
-    const OVERLAYS = '.site-nav, .stop-panel, .dimension, .room-tools, .walk-ui, .intro-links';
+    // .walk-ui = the walk mode buttons and HUD (walk.js)
+    const OVERLAYS = '.site-nav, .stop-panel, .dimension, .walk-ui, .intro-links';
 
     // Who gets the input: inputOwner() (input.js) is 'journey', 'portal'
-    // (a project app: no input), 'walk' (walk.js) or 'tool' (depthTool.js)
+    // (a project app: no input) or 'walk' (walk.js)
 
     // Coalesce hover hit-tests to one raycast per frame — pointermove
     // can fire far more often than the display refreshes. Only the journey
@@ -82,15 +81,15 @@ import * as walk from './walk.js';
     document.body.addEventListener('pointerdown', (e) => {
         const owner = inputOwner();
         if (e.target.closest(OVERLAYS) || owner === 'portal') return;
-        // walk mode (a tool too: it lives there): one finger looks, a second one is ignored
+        // walk mode: one finger looks, a second one is ignored
         if (owner !== 'journey' && pointerDownPos) return;
         pointerDownPos = { id: e.pointerId, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, drag: false };
     });
 
-    // Walk mode (walk.js): a drag looks around (also while measuring), a tap walks or picks an object
+    // Walk mode (walk.js): a drag looks around, a tap walks or picks an object
     document.body.addEventListener('pointermove', (e) => {
         const owner = inputOwner();
-        if (!pointerDownPos || pointerDownPos.id !== e.pointerId || (owner !== 'walk' && owner !== 'tool')) return;
+        if (!pointerDownPos || pointerDownPos.id !== e.pointerId || owner !== 'walk') return;
         const p = pointerDownPos;
         if (!p.drag && Math.hypot(e.clientX - p.x, e.clientY - p.y) >= TAP_THRESHOLD) p.drag = true;
         if (p.drag) walk.onDrag(e.clientX - p.lx, e.clientY - p.ly);
@@ -129,7 +128,7 @@ import * as walk from './walk.js';
     document.addEventListener('keydown', (e) => {
         const owner = inputOwner();
         if (owner === 'portal' || e.target.closest?.('.dimension')) return;
-        if (owner === 'walk' || owner === 'tool') {
+        if (owner === 'walk') {
             const k = e.key.toLowerCase();
             if (WALK_KEYS.includes(k) && !e.target.closest('input,textarea') && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();

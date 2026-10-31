@@ -43,7 +43,7 @@ function pauseJourney() {
     cam.setScreenShift(false, true);
     if (camera.view?.enabled) camera.clearViewOffset();
     J.enterPhase(J.Phase.EXPLORE);
-    emitExplore('enter');   // depthTool.js shows its toolbar
+    emitExplore('enter');
 }
 
 export function enterExplore(immediate = false) {

@@ -68,9 +68,7 @@
            and you walk through the flat: six splat objects in it stand for
            my Giraffe360 R&amp;D work. Tap the floor to walk, drag to look, or
            press "Next object" (or Enter) to walk to the nearest one; each
-           opens a short panel, and you can collect it. A depth lens colours
-           the splat by distance, and a measure tool gives approximate metric
-           distances (about ±3 %). "Skip the flat" (or "Continue" once all six
+           opens a short panel, and you can collect it. "Skip the flat" (or "Continue" once all six
            are found) lets a glowing comet lift through the cut ceiling and fly out over
            the window wall, past a strange attractor drifting like a galaxy,
            to a timeline graph that it draws in four frames (tap or press
@@ -186,16 +184,6 @@
     <p class="room-loading" role="status"></p>
     <p class="room-credit" hidden>Apartment: "london" scene, Zip-NeRF dataset (Barron et al. 2023), CC BY 4.0, reconstructed with gsplat</p>
 
-    <div class="room-tools" role="toolbar" aria-label="Room tools" hidden>
-        <div class="room-tools-row">
-            <button type="button" data-tool="depth" aria-pressed="false" disabled>Depth</button>
-            <button type="button" data-tool="measure" aria-pressed="false" disabled>Measure</button>
-            <button type="button" class="room-tools-mark" hidden>Mark</button>
-        </div>
-        <p class="room-tools-hint" aria-live="polite">Try the depth lens</p>
-    </div>
-    <div class="room-tools-cross" hidden></div>
-
     <aside class="stop-panel" aria-live="polite" hidden>
         <p class="stop-panel-dates"></p>
         <h2 class="stop-panel-title"></h2>
@@ -205,7 +193,6 @@
         <a class="stop-panel-portal" href="apps/sorting/" hidden></a>
         <div class="stop-panel-actions">
             <button type="button" class="walk-btn walk-explore" hidden>Explore the flat</button>
-            <button type="button" class="walk-btn walk-collect" hidden>Collect</button>
         </div>
     </aside>
 
@@ -220,10 +207,11 @@
     </div>
 
     <!-- Walk mode (js/walk.js): the landing's explore button, the HUD while walking,
-         and the tour (the site starts with it): task, Next object, Skip the flat -->
+         and the bottom bar: the tour's task line (the site starts with it), then
+         Collect (any walk), Next object and Skip the flat (the tour) -->
     <button type="button" class="walk-ui walk-btn walk-explore walk-explore-float" hidden>Explore the flat</button>
     <div class="walk-ui walk-hud" hidden>
-        <button type="button" class="walk-btn walk-back">Back to the journey</button>
+        <button type="button" class="walk-btn walk-back" aria-label="Back to the journey">&larr; Back<span class="walk-back-long"> to the journey</span></button>
         <span class="walk-count" aria-live="polite" title="objects collected"><span aria-hidden="true">0 / 6</span><span class="visually-hidden">0 of 6 objects collected</span></span>
     </div>
     <div class="walk-ui walk-tour" hidden>
@@ -232,8 +220,9 @@
             <p class="walk-task-sub">This flat is a Gaussian splat; six objects in it are my work at Giraffe360.</p>
         </div>
         <div class="walk-actions">
-            <button type="button" class="walk-btn walk-primary walk-next">Next object</button>
-            <button type="button" class="walk-btn walk-skip">Skip the flat &rarr;</button>
+            <button type="button" class="walk-btn walk-collect" hidden>Collect</button>
+            <button type="button" class="walk-btn walk-next">Next object</button>
+            <button type="button" class="walk-btn walk-link walk-skip">Skip the flat &rarr;</button>
         </div>
     </div>
     <p class="walk-hint" role="status" hidden>Tap the floor to walk · drag to look<span class="walk-hint-keys"> · WASD</span></p>
@@ -241,7 +230,6 @@
 
     <script type="module" src="js/stopPanel.js"></script>
     <script type="module" src="js/room.js"></script>
-    <script type="module" src="js/depthTool.js"></script>
     <script type="module" src="js/dimension.js"></script>
     <script type="module" src="js/agentApi.js"></script>
     <script type="module" src="js/main.js"></script>

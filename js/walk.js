@@ -5,9 +5,9 @@
 // leaveInPlace; main.js routes input here (onTap, onDrag, setKeys, onEnter).
 // This module owns the camera pose while walking (no camera.js changes) and
 // its own DOM: the "Explore the flat" buttons, the HUD ("n / 6", and the
-// back button when entered from a stop), the Collect button, and the tour
-// (entered from the intro or ?go=<object id>): an onboarding hint, the task
-// line, "Next object" (also Enter: a guided walk to the nearest object not
+// back button when entered from a stop), and one bottom bar (.walk-tour):
+// Collect (any walk, while a panel shows), then for the tour (entered from
+// the intro or ?go=<object id>) an onboarding hint, the task line, "Next object" (also Enter: a guided walk to the nearest object not
 // collected yet, then its panel), "Skip the flat →" ("Continue →" at 6/6)
 // and an edge arrow to that object while it is off screen or out of sight.
 // Panel text goes through the 'walk:panel' event to stopPanel.js.
@@ -78,6 +78,7 @@ const hudEl = document.querySelector('.walk-hud');
 const countEl = document.querySelector('.walk-count');
 const backBtn = document.querySelector('.walk-back');
 const tourEl = document.querySelector('.walk-tour');
+const taskEl = document.querySelector('.walk-task');
 const hintEl = document.querySelector('.walk-hint');
 const nextBtn = document.querySelector('.walk-next');
 const skipBtn = document.querySelector('.walk-skip');
@@ -97,6 +98,7 @@ let path = null, pathLen = 0, pathS = 0, autoYaw = false, stuckT = 0, stuckS = 0
 let keys = new Set();
 let selected = null;                   // the object stop whose panel shows
 let tour = false;                      // entered from the intro (or ?go): the tour HUD
+let barTour = false;                   // the bottom bar shows the tour (task, Next object, Skip)
 let guide = null;                      // the object a Next-object walk goes to
 let slowTurn = false;                  // auto turns at GUIDE_YAW_MAX (a guided walk and its turn)
 let arrived = false;                   // the path ended at its goal this step
@@ -547,16 +549,34 @@ function updateHud() {
     const [shown, words] = countEl.children;
     if (shown) shown.textContent = `${n} / ${total()}`;
     if (words) words.textContent = `${n} of ${total()} objects collected`;
-    // the tour: at 6/6 "Next object" goes, "Skip the flat →" becomes "Continue →"
-    const all = n >= total();
-    if (nextBtn) nextBtn.hidden = all;
+    syncBar();
+}
+// The bottom bar: [Collect] [Next object] [Skip the flat →]. Collect shows
+// with a panel (any walk); the rest is the tour's. One primary (white):
+// Collect until collected, else Next object; at 6/6 "Next object" goes and
+// the text button "Skip the flat →" becomes the primary "Continue →".
+function syncBar() {
+    if (!tourEl) return;
+    const collectOn = !!collectBtn && !collectBtn.hidden;
+    tourEl.hidden = !(barTour || collectOn);
+    if (taskEl) taskEl.hidden = !barTour;
+    const all = allCollected();
+    const collectFirst = collectOn && !collectBtn.disabled;
+    if (collectBtn) collectBtn.classList.toggle('walk-primary', collectFirst);
+    if (nextBtn) {
+        nextBtn.hidden = !barTour || all;
+        nextBtn.classList.toggle('walk-primary', !collectFirst);
+    }
     if (skipBtn) {
+        skipBtn.hidden = !barTour;
         skipBtn.textContent = all ? 'Continue →' : 'Skip the flat →';
-        skipBtn.classList.toggle('walk-primary', all);
+        skipBtn.classList.toggle('walk-primary', all && !collectFirst);
+        skipBtn.classList.toggle('walk-link', !(all && !collectFirst));
     }
 }
 function showTour(on) {
-    if (tourEl) tourEl.hidden = !on;
+    barTour = on;
+    syncBar();
     if (backBtn) backBtn.hidden = on;
     document.body.classList.toggle('walk-touring', on);
     if (!on) { hideHint(); if (arrowEl) arrowEl.hidden = true; }
@@ -568,10 +588,12 @@ function hideHint() {
 function showCollect(stop) {
     if (!collectBtn) return;
     collectBtn.hidden = !stop;
-    if (!stop) return;
-    const have = collected.has(stop.id);
-    collectBtn.disabled = have;
-    collectBtn.textContent = have ? 'Collected' : 'Collect';
+    if (stop) {
+        const have = collected.has(stop.id);
+        collectBtn.disabled = have;
+        collectBtn.textContent = have ? 'Collected' : 'Collect';
+    }
+    syncBar();
 }
 function select(stop) {
     selected = stop;

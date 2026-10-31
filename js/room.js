@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { scene, renderer, camera, bloomPass, isMobile, setStarVisibility } from './attractors.js';
 import { apartment, getInsideFade, setRoomFade, StopType, entryAt, worldToRoom } from './world.js';
 
-// The apartment API for the add-ons (walk.js, depthTool.js): its frame
+// The apartment API for the add-ons (walk.js): its frame
 // (position, quaternion, scale), room <-> world points and metres per unit
 export { apartment, roomToWorld, worldToRoom, M_PER_UNIT } from './world.js';
 import { registerFlat } from './explore.js';
@@ -63,7 +63,7 @@ let bloomOutside = 0.1;               // read from the bloom pass on load
 let group = null;                     // the apartment frame
 const meshes = [];                    // splat meshes (room + objects): opacity
 const objects = [];                   // object meshes: idle animation
-// For depthTool.js (lens + raycast): the room mesh once loaded, and the object meshes
+// For the add-ons: the room mesh once loaded, and the object meshes
 export let roomMesh = null;
 export const objectMeshes = [];
 let loading = false;

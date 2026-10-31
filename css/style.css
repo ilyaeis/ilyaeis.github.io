@@ -469,104 +469,6 @@ body.panel-open .tap-prompt {
     body.panel-open .room-credit { display: none; }
 }
 
-/* Room tools (js/depthTool.js): depth lens + measure, at the apartment stops and the landing */
-.room-tools {
-    position: fixed;
-    top: calc(0.35rem + env(safe-area-inset-top));
-    left: calc(0.75rem + env(safe-area-inset-left));
-    z-index: 10;
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-    color: #888;
-}
-.room-tools[hidden] { display: none; }
-.room-tools-row { display: flex; gap: 0.4rem; }
-.room-tools button {
-    min-height: 2.75rem;
-    min-width: 2.75rem;
-    padding: 0 0.9rem;
-    font: inherit;
-    letter-spacing: inherit;
-    color: #c8c8c8;
-    background: rgba(10, 10, 10, 0.6);
-    border: 1px solid #444;
-    border-radius: 999px;
-    cursor: pointer;
-}
-.room-tools button[hidden] { display: none; }
-.room-tools button:disabled { opacity: 0.4; cursor: default; }
-.room-tools button[aria-pressed="true"],
-.room-tools .room-tools-mark {
-    color: #0a0a0a;
-    background: #ffd36b;
-    border-color: #ffd36b;
-}
-.room-tools button:focus-visible { outline: 1px solid #aaa; outline-offset: 2px; }
-.room-tools-hint {
-    margin-top: 0.35rem;
-    padding-left: 0.3rem;
-    font-size: 0.72rem;
-    text-shadow: 0 0 8px #000, 0 0 2px #000;
-    pointer-events: none;
-}
-/* Depth lens legend: near .. far in metres */
-.room-tools-legend {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin-top: 0.3rem;
-    padding-left: 0.3rem;
-    font-size: 0.68rem;
-    letter-spacing: 0.06em;
-    color: #bbb;
-    text-shadow: 0 0 8px #000, 0 0 2px #000;
-    pointer-events: none;
-}
-.room-tools-legend[hidden] { display: none; }
-.room-tools-legend i { display: block; width: 7rem; height: 0.45rem; border-radius: 0.25rem; }
-/* Narrow screens: below the walk HUD (nav row, then the back button) */
-@media (max-width: 699px) {
-    .room-tools { top: calc(6.4rem + env(safe-area-inset-top)); }
-}
-
-.room-tools-label {
-    position: fixed;
-    z-index: 6;
-    transform: translate(-50%, -140%);
-    padding: 0.2rem 0.55rem;
-    border-radius: 0.3rem;
-    background: rgba(10, 10, 10, 0.8);
-    color: #ffd36b;
-    font-size: 0.85rem;
-    font-weight: 600;
-    white-space: nowrap;
-    pointer-events: none;
-}
-.room-tools-label[hidden] { display: none; }
-
-/* Phone crosshair at the screen centre (the lens and the Mark ray) */
-.room-tools-cross {
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    z-index: 6;
-    width: 22px;
-    height: 22px;
-    margin: -11px 0 0 -11px;
-    pointer-events: none;
-}
-.room-tools-cross[hidden] { display: none; }
-.room-tools-cross::before,
-.room-tools-cross::after {
-    content: '';
-    position: absolute;
-    background: #fff;
-    opacity: 0.85;
-    box-shadow: 0 0 3px #000;
-}
-.room-tools-cross::before { left: 10px; top: 0; width: 2px; height: 22px; }
-.room-tools-cross::after { top: 10px; left: 0; width: 22px; height: 2px; }
-
 /* Walk mode (js/walk.js): explore / collect / back buttons, the HUD under the nav.
    Buttons are at least 44 px tall (tap target). */
 .walk-btn {
@@ -613,6 +515,21 @@ body.panel-open .tap-prompt {
     align-items: center;
     gap: 0.8rem;
 }
+/* Phones: one top row. The nav stays right; the count (and Back) sit top left */
+@media (max-width: 699px) {
+    .walk-hud {
+        top: calc(0.35rem + env(safe-area-inset-top));
+        right: auto;
+        left: calc(0.75rem + env(safe-area-inset-left));
+        min-height: 2.75rem;
+        gap: 0.5rem;
+    }
+    .walk-hud .walk-btn { padding: 0 0.7rem; font-size: 0.75rem; letter-spacing: 0.04em; }
+    .walk-count { font-size: 0.85rem; letter-spacing: 0.04em; }
+    /* the nav shares the row: no gaps between its links (the tap targets stay 44 px) */
+    body[data-input="walk"] .site-nav a { margin-left: 0; }
+    .walk-back-long { display: none; }
+}
 .walk-count {
     color: #ccc;
     font-size: 0.9rem;
@@ -625,6 +542,11 @@ body.panel-open .tap-prompt {
    bottom, above the room credit; the onboarding hint; the edge arrow */
 .walk-primary { background: #e8e8e8; border-color: #e8e8e8; color: #111; }
 .walk-primary:hover, .walk-primary:focus-visible { background: #fff; border-color: #fff; color: #000; }
+.walk-btn.walk-primary:disabled { background: rgba(10, 10, 10, 0.7); }
+/* A text button (Skip the flat): no pill, so three fit one row on a 360 px phone */
+.walk-link { border-color: transparent; background: none; padding: 0 0.5rem; color: #bbb; }
+.walk-link:hover, .walk-link:focus-visible { border-color: transparent; color: #fff; text-decoration: underline; }
+.walk-task[hidden] { display: none; }
 .walk-tour {
     position: fixed;
     left: 50%;
@@ -642,10 +564,14 @@ body.panel-open .tap-prompt {
 }
 .walk-task-title { font-size: 1rem; letter-spacing: 0.06em; color: #eee; }
 .walk-task-sub { margin-top: 0.25rem; font-size: 0.8rem; color: #bbb; max-width: 34rem; }
-.walk-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; }
-/* Phones: the task is one small paragraph of two lines */
+.walk-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; align-items: center; }
+/* Phones: the task is one small paragraph of two lines; the three buttons fit one row */
 @media (max-width: 699px) {
-    .walk-tour { bottom: calc(2.9rem + env(safe-area-inset-bottom)); gap: 0.5rem; }
+    .walk-tour { bottom: calc(2.9rem + env(safe-area-inset-bottom)); gap: 0.5rem; max-width: calc(100vw - 1rem - env(safe-area-inset-left) - env(safe-area-inset-right)); }
+    .walk-actions { gap: 0.4rem; flex-wrap: nowrap; }
+    .walk-actions .walk-btn { padding: 0 0.85rem; font-size: 0.8rem; letter-spacing: 0.04em; white-space: nowrap; }
+    .walk-actions .walk-link { padding: 0 0.4rem; }
+    .stop-panel { max-height: 46vh; }
     .walk-task { font-size: 0.74rem; line-height: 1.4; max-width: 22rem; }
     .walk-task p { display: inline; font-size: inherit; margin: 0; }
     .walk-task-title { font-weight: 600; }
