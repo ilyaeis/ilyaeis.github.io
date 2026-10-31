@@ -138,6 +138,7 @@ let headingOverride = null; // camera heading for this frame (fly-by framing), e
 const _camDir = new THREE.Vector3();
 const _hR = new THREE.Vector3(), _hU = new THREE.Vector3();
 let baseFov = 60;
+const fovEase = { x: 60, v: 0 };   // the FOV back from the walk (leaveFlat)
 
 // Scratch frames (flight arcs, corkscrew basis)
 const _arcRight = new THREE.Vector3();
@@ -316,6 +317,12 @@ const WARP_FADE_PRE = 2.2 * TUNNEL_TIME_SCALE; // s: the worlds cross-fade from 
 const WARP_FADE_POST = 0.4 * TUNNEL_TIME_SCALE; // ... to this long after it (reversed on the way out)
 
 
+// Leaving the walk (leaveFlat): the comet starts this far ahead of the eye
+// and below it (room units), and the walk's FOV eases back over FOV_EASE s
+const LEAVE_AHEAD = 0.15;
+const LEAVE_BELOW = 0.03;
+const FOV_EASE = 0.6;
+
 // Rocket → comet morph duration (3D rocket — see intro3d.js)
 const ROCKET_MORPH_DURATION = intro.CHARGE_DURATION;
 
@@ -354,7 +361,8 @@ export function init() {
         get phase() { return phase; }, get phaseTime() { return phaseTime; },
         get stop() { return stops[stopIndex]; }, get trail() { return trail; }, get baseFov() { return baseFov; },
         viewDelay: (stop) => VIEW_TAP_DELAY[stop.type],
-        enterPhase, setPhase, enterView, emitStop, hideTapPrompt, stepFaceAlign, traceWorld, fitFor, hasPanel, legPoint
+        enterPhase, setPhase, enterView, emitStop, hideTapPrompt, stepFaceAlign, traceWorld, fitFor, hasPanel, legPoint,
+        setStopIndex: (i) => { stopIndex = i; }, leaveFlat
     };
     const q = new URLSearchParams(location.search);
     // Dev (?portal=1): enter the stop's portal after the view delay; ?t then counts from the portal start
@@ -364,7 +372,12 @@ export function init() {
     const stopQ = Number(q.get('stop')), legQ = Number(q.get('leg'));
     controls.autoRotateSpeed = 0;       // the intro stands still (jumpTo / enterView set their own)
     const goTarget = q.has('go') ? stopById(q.get('go')) : null;
-    if (goTarget?.navigable) {          // ?go=<id>[&mode=fly|jump]
+    if (goTarget?.navigable && goTarget.universe === 'rnd' && explore.hasWalker()) {
+        // ?go=<object id>: walk mode at that object, facing it, its panel open
+        intro.hideIntro(); hideTapPrompt();
+        explore.enterAtObject(goTarget.index);
+    }
+    else if (goTarget?.navigable) {     // ?go=<id>[&mode=fly|jump]
         const i = goTarget.index;
         if (q.get('mode') === 'fly' && i >= 1) { jumpTo(i - 1); setupTravel(i, false); }
         else jumpTo(i);
@@ -791,10 +804,25 @@ function stepFaceAlign(dt) {
 
 // ── Leave the flat ─────────────────────────────────────────────────
 // On with the journey from inside the flat: from the comet head after the
-// rocket morph. The comet climbs through the cut ceiling and out over the
-// window wall (flatExitVias) to the first stop after the flat.
+// rocket morph, or from the walk ("Skip the flat", "Continue"; explore.js):
+// there the walk ends where the camera is (no snap) and the comet starts a
+// little ahead of the eye, along the view. It climbs through the cut
+// ceiling and out over the window wall (flatExitVias) to the first stop
+// after the flat. The walk's wider FOV eases back (updateTravel).
 export function leaveFlat() {
     const dest = afterFlatIndex();
+    if (phase === Phase.EXPLORE) {
+        emitStop('leave', { to: dest });   // the panel and the room credit go
+        explore.leaveInPlace();
+        camera.getWorldDirection(cometDir);
+        cometPos.copy(camera.position).addScaledVector(cometDir, LEAVE_AHEAD * apartment.scale)
+            .addScaledVector(camera.up, -LEAVE_BELOW * apartment.scale);
+        controls.target.copy(cometPos);    // the chase hand-off starts from this view
+        trail.attractorIdx = stops[dest].paletteIdx ?? 0;
+        clearTrail(trail); addTrailToScene(trail);
+        pushPointWorld(trail, cometPos.x, cometPos.y, cometPos.z);
+        worldPos.copy(cometPos);
+    }
     stopIndex = -1;
     fromFlat = true;
     setupTravel(dest, false);
@@ -873,6 +901,7 @@ export function setupTravel(destIdx, withCorkscrew) {
     }
     corkscrew = withCorkscrew;
     fromFlat = false;
+    fovEase.x = camera.fov; fovEase.v = 0;
     if (warp) {
         warp.g = legEndShare(warp.leg);
         warp.t = easeInverse(warp.g) * travelDuration;
@@ -1017,14 +1046,15 @@ function buildTunnelLegs(from, dest, inTunnel, toTunnel, vias) {
 // and returns { p, dir } there, for a leg that continues from it.
 function buildViaLegs(vias, target) {
     const fromStop = stops[stopIndex];
-    const fromRoom = fromFlat || fromStop?.type === StopType.OBJECT || fromStop?.type === StopType.LANDING;   // tangent to the loop, no random swing (indoors)
+    const fromRoom = fromStop?.type === StopType.OBJECT;   // the landing leaves as any hover stop
     const arc = indoor ? 0 : 1;
     let p = cometPos, dir = cometDir;
     vias.forEach((v, i) => {
         let leg;
-        if (i === 0 && fromFlat) {
-            // leaving the flat: the heading (the rocket nose, the walker's view) is
-            // arbitrary: leave mostly towards the first via, as joinLeg does
+        if (i === 0 && (fromFlat || fromStop?.type === StopType.LANDING)) {
+            // leaving the flat: the heading (the rocket nose, the walker's view,
+            // the loop round the landing text) has nothing to do with the way
+            // out: leave mostly towards the first via, as joinLeg does
             _vD.subVectors(v.p, cometPos).normalize().addScaledVector(cometDir, JOIN_HEADING_MIX).normalize();
             leg = buildLeg(cometPos, _vD, v.p, true, 0.25, 0);
         }
@@ -1179,7 +1209,9 @@ function updateRocketExit(dt) {
         intro.getRocketDirWorld(cometDir);
         intro.hideIntro();
         worldPos.copy(_vec3);
-        leaveFlat();
+        // Walk the flat from here (the tour); without a walker (dev/camlog.html)
+        // or after "skip the walk" the comet leaves the flat at once
+        if (skipWalk || !explore.enterFromIntro()) leaveFlat();
     }
 }
 
@@ -1263,6 +1295,11 @@ function updateTravel(dt) {
         tunnel.updateStreaks(dt, cometPos, cometDir, Math.max(w, RUSH_STREAKS * rush));
         tunnel.setRush(Math.max(w, RUSH_RINGS * rush));
         camera.fov = baseFov + WARP_FOV * w + RUSH_FOV * rush;
+        camera.updateProjectionMatrix();
+    } else if (camera.fov !== baseFov) {
+        // after the walk (its FOV is wider): ease back
+        cam.smoothDampScalar(fovEase, baseFov, FOV_EASE, dt);
+        camera.fov = Math.abs(fovEase.x - baseFov) < 0.01 ? baseFov : fovEase.x;
         camera.updateProjectionMatrix();
     }
     // Arrival: blend into the VIEW pose over the last ARRIVE_BLEND of the time

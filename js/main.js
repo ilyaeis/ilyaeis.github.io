@@ -119,7 +119,7 @@ import * as walk from './walk.js';
     });
 
     // Keyboard: Enter / Space advance the journey (links and buttons keep their own behavior).
-    // Walk mode: WASD / arrows walk and turn (walk.js), Enter / Space do nothing.
+    // Walk mode: WASD / arrows walk and turn (walk.js), Enter is "Next object" in the tour, Space does nothing.
     const walkKeys = new Set();
     const WALK_KEYS = ['w', 'a', 's', 'd', 'q', 'e', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
     document.addEventListener('keyup', (e) => {
@@ -134,7 +134,10 @@ import * as walk from './walk.js';
             if (WALK_KEYS.includes(k) && !e.target.closest('input,textarea') && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
                 walkKeys.add(k); walk.setKeys(new Set(walkKeys));
-            } else if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button')) e.preventDefault();
+            } else if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button')) {
+                e.preventDefault();
+                if (e.key === 'Enter' && !e.repeat) walk.onEnter();   // the tour: "Next object"
+            }
             return;
         }
         if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button') && owner === 'journey') {

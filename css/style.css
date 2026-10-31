@@ -620,3 +620,74 @@ body.panel-open .tap-prompt {
     text-shadow: 0 0 8px #000, 0 0 2px #000;
     font-variant-numeric: tabular-nums;
 }
+
+/* The tour (js/walk.js, the site starts with it): task line and buttons at the
+   bottom, above the room credit; the onboarding hint; the edge arrow */
+.walk-primary { background: #e8e8e8; border-color: #e8e8e8; color: #111; }
+.walk-primary:hover, .walk-primary:focus-visible { background: #fff; border-color: #fff; color: #000; }
+.walk-tour {
+    position: fixed;
+    left: 50%;
+    bottom: calc(3.2rem + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100vw - 2rem);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.7rem;
+    text-align: center;
+    text-shadow: 0 0 8px #000, 0 0 2px #000;
+}
+.walk-task-title { font-size: 1rem; letter-spacing: 0.06em; color: #eee; }
+.walk-task-sub { margin-top: 0.25rem; font-size: 0.8rem; color: #bbb; max-width: 34rem; }
+.walk-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; }
+/* Phones: the task is one small paragraph of two lines */
+@media (max-width: 699px) {
+    .walk-tour { bottom: calc(2.9rem + env(safe-area-inset-bottom)); gap: 0.5rem; }
+    .walk-task { font-size: 0.74rem; line-height: 1.4; max-width: 22rem; }
+    .walk-task p { display: inline; font-size: inherit; margin: 0; }
+    .walk-task-title { font-weight: 600; }
+    .walk-task-title::after { content: '. '; }
+}
+/* A panel is open: side layout, the tour moves under the object (left half);
+   bottom layout, only the buttons stay, at the very bottom */
+@media (min-width: 700px) and (orientation: landscape) {
+    body.panel-open .walk-tour { left: 27%; }
+}
+@media (max-width: 699px), (orientation: portrait) {
+    body.panel-open .walk-task { display: none; }
+    body.panel-open .walk-tour { bottom: calc(0.4rem + env(safe-area-inset-bottom)); }
+}
+.walk-hint {
+    position: fixed;
+    top: 22%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(10, 10, 10, 0.6);
+    color: #ddd;
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+    user-select: none;
+}
+.walk-hint[hidden] { display: none; }
+@media (pointer: coarse) { .walk-hint-keys { display: none; } }
+.walk-arrow {
+    position: fixed;
+    z-index: 9;
+    width: 0;
+    height: 0;
+    border-top: 11px solid transparent;
+    border-bottom: 11px solid transparent;
+    border-left: 18px solid rgba(255, 211, 107, 0.9);
+    filter: drop-shadow(0 0 4px #000);
+    pointer-events: none;
+}
+.walk-arrow[hidden] { display: none; }

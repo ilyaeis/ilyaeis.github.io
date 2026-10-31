@@ -1,11 +1,16 @@
 // ── Walk mode ──────────────────────────────────────────────────────
 // Walk through the apartment at eye height and collect the six R&D
-// objects. The orchestrator switches to Phase.EXPLORE and calls
-// enterWalk / update / exitWalk; main.js routes input here (onTap, onDrag,
-// setKeys). This module owns the camera pose while walking (no camera.js
-// changes) and its own DOM: the "Explore the flat" buttons, the HUD (back
-// button and "n / 6") and the Collect button. Panel text goes through the
-// 'walk:panel' event to stopPanel.js.
+// objects. The site starts here: after the intro the orchestrator switches
+// to Phase.EXPLORE (explore.js) and calls enterWalk / update / exitWalk /
+// leaveInPlace; main.js routes input here (onTap, onDrag, setKeys, onEnter).
+// This module owns the camera pose while walking (no camera.js changes) and
+// its own DOM: the "Explore the flat" buttons, the HUD ("n / 6", and the
+// back button when entered from a stop), the Collect button, and the tour
+// (entered from the intro or ?go=<object id>): an onboarding hint, the task
+// line, "Next object" (also Enter: a guided walk to the nearest object not
+// collected yet, then its panel), "Skip the flat →" ("Continue →" at 6/6)
+// and an edge arrow to that object while it is off screen or out of sight.
+// Panel text goes through the 'walk:panel' event to stopPanel.js.
 //
 // Walk grid: assets/room/walk.json (make_walk_grid.py, lazily loaded), a
 // 2D occupancy grid in room units (the .sog frame: +Y up, 1 unit = 3.63 m).
@@ -18,7 +23,7 @@ import * as THREE from 'three';
 import { scene, camera, ATTRACTORS, getPaletteColor } from './attractors.js';
 import { stops, StopType, planePointToWorld } from './world.js';
 import { apartment, roomToWorld, worldToRoom } from './room.js';
-import { registerWalker, enterExplore, exitExplore } from './explore.js';
+import { registerWalker, enterExplore, exitExplore, skipFlat } from './explore.js';
 
 const DEG = Math.PI / 180;
 
@@ -50,6 +55,19 @@ const HALO_FADE = 0.35;                // s: line-of-sight fade
 const HIT_SCALE = 1.15;                // tap sphere radius × the object's halo / half height
 const PANEL_SHIFT = [0.5, 0.45];       // turn-to: the object sits at this NDC offset off the panel (side x, bottom y)
 const STORE_KEY = 'rnd.collected';
+// The tour (Next object): a guided walk turns gently (auto turns capped at
+// GUIDE_YAW_MAX, also the turn to the object at the end) and stops this far
+// from the object, on the side its journey view looks from (further for a
+// low object, so the view looks down at most GUIDE_PITCH)
+const GUIDE_YAW_MAX = 70 * DEG;
+const GUIDE_VIEW_M = 1.5;
+const GUIDE_PITCH = 40 * DEG;
+const GOAL_ROOMY = 8;                  // cells of clearance a guide goal should have
+const ENTER_PITCH = -4 * DEG;          // the walk from the intro starts at eye level, a little down (the ceiling is a void)
+const GUIDE_ARRIVE_M = 0.15;            // m: ... and counts as there when it has stopped within this of the goal
+const HINT_TIME = 6;                   // s: the onboarding hint shows this long (or until the first walk)
+const ARROW_EVERY = 0.4;               // s: the edge arrow re-plans its way to the nearest object this often
+const ARROW_INSET = 0.86;              // NDC: the arrow keeps this far inside the screen edge
 
 // ── DOM ────────────────────────────────────────────────────────────
 const exploreBtns = [...document.querySelectorAll('.walk-explore')];
@@ -59,6 +77,11 @@ const collectBtn = document.querySelector('.walk-collect');
 const hudEl = document.querySelector('.walk-hud');
 const countEl = document.querySelector('.walk-count');
 const backBtn = document.querySelector('.walk-back');
+const tourEl = document.querySelector('.walk-tour');
+const hintEl = document.querySelector('.walk-hint');
+const nextBtn = document.querySelector('.walk-next');
+const skipBtn = document.querySelector('.walk-skip');
+const arrowEl = document.querySelector('.walk-arrow');
 
 // ── State ──────────────────────────────────────────────────────────
 let G = null, gridPromise = null;      // the grid (walk.json) and its decoded fields
@@ -73,6 +96,12 @@ const look = { yaw: 0, pitch: 0, yawT: 0, pitchT: 0, yawV: 0, pitchV: 0 };
 let path = null, pathLen = 0, pathS = 0, autoYaw = false, stuckT = 0, stuckS = 0;
 let keys = new Set();
 let selected = null;                   // the object stop whose panel shows
+let tour = false;                      // entered from the intro (or ?go): the tour HUD
+let guide = null;                      // the object a Next-object walk goes to
+let slowTurn = false;                  // auto turns at GUIDE_YAW_MAX (a guided walk and its turn)
+let arrived = false;                   // the path ended at its goal this step
+let hintT = -1;                        // s the hint has shown (-1: gone)
+let arrowT = 0, arrowWay = null;       // edge arrow: re-plan timer, { stop, raw } to the nearest object
 const collected = new Set(load());
 let halos = null;                      // [{ stop, line, vis }]
 let marker = null, group = null;
@@ -198,11 +227,13 @@ function seeLine(ax, az, bx, bz, end) {
     return true;
 }
 
-// A* (8-connected, no corner cutting, octile heuristic, binary heap)
-function astar(sx, sz, gx, gz) {
+// A* (8-connected, no corner cutting, octile heuristic, binary heap).
+// With gx < 0: no goal, a flood from the start (Dijkstra): { gS, from } for every cell
+function search(sx, sz, gx, gz) {
     const N = nx * nz, gS = new Float32Array(N).fill(Infinity), from = new Int32Array(N).fill(-1);
     const closed = new Uint8Array(N), heap = [];
-    const h = (ix, iz) => { const dx = Math.abs(ix - gx), dz = Math.abs(iz - gz); return Math.max(dx, dz) + 0.41421356 * Math.min(dx, dz); };
+    const h = gx < 0 ? () => 0
+        : (ix, iz) => { const dx = Math.abs(ix - gx), dz = Math.abs(iz - gz); return Math.max(dx, dz) + 0.41421356 * Math.min(dx, dz); };
     const push = (f, i) => { heap.push([f, i]); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
     const pop = () => {
         const top = heap[0], last = heap.pop();
@@ -218,7 +249,7 @@ function astar(sx, sz, gx, gz) {
         }
         return top;
     };
-    const s = sz * nx + sx, goal = gz * nx + gx;
+    const s = sz * nx + sx, goal = gx < 0 ? -1 : gz * nx + gx;
     gS[s] = 0; push(h(sx, sz), s);
     while (heap.length) {
         const [, i] = pop();
@@ -236,11 +267,16 @@ function astar(sx, sz, gx, gz) {
             if (g < gS[j]) { gS[j] = g; from[j] = i; push(g + h(jx, jz), j); }
         }
     }
+    return { gS, from, s };
+}
+// The cell path from the search start to cell `goal` (room units), or null
+function cellPath({ from, s }, goal) {
     if (from[goal] < 0 && goal !== s) return null;
     const out = [];
     for (let i = goal; i >= 0; i = from[i]) { const ix = i % nx; out.push([x0 + (ix + 0.5) * cell, z0 + ((i - ix) / nx + 0.5) * cell]); if (i === s) break; }
     return out.reverse();
 }
+function astar(sx, sz, gx, gz) { return cellPath(search(sx, sz, gx, gz), gz * nx + gx); }
 
 // String pulling: keep only the nodes needed for line of sight
 function smooth(pts) {
@@ -275,6 +311,11 @@ function setPath(gx, gz) {
     if (!s || !g) return { ok: false, why: !s ? 'start' : 'goal' };
     const raw = astar(s[0], s[1], g[0], g[1]);
     if (!raw) return { ok: false, why: 'no path' };
+    guide = null; slowTurn = false;
+    hideHint();
+    return followRaw(raw);
+}
+function followRaw(raw) {
     raw[0] = [pos.x, pos.y];
     path = smooth(raw);
     pathLen = 0; for (let i = 1; i < path.length; i++) pathLen += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
@@ -283,6 +324,65 @@ function setPath(gx, gz) {
     return { ok: true, nodes: raw.length, smoothNodes: path.length, len_m: +(pathLen / M).toFixed(2) };
 }
 function endPath() { path = null; if (marker) marker.visible = false; }
+
+// ── The tour: the nearest object not collected yet (by walking distance) ──
+// The goal: GUIDE_VIEW_M from the object, on the side its journey view
+// looks from (stop.normal points from that view to the object). Of a few
+// spots round that one (turned, nearer, further) the one with room round it
+// (GOAL_ROOMY cells of clearance: a cramped goal is hard to walk out of)
+// and a line of sight wins. Fixed per object: computed once.
+function objectGoal(h) {
+    if (h.goal !== undefined) return h.goal;
+    const n = worldToRoom(_v.copy(h.stop.center).sub(h.stop.normal)).sub(h.room).setY(0).normalize();
+    const d0 = Math.max(GUIDE_VIEW_M * M, (G.eye - h.room.y) / Math.tan(GUIDE_PITCH)), a0 = Math.atan2(n.z, n.x);
+    let best = null, bestS = Infinity;
+    for (const da of [0, 0.35, -0.35, 0.7, -0.7]) for (const k of [1, 0.85, 1.2]) {
+        const x = h.room.x + Math.cos(a0 + da) * d0 * k, z = h.room.z + Math.sin(a0 + da) * d0 * k;
+        const g = nearestFree(x, z, 0.3 * M, GOAL_CLEAR);
+        if (!g) continue;
+        const gx = x0 + (g[0] + 0.5) * cell, gz = z0 + (g[1] + 0.5) * cell, c = clearAt(g[0], g[1]);
+        if (!seeLine(gx, gz, h.room.x, h.room.z, h.end)) continue;
+        const sc = 0.5 * Math.abs(da) + Math.abs(k - 1) + Math.hypot(gx - x, gz - z) / M + 0.3 * Math.max(0, GOAL_ROOMY - c);
+        if (sc < bestS) { bestS = sc; best = g; }
+    }
+    h.goal = best ?? nearestFree(h.room.x + n.x * d0, h.room.z + n.z * d0, SNAP_M * M, GOAL_CLEAR);
+    return h.goal;
+}
+// { stop, raw, len } of the nearest uncollected object (not `skip`), or null
+function nearestWay(skip = null) {
+    const st = nearestFree(pos.x, pos.y, 0.3 * M);
+    if (!st || !halos) return null;
+    const flood = search(st[0], st[1], -1, -1);
+    let best = null;
+    for (const h of halos) {
+        if (collected.has(h.stop.id) || h.stop === skip) continue;
+        const g = objectGoal(h);
+        if (!g) continue;
+        const i = g[1] * nx + g[0], len = flood.gS[i];
+        if (len < (best?.len ?? Infinity)) best = { stop: h.stop, goal: i, len };
+    }
+    if (!best) return null;
+    best.raw = cellPath(flood, best.goal);
+    return best.raw ? best : null;
+}
+// "Next object": walk to the nearest object not collected yet (the one
+// whose panel shows is done: the next one), then turn to it and show its panel
+function next() {
+    if (mode !== 'walk') return { ok: false, why: 'not walking' };
+    const way = nearestWay(selected);
+    if (!way) return { ok: false, why: 'all collected' };
+    hideHint();
+    select(null);
+    const r = followRaw(way.raw);
+    guide = way.stop; slowTurn = true;
+    return { ...r, object: way.stop.id };
+}
+function onArrive() {
+    if (!guide) return;
+    const st = guide;
+    guide = null;
+    select(st);
+}
 function pathPoint(s) {
     for (let i = 1; i < path.length; i++) {
         const L = Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
@@ -328,7 +428,7 @@ function step(dt) {
     const turn = (keys.has('arrowleft') || keys.has('q') ? 1 : 0) - (keys.has('arrowright') || keys.has('e') ? 1 : 0);
     if (turn) { look.yaw += turn * KEY_TURN * dt; look.yawT = look.yaw; look.yawV = 0; autoYaw = false; }
     if (f || r) {
-        endPath();
+        endPath(); guide = null; slowTurn = false; hideHint();
         const sy = Math.sin(look.yaw), cy = Math.cos(look.yaw);
         _w.set(-sy * f + cy * r, -cy * f - sy * r).normalize().multiplyScalar(SPEED);
     } else if (path) {
@@ -342,10 +442,13 @@ function step(dt) {
         const d = _w.length();
         const sp = SPEED * Math.min(1, Math.sqrt(Math.max(left, 0) / ARRIVE_R));   // eased arrival
         if (d > 1e-6) _w.multiplyScalar(sp / d);
-        if (left < 0.03 * M && Math.hypot(path.at(-1)[0] - pos.x, path.at(-1)[1] - pos.y) < 0.05 * M) endPath();
+        if (left < 0.03 * M && Math.hypot(path.at(-1)[0] - pos.x, path.at(-1)[1] - pos.y) < 0.05 * M) { endPath(); arrived = true; }
+        // a guided walk is there when it has (almost) stopped close to the goal
+        // (the wall avoidance can hold it a few cm short)
+        if (path && guide && left < GUIDE_ARRIVE_M * M && vel.length() < 0.05 * SPEED) { endPath(); arrived = true; }
         // stuck guard: no progress for 1.5 s cancels the walk
         stuckT += dt;
-        if (path && stuckT > 1.5) { if (pathS - stuckS < 0.02 * M) endPath(); stuckT = 0; stuckS = pathS; }
+        if (path && stuckT > 1.5) { if (pathS - stuckS < 0.02 * M) { endPath(); guide = null; } stuckT = 0; stuckS = pathS; }
         if (autoYaw && vel.length() > 0.3 * SPEED) look.yawT = look.yaw + wrap(Math.atan2(-vel.x, -vel.y) - look.yaw);
     }
     if (_w.lengthSq() > 0) _w.addScaledVector(avoidance(_a), _w.length() / SPEED);
@@ -366,9 +469,9 @@ function step(dt) {
     // look springs: auto turns capped (YAW_MAX); drag look moves both pose and target
     look.pitchT = Math.max(PITCH_MIN, Math.min(PITCH_TOP, look.pitchT));
     const yT = look.yaw + wrap(look.yawT - look.yaw);
-    [look.yaw, look.yawV] = smoothDamp(look.yaw, yT, look.yawV, YAW_TIME, YAW_MAX, dt);
+    [look.yaw, look.yawV] = smoothDamp(look.yaw, yT, look.yawV, YAW_TIME, slowTurn ? GUIDE_YAW_MAX : YAW_MAX, dt);
     look.yawT = look.yaw + wrap(look.yawT - look.yaw);
-    [look.pitch, look.pitchV] = smoothDamp(look.pitch, look.pitchT, look.pitchV, PITCH_TIME, PITCH_MAX, dt);
+    [look.pitch, look.pitchV] = smoothDamp(look.pitch, look.pitchT, look.pitchV, PITCH_TIME, slowTurn ? GUIDE_YAW_MAX : PITCH_MAX, dt);
 }
 
 // Camera pose of the walker (world)
@@ -431,6 +534,23 @@ function updateHud() {
     const [shown, words] = countEl.children;
     if (shown) shown.textContent = `${n} / ${total()}`;
     if (words) words.textContent = `${n} of ${total()} objects collected`;
+    // the tour: at 6/6 "Next object" goes, "Skip the flat →" becomes "Continue →"
+    const all = n >= total();
+    if (nextBtn) nextBtn.hidden = all;
+    if (skipBtn) {
+        skipBtn.textContent = all ? 'Continue →' : 'Skip the flat →';
+        skipBtn.classList.toggle('walk-primary', all);
+    }
+}
+function showTour(on) {
+    if (tourEl) tourEl.hidden = !on;
+    if (backBtn) backBtn.hidden = on;
+    document.body.classList.toggle('walk-touring', on);
+    if (!on) { hideHint(); if (arrowEl) arrowEl.hidden = true; }
+}
+function hideHint() {
+    hintT = -1;
+    if (hintEl) hintEl.hidden = true;
 }
 function showCollect(stop) {
     if (!collectBtn) return;
@@ -466,17 +586,22 @@ function collect() {
     else showCollect(selected);
 }
 
-// Turn (capped auto turn) so the world point sits beside the panel
-function turnTo(world) {
+// The look (yaw, pitch) that puts the world point beside the panel
+function aimAt(world) {
     const r = worldToRoom(_v.copy(world));
     const dx = r.x - pos.x, dy = r.y - G.eye, dz = r.z - pos.y;
     let yaw = Math.atan2(-dx, -dz), pitch = Math.atan2(dy, Math.hypot(dx, dz));
-    const t = Math.tan(camera.fov * DEG / 2);
+    const t = Math.tan(FOV * DEG / 2);
     if (window.matchMedia('(min-width: 700px) and (orientation: landscape)').matches) yaw -= Math.atan(PANEL_SHIFT[0] * t * camera.aspect);
     else pitch -= Math.atan(PANEL_SHIFT[1] * t);
+    return { yaw, pitch: Math.max(PITCH_MIN, Math.min(PITCH_TOP, pitch)) };
+}
+// Turn (capped auto turn) so the world point sits beside the panel
+function turnTo(world) {
+    const { yaw, pitch } = aimAt(world);
     endPath(); autoYaw = false;
     look.yawT = look.yaw + wrap(yaw - look.yaw);
-    look.pitchT = Math.max(PITCH_MIN, Math.min(PITCH_TOP, pitch));
+    look.pitchT = pitch;
 }
 
 function setExploreButtons(stop) {
@@ -491,21 +616,30 @@ window.addEventListener('journey:stop', e => {
     if (mode !== 'off') return;
     setExploreButtons(d.phase === 'enter' ? { universe: d.universe, type: d.type } : null);
 });
+// the grid is small: fetch it with the intro, so the walk starts at once
+window.addEventListener('journey:intro', e => { if (e.detail?.phase === 'enter') loadGrid().catch(() => {}); });
 exploreBtns.forEach(b => b.addEventListener('click', () => enterExplore()));
 backBtn?.addEventListener('click', () => exitExplore());
 collectBtn?.addEventListener('click', collect);
+nextBtn?.addEventListener('click', () => next());
+skipBtn?.addEventListener('click', () => skipFlat());
 
 // ── API (explore.js) ───────────────────────────────────────────────
 // Is walking possible here (an apartment stop or the landing)?
 function canWalk(stop) { return stop?.universe === 'rnd' || stop?.type === StopType.LANDING; }
 
-// Start walking from the current camera pose. opts.immediate: no ease (dev).
+// Start walking from the current camera pose. opts.immediate: no ease;
+// opts.tour: the tour HUD; opts.at: start at that object, facing it, its panel open.
 function enterWalk(opts = {}) {
     immediate = !!opts.immediate;
     mode = 'wait';
     setExploreButtons(null);
     selected = null; panel(null); showCollect(null);
+    guide = null; slowTurn = false; arrowWay = null; arrowT = 0;
+    tour = !!opts.tour;
     if (hudEl) hudEl.hidden = false;
+    showTour(tour);
+    if (tour && hintEl && !opts.at) { hintT = 0; hintEl.hidden = false; }
     updateHud();
     fromPos.copy(camera.position); fromQ.copy(camera.quaternion); fromFov = camera.fov;
     loadGrid().then(() => {
@@ -519,11 +653,29 @@ function enterWalk(opts = {}) {
         vel.set(0, 0); acc.set(0, 0); endPath();
         _v.set(0, 0, -1).applyQuaternion(camera.quaternion).applyQuaternion(_q.copy(apartment.quaternion).invert());
         look.yaw = look.yawT = Math.atan2(-_v.x, -_v.z);
-        look.pitch = look.pitchT = Math.max(PITCH_MIN, Math.min(PITCH_TOP, Math.asin(THREE.MathUtils.clamp(_v.y, -1, 1))));
+        look.pitch = look.pitchT = Math.max(PITCH_MIN, Math.min(tour ? ENTER_PITCH : PITCH_TOP, Math.asin(THREE.MathUtils.clamp(_v.y, -1, 1))));
         look.yawV = look.pitchV = 0;
+        const h = opts.at && halos.find(x => x.stop === opts.at);
+        const g = h && objectGoal(h);
+        if (g) {
+            // at the object: on its view side, facing it, its panel open
+            pos.set(x0 + (g[0] + 0.5) * cell, z0 + (g[1] + 0.5) * cell);
+            const a = aimAt(h.stop.center);
+            look.yaw = look.yawT = a.yaw; look.pitch = look.pitchT = a.pitch;
+            selected = h.stop; panel(h.stop.panel); showCollect(h.stop);
+        }
         group.visible = true;
         startEase('in', fromPos.distanceTo(roomToWorld(pos.x, G.eye, pos.y, _p)), 0);
-    }).catch(() => { mode = 'off'; if (hudEl) hudEl.hidden = true; exitExplore(); });
+    }).catch(() => { mode = 'off'; if (hudEl) hudEl.hidden = true; showTour(false); exitExplore(); });
+}
+
+// Leave walk mode where the camera is (the journey flies on from here)
+function leaveInPlace() {
+    selected = null; panel(null); showCollect(null);
+    if (hudEl) hudEl.hidden = true;
+    showTour(false);
+    endPath(); guide = null; slowTurn = false;
+    finish();
 }
 
 // Ease back to the journey VIEW pose; done() runs when it is reached
@@ -531,7 +683,8 @@ function enterWalk(opts = {}) {
 function exitWalk(viewPos, viewTarget, viewFov, done, instant = false) {
     selected = null; panel(null); showCollect(null);
     if (hudEl) hudEl.hidden = true;
-    endPath();
+    showTour(false);
+    endPath(); guide = null; slowTurn = false;
     fromPos.copy(camera.position); fromQ.copy(camera.quaternion); fromFov = camera.fov;
     toPos.copy(viewPos);
     toQ.setFromRotationMatrix(_m.lookAt(viewPos, viewTarget, camera.up));
@@ -566,9 +719,12 @@ function finish() {
 function update(dt) {
     if (mode === 'off' || mode === 'wait') return;
     if (mode === 'walk') {
+        arrived = false;
         if (dt > 0) step(dt);
+        if (arrived) onArrive();
         walkPose(camera.position, camera.quaternion);
         if (camera.fov !== FOV) { camera.fov = FOV; camera.updateProjectionMatrix(); }
+        if (tour) updateTour(dt);
     } else {
         ease.t += dt;
         const w = ease.T > 0 ? smoother(Math.min(1, ease.t / ease.T)) : 1;
@@ -583,6 +739,46 @@ function update(dt) {
         }
     }
     updateHalos(dt);
+}
+
+// The tour HUD per frame: the hint times out; the edge arrow points to the
+// nearest object not collected yet while it is off screen or out of sight
+// (to the next corner of the way there when a wall is in between)
+const _c3 = new THREE.Vector3();
+function updateTour(dt) {
+    if (hintT >= 0 && (hintT += dt) > HINT_TIME) hideHint();
+    if (!arrowEl) return;
+    arrowT -= dt;
+    if (arrowT <= 0) { arrowT = ARROW_EVERY; arrowWay = nearestWay(); }
+    const st = arrowWay?.stop;
+    const h = st && halos.find(x => x.stop === st);
+    let show = !!h && selected !== st;
+    if (show) {
+        const sees = seeLine(pos.x, pos.y, h.room.x, h.room.z, h.end);
+        camera.updateMatrixWorld();
+        const ahead = _c3.copy(st.center).applyMatrix4(camera.matrixWorldInverse).z < 0;
+        _c3.copy(st.center).project(camera);
+        show = !(sees && ahead && Math.abs(_c3.x) < 0.95 && Math.abs(_c3.y) < 0.95);
+        if (show) {
+            // the target: the object, or the next corner of the way when a wall is in between
+            let tgt = st.center;
+            if (!sees) {
+                const sm = smooth([[pos.x, pos.y], ...arrowWay.raw.slice(1)]);
+                const c = sm[Math.min(1, sm.length - 1)];
+                tgt = roomToWorld(c[0], G.eye, c[1], _p);
+            }
+            const behind = _c3.copy(tgt).applyMatrix4(camera.matrixWorldInverse).z > 0;
+            _c3.copy(tgt).project(camera);
+            let x = behind ? -_c3.x : _c3.x, y = behind ? -_c3.y : _c3.y;
+            const L = Math.max(Math.abs(x), Math.abs(y), 1e-6);
+            if (behind || L > ARROW_INSET) { x = x / L * ARROW_INSET; y = y / L * ARROW_INSET; }
+            const ang = Math.atan2(-y * window.innerHeight, x * window.innerWidth);
+            arrowEl.style.left = `${(x + 1) / 2 * 100}%`;
+            arrowEl.style.top = `${(1 - y) / 2 * 100}%`;
+            arrowEl.style.transform = `translate(-50%, -50%) rotate(${ang}rad)`;
+        }
+    }
+    arrowEl.hidden = !show;
 }
 
 // ── Input (main.js) ────────────────────────────────────────────────
@@ -601,7 +797,7 @@ export function onTap(px, py) {
         const d = _p.distanceTo(ray.ray.origin);
         if (d < bestD && seeLine(pos.x, pos.y, h.room.x, h.room.z, h.end)) { best = st; bestD = d; }
     }
-    if (best) { select(best); return { ok: true, object: best.id }; }
+    if (best) { guide = null; slowTurn = false; hideHint(); select(best); return { ok: true, object: best.id }; }
     // floor plane, in room units
     const o = worldToRoom(_v.copy(ray.ray.origin)), o2 = worldToRoom(_p.copy(ray.ray.origin).add(ray.ray.direction));
     const dy = o2.y - o.y;
@@ -622,8 +818,10 @@ export function onDrag(dx, dy) {
 
 // The keys held down (lower case): WASD / arrows walk, Q/E and left/right turn
 export function setKeys(set) { keys = set; }
+// Enter (not on a link or button): "Next object" in the tour
+export function onEnter() { if (tour && mode === 'walk' && nextBtn && !nextBtn.hidden) next(); }
 
-registerWalker({ canWalk, enterWalk, exitWalk, update });
+registerWalker({ canWalk, enterWalk, exitWalk, leaveInPlace, update });
 
 // ── Dev (checks and screenshots): window.__walk ────────────────────
 window.__walk = {
@@ -638,6 +836,9 @@ window.__walk = {
         if (mode === 'walk') walkPose(camera.position, camera.quaternion);
     },
     walkTo(x, z) { return setPath(x, z); },
+    next,
+    get guide() { return guide?.id ?? null; },
+    cellInfo(x, z) { const ix = cx(x), iz = cz(z); return { free: free(ix, iz), clear: clearAt(ix, iz), CL_MIN, path: path?.map(p => p.map(v => +v.toFixed(3))) }; },
     // run the walker offline with a fixed dt (no frames needed)
     simulate(seconds, dt = 1 / 60) {
         let contacts = 0, maxYawRate = 0, maxAcc = 0, pv = vel.length(), py = look.yaw, t = 0;
@@ -647,7 +848,7 @@ window.__walk = {
             maxYawRate = Math.max(maxYawRate, Math.abs(wrap(look.yaw - py)) / dt / DEG); py = look.yaw;
             if (lastPush > 0) contacts++;
             const settled = Math.abs(wrap(look.yawT - look.yaw)) < 1e-3 && Math.abs(look.pitchT - look.pitch) < 1e-3;
-            if (mode === 'walk' && !path && v < 1e-4 && !keys.size && settled) break;
+            if (mode === 'walk' && !path && !guide && v < 1e-4 && !keys.size && settled) break;
         }
         return { arrived: !path, t, x: pos.x, z: pos.y, maxYawRate, maxAcc_ms2: maxAcc, contacts };
     },
