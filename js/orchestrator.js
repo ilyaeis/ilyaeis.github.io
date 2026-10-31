@@ -99,6 +99,9 @@ const COMET_CAPACITY = isMobile ? 600 : 1200;
 // Travel — stops are 30-50 units apart now, so the comet moves fast
 const TRAVEL_SPEED = 9.0;            // world units per second
 const TRAVEL_MIN = 5.0;              // seconds
+// Tunnel flights: every timing (pace, eases, arrival blend, warp) is scaled
+// by this, so the layout stays and the whole tunnel runs faster (0.5 = 2x)
+const TUNNEL_TIME_SCALE = 0.5;
 const TRAVEL_MAX = 8.0;
 const TRAVEL_LONG_SPEED = 14.0;      // u/s mean cap for very long hops (the landing -> first rock loop)
 const TRAVEL_POINTS_PER_FRAME = 30;  // comet substeps along the path
@@ -161,7 +164,7 @@ const VIEW_TAP_DELAY = {
 // Projects tunnel (tunnel.js). Flights inside it follow the centreline.
 const TUNNEL_DEPART = 8;             // s after a project stop where the departure joins the centreline
 const ARRIVE_BLEND = 0.3;            // share of the flight time over which the camera blends into the VIEW pose (time-based, so dt-free)
-const ARRIVE_TIME = 2.6;             // tunnel stops: blend over the last this many seconds
+const ARRIVE_TIME = 2.6 * TUNNEL_TIME_SCALE; // tunnel stops: blend over the last this many seconds
 const ARRIVE_MIN_DOT = 0.3;          // ... only if the arrival heading is this aligned with the stop's facing
 const FOLLOW_EASE = 0.3;             // path share over which the chase distance eases to the destination fit
 const JOIN_HEADING_MIX = 1.0;        // departure into the tunnel: share of the live heading in the first control arm
@@ -181,15 +184,15 @@ const FLYBY_SLOW_H = 14;             // s: half-width of that slow bump
 const FLYBY_SPIRAL_W = 3;            // the spiral leg is this much slower again in the middle
 const FLYBY_CAM_DIST = 4.6;          // chase distance while framing a fly-by (the camera offset is ~2% longer: stay under controls.maxDistance 5, or OrbitControls clamps and kinks the path)
 const FLYBY_GLOW = 0.9;              // extra comet intensity while it spirals round a fly-by
-const TUNNEL_EASE_TIME = 1.8;        // s to reach (and leave) the cruise pace in a tunnel flight
+const TUNNEL_EASE_TIME = 1.8 * TUNNEL_TIME_SCALE; // s to reach (and leave) the cruise pace in a tunnel flight
 const FLYBY_CAM_L = 20;              // s: half-width of the fly-by framing (C2 bump round the viz)
 const FLYBY_CAM_LAG = 2;             // s: the camera anchor hangs back this far behind the comet at the fly-by
 const FLYBY_CAM_LAG_AT = 2;          // ... most when the comet is this far past the viz
 // Tunnel pacing: flights rush through the fast zones (tunnel.js) and slow
 // down for fly-bys and stops. Speed x TUNNEL_FAST at a zone's middle.
 const TUNNEL_FAST = 2.4;
-const TUNNEL_SPEED = 15.5;           // cruise pace, weighted units/s (sets the flight time)
-const TUNNEL_TRAVEL_MAX = 18;        // s
+const TUNNEL_SPEED = 15.5 / TUNNEL_TIME_SCALE; // cruise pace, weighted units/s (sets the flight time)
+const TUNNEL_TRAVEL_MAX = 18 * TUNNEL_TIME_SCALE; // s
 const RUSH_STREAKS = 0.35;           // star streaks at full rush (warp = 1)
 const RUSH_RINGS = 0.5;              // ring pulse speed-up at full rush
 const RUSH_FOV = 5;                  // degrees of extra FOV at full rush
@@ -199,12 +202,12 @@ const RUSH_FOV = 5;                  // degrees of extra FOV at full rush
 // comet dives through the throat; the walls narrow into the tunnel.
 // Warp out is the reverse: the end flares open behind the comet and the
 // outside world fades back in. All cross-fades, no cuts.
-const WARP_RISE = 0.9;               // s: streaks / FOV / bloom rise before the jump (throat)
-const WARP_FALL = 1.4;               // s: ... and settle after it
+const WARP_RISE = 0.9 * TUNNEL_TIME_SCALE; // s: streaks / FOV / bloom rise before the jump (throat)
+const WARP_FALL = 1.4 * TUNNEL_TIME_SCALE; // s: ... and settle after it
 const WARP_FOV = 12;                 // extra degrees of FOV at the peak (gentle)
 const WARP_COMET = 1.2;              // extra comet intensity at the peak
-const WARP_FADE_PRE = 2.2;           // s: the worlds cross-fade from this long before the jump
-const WARP_FADE_POST = 0.4;          // ... to this long after it (reversed on the way out)
+const WARP_FADE_PRE = 2.2 * TUNNEL_TIME_SCALE; // s: the worlds cross-fade from this long before the jump
+const WARP_FADE_POST = 0.4 * TUNNEL_TIME_SCALE; // ... to this long after it (reversed on the way out)
 
 // Rocket → comet morph duration (3D rocket — see intro3d.js)
 const ROCKET_MORPH_DURATION = intro.CHARGE_DURATION;
