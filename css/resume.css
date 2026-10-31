@@ -301,83 +301,111 @@ li::before {
     background: var(--faint);
 }
 
-/* ---------- projects ---------- */
-
-.projects { margin-top: 0; }
-
-.projects li {
-    margin-top: 0.85rem;
-    padding-left: 0;
-}
-
-.projects li::before { display: none; }
-
-.projects .name {
-    font-weight: 600;
-    color: var(--fg-strong);
-}
-
-.projects .name a {
-    color: inherit;
-    text-decoration-color: var(--rule-strong);
-}
-
-.projects .name a:hover,
-.projects .name a:focus-visible {
-    text-decoration-color: var(--accent);
-}
-
-.projects .meta {
-    font-size: 0.88rem;
-}
-
-.projects .desc { color: var(--fg); }
-
 /* ---------- details ---------- */
 
-details.more { margin-top: 0.35rem; }
+/* .group: a "More about ..." toggle that holds several items.
+   .item: one headline (the summary) with its explanation (.why) below. */
 
-details.more > summary {
+details.group { margin-top: 0.35rem; }
+
+details.group > summary,
+details.item > summary {
     cursor: pointer;
     list-style: none;
-    display: inline-flex;
-    align-items: center;
+    display: flex;
+    align-items: baseline;
     gap: 0.55rem;
     min-height: 2.75rem;
-    color: var(--muted);
-    font-size: 0.88rem;
+    padding: 0.5rem 0;
     user-select: none;
     transition: color 0.15s ease;
 }
 
-details.more > summary::-webkit-details-marker { display: none; }
+details.group > summary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    color: var(--muted);
+    font-size: 0.88rem;
+}
 
-details.more > summary::before {
+details.item > summary {
+    color: var(--fg-strong);
+    font-weight: 500;
+}
+
+details.group > summary::-webkit-details-marker,
+details.item > summary::-webkit-details-marker { display: none; }
+
+details.group > summary::before,
+details.item > summary::before {
     content: '';
+    flex: 0 0 auto;
     width: 0.4rem;
     height: 0.4rem;
-    border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
+    border-right: 1.5px solid var(--muted);
+    border-bottom: 1.5px solid var(--muted);
     transform: translateY(-0.1em) rotate(-45deg);
     transition: transform 0.2s ease;
 }
 
-details.more[open] > summary::before {
+details.group > summary::before { border-color: currentColor; }
+
+details.group[open] > summary::before,
+details.item[open] > summary::before {
     transform: translateY(-0.15em) rotate(45deg);
 }
 
-details.more > summary:hover,
-details.more[open] > summary {
+details.group > summary:hover,
+details.group[open] > summary { color: var(--fg); }
+
+details.item > summary:hover::before,
+details.item[open] > summary::before { border-color: var(--accent); }
+
+details.group > summary:focus-visible,
+details.item > summary:focus-visible { outline-offset: 0; }
+
+.items { margin-top: 0.4rem; }
+.items > * + * { border-top: 1px solid var(--rule); }
+.entry > .items:first-of-type { margin-top: 0.6rem; }
+
+.why {
+    padding: 0 0 0.9rem 0.95rem;
+    font-size: 0.95rem;
     color: var(--fg);
 }
 
-details.more > summary:focus-visible {
-    outline-offset: 0;
+.why p + p { margin-top: 0.5rem; }
+.why .meta { font-size: 0.88rem; }
+.why a { white-space: nowrap; }
+
+/* Headline with a public link: the link sits beside the summary, not inside it. */
+.item-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0 1rem;
+    align-items: start;
 }
 
-details.more > ul { margin-top: 0; }
-details.more > .note:first-of-type { margin-top: 0; }
-details.more > .projects li:first-child { margin-top: 0.25rem; }
+.post {
+    margin-top: 0.5rem;
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: flex-start;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    white-space: nowrap;
+    color: var(--accent);
+    text-decoration-color: var(--accent);
+}
+
+@media (max-width: 30rem) {
+    .item-row { grid-template-columns: 1fr; }
+    .post { margin: 0 0 0.7rem 0.95rem; min-height: 0; }
+}
+
+details.group > .items { margin-top: 0; }
+details.group > .note:first-of-type { margin-top: 0; }
 
 /* ---------- skills ---------- */
 
@@ -468,7 +496,7 @@ dl.skills dd { color: var(--fg); }
     .topbar,
     .screen,
     .pdf-alt,
-    details.more > summary {
+    details.group > summary {
         display: none;
     }
 
@@ -547,10 +575,28 @@ dl.skills dd { color: var(--fg); }
     li::before { background: var(--faint); top: 0.62em; width: 4pt; }
 
     .note { font-size: 9pt; color: var(--muted); margin-top: 3pt; }
-    details.more { margin-top: 0; }
+    details.group { margin-top: 0; }
 
-    .projects li { margin-top: 7pt; }
-    .projects .meta { font-size: 9pt; color: var(--muted); }
+    /* Each item: bold headline, smaller explanation on the next line.
+       .print-brief groups print headlines only, to keep two pages. */
+    .items { margin-top: 3pt; }
+    .items > * + * { border-top: 0; }
+    .item-row { display: block; }
+    details.item { margin-top: 3.5pt; break-inside: avoid; }
+    details.item > summary {
+        display: block;
+        min-height: 0;
+        padding: 0;
+        font-size: 10.5pt;
+        font-weight: 600;
+        color: var(--fg-strong);
+    }
+    details.item > summary::before { display: none; }
+    .item > summary .print { font-weight: 400; font-size: 9pt; color: var(--muted); }
+    .why { padding: 0; margin-top: 1pt; font-size: 9pt; line-height: 1.38; color: var(--muted); }
+    .why .meta { font-size: 9pt; }
+    .print-brief .why { display: none; }
+
 
     dl.skills div {
         grid-template-columns: 24mm 1fr;
