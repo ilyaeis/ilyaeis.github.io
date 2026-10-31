@@ -71,8 +71,20 @@ let indoorDoorsEnd = -1;   // indoor: path share where the last doorway leg ends
 const _railPos = new THREE.Vector3(), _railLook = new THREE.Vector3();
 let railIn = 3;            // s: this flight's ease onto the rail (RAIL_IN)
 const railStartPos = new THREE.Vector3(), railStartLook = new THREE.Vector3(); // the camera pose at the departure
-const _railQ = new THREE.Quaternion(), _railQs = new THREE.Quaternion(), _qIdentity = new THREE.Quaternion();
-const railDir = new THREE.Vector3(), railDirVel = new THREE.Vector3();
+// Rail view heading: yaw (unwrapped) and pitch springs with a speed cap. They
+// start at the departure view and turn towards the path ahead, so the view
+// never turns faster than RAIL_TURN_MAX, even where the path loops.
+const railYaw = { x: 0, v: 0 }, railPitch = { x: 0, v: 0 };
+const railPosF = new THREE.Vector3(), railPosV = new THREE.Vector3();
+let railFresh = true;
+// Yaw of a direction (about +Y) and a yaw / pitch blend of two directions
+function yawOf(v) { return Math.atan2(v.x, v.z); }
+function pitchOf(v) { return Math.atan2(v.y, Math.hypot(v.x, v.z)); }
+function blendDir(a, b, w, dYaw, out) {
+    const yaw = yawOf(a) + dYaw * w;
+    const pitch = THREE.MathUtils.lerp(pitchOf(a), pitchOf(b), w);
+    return out.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+}
 const _rpA = new THREE.Vector3();
 // Path point at share g averaged over ±halfW (triangle weights). Before the
 // start and past the end the path goes on straight along its end tangents,
@@ -214,7 +226,9 @@ const RAIL_UP = 0.07;                // ... above the path
 const RAIL_WINDOW = 0.2;             // room units: the rail path is averaged over ± this (twice that for the look point)
 const INDOOR_AFTER_RAIL = 1.2;       // s: an indoor flight lasts at least this long after the rail took over
 const RAIL_MAX_PITCH = THREE.MathUtils.degToRad(20); // the rail view looks at most this far up or down
-const RAIL_TURN_TIME = 0.6;          // s: smooth time of the rail view direction
+const RAIL_TURN_TIME = 0.8;          // s: smooth time of the rail view heading (yaw, pitch)
+const RAIL_TURN_MAX = THREE.MathUtils.degToRad(60); // rad/s: its speed cap
+const RAIL_FILTER = 0.06;            // s: smooth time of the final rail pose (filters arc-table kinks)
 // s: the camera eases from the departure pose onto the rail; slower for a
 // bigger turn (RAIL_IN_RATE degrees per second of it), so the view never whips
 const RAIL_IN = [2.4, 4.6];
@@ -1101,38 +1115,48 @@ function updateTravel(dt) {
         railPathPoint(t - RAIL_BACK * s / L, RAIL_WINDOW * s / L, _railPos);
         _railPos.y += RAIL_UP * s;
         railPathPoint(t + RAIL_AHEAD * s / L, 2 * RAIL_WINDOW * s / L, _railLook);
-        // the rail direction on a spring: it turns smoothly even where the path bends hard
+        // the rail heading on springs: it turns smoothly even where the path bends hard
         const d1 = _vB.subVectors(_railLook, _railPos);
         const len1 = d1.length();
         // a calm pitch: the climb over an object or a dip does not tip the view
         const hl = Math.hypot(d1.x, d1.z), maxY = Math.tan(RAIL_MAX_PITCH) * hl;
         d1.y = THREE.MathUtils.clamp(d1.y, -maxY, maxY);
-        if (phaseFirstFrame) { railDir.copy(d1).normalize(); railDirVel.set(0, 0, 0); phaseFirstFrame = false; }
-        cam.smoothDampVec(railDir, d1.normalize(), railDirVel, RAIL_TURN_TIME, dt);
-        railDir.normalize();
+        if (phaseFirstFrame) {
+            phaseFirstFrame = false;
+            _vA.subVectors(railStartLook, railStartPos);
+            railYaw.x = yawOf(_vA); railPitch.x = pitchOf(_vA); railYaw.v = railPitch.v = 0;
+            railFresh = true;
+        }
+        if (hl > 1e-6) {
+            const dYaw = Math.atan2(Math.sin(yawOf(d1) - railYaw.x), Math.cos(yawOf(d1) - railYaw.x)); // shortest way round
+            cam.smoothDampScalar(railYaw, railYaw.x + dYaw, RAIL_TURN_TIME, dt, RAIL_TURN_MAX);
+        }
+        cam.smoothDampScalar(railPitch, pitchOf(d1), RAIL_TURN_TIME, dt, RAIL_TURN_MAX);
         // From the departure pose onto the rail (the rail owns the camera for the
-        // whole flight): the position eases along a line, the view direction
-        // turns along the shortest arc (a lerp of the two look points could pass
-        // under the camera and spin the view)
+        // whole flight): the position eases along a line; the view heading is
+        // the springs above, which start at the departure view
         const a = THREE.MathUtils.smootherstep(phaseTime + dt, 0, railIn);
         const d0 = _vA.subVectors(railStartLook, railStartPos);
-        d1.copy(railDir);
         const len = THREE.MathUtils.lerp(d0.length(), len1, a);
-        _railQ.setFromUnitVectors(d0.normalize(), d1);
-        d0.applyQuaternion(_railQs.slerpQuaternions(_qIdentity, _railQ, a));
+        d0.set(Math.sin(railYaw.x) * Math.cos(railPitch.x), Math.sin(railPitch.x), Math.cos(railYaw.x) * Math.cos(railPitch.x));
         _railPos.lerpVectors(railStartPos, _railPos, a);
         // ... and onto the VIEW pose at the end, the same way (the arrival lerp of camera.js is off)
         const w = arriveBlend ? THREE.MathUtils.smootherstep(x, 1 - ARRIVE_BLEND, 1) : 0;
+        let lenF = len;
         if (w > 0) {
             const d2 = _vC.subVectors(dest.center, arrivePos);
-            const len2 = THREE.MathUtils.lerp(len, d2.length(), w);
-            _railQ.setFromUnitVectors(d0, d2.normalize());
-            d0.applyQuaternion(_railQs.slerpQuaternions(_qIdentity, _railQ, w));
+            lenF = THREE.MathUtils.lerp(len, d2.length(), w);
+            let dy2 = yawOf(d2) - yawOf(d0);
+            dy2 -= 2 * Math.PI * Math.round(dy2 / (2 * Math.PI));
+            blendDir(d0, d2, w, dy2, d0);
             _railPos.lerp(arrivePos, w);
-            cam.setRail(_railPos, _railLook.copy(_railPos).addScaledVector(d0, len2), 1);
-        } else {
-            cam.setRail(_railPos, _railLook.copy(_railPos).addScaledVector(d0, len), 1);
         }
+        // a light spring filter on the position: the arc-length table is
+        // piecewise linear, and the path average above would pass its tiny
+        // kinks on as jerk at high frame rates (the view heading is already smooth)
+        if (railFresh) { railFresh = false; railPosF.copy(_railPos); railPosV.set(0, 0, 0); }
+        cam.smoothDampVec(railPosF, _railPos, railPosV, RAIL_FILTER, dt);
+        cam.setRail(railPosF, _railLook.copy(railPosF).addScaledVector(d0, lenF), 1);
         cam.setArrival(null, null, 0);
     }
     // Fly-by: the camera frames the viz, looking down the tunnel. Its
