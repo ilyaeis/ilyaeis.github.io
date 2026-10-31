@@ -18,6 +18,8 @@ Riga · 2025 – present. Giraffe360 makes cameras and software for real-estate 
   This was a long-standing quality problem. I found the root cause (wrong depth behind windows and walls), handled depth differently inside and outside the room, and added a training-time correction. 700+ controlled experiments back it. It runs in production and was publicly showcased by Giraffe360.
 - **Shipped the looped drone video, from idea to production.** [Giraffe360 post](https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)
   I proposed the feature, agreed its look with the designers, developed the camera-path algorithm and shipped it to production. A customer-requested feature, launched by Giraffe360 in Oct 2026.
+- **Led the team that built outdoor splats and orbital videos.**
+  Led the team that built exterior (outdoor) splats and the orbital outdoor videos, now in production.
 - **Research to production: influence accumulation, plus Analytic-Splatting in gsplat.**
   Influence accumulation measures each Gaussian’s contribution to the image and relocates the least useful ones during training; it is in production. Analytic-Splatting (exact per-pixel Gaussian integration) is implemented in gsplat at CUDA level. It reduces aliasing and is used in a downsampling algorithm.
 - **Built tools to measure 3DGS quality against known ground truth.**
@@ -25,8 +27,6 @@ Riga · 2025 – present. Giraffe360 makes cameras and software for real-estate 
 
 More about this role:
 
-- **Led a small team building outdoor splats and orbital videos.**
-  Led a small team that built exterior (outdoor) splats and orbital outdoor videos, now in production.
 - **Mentored a junior engineer on a new depth algorithm.**
   The junior engineer built a new depth algorithm with me (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. Now the best method; the team uses it.
 - **Led the pipeline restructuring and created a 3DGS monorepo.**
