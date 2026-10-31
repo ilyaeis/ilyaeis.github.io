@@ -175,13 +175,13 @@ const PROJECT_LOOP_PAD = 0.28;       // loop runs this far outside the frame
 // Fly-bys: the comet leaves the centreline, slows down and spirals round
 // the viz (a helix leg round the tunnel axis), then rejoins it. The camera
 // frames the viz meanwhile (focus + tunnel heading), then turns back.
-const FLYBY_SPAN = 4;                // s: the helix runs over fly-by s +- this
+const FLYBY_SPAN = 5;                // s: the helix runs over fly-by s +- this
 const FLYBY_TURNS = 1.5;             // turns over the helix leg
 const FLYBY_PAD = 0.35;              // helix radius = viz half-diagonal + this
-const FLYBY_RAMP = 0.35;             // share of the helix leg where the radius grows (and shrinks at the end)
+const FLYBY_RAMP = 0.45;             // share of the helix leg where the radius grows (and shrinks at the end)
 const FLYBY_SLOW = 1.6;              // path weight 1 + this at the fly-by: the comet is ~3.5x slower mid-spiral
 const FLYBY_SLOW_H = 14;             // s: half-width of that slow bump
-const FLYBY_SPIRAL_W = 3;            // the spiral leg is this much slower again in the middle
+const FLYBY_SPIRAL_W = 5.5;           // the spiral leg is this much slower again in the middle
 const FLYBY_CAM_DIST = 4.6;          // chase distance while framing a fly-by (the camera offset is ~2% longer: stay under controls.maxDistance 5, or OrbitControls clamps and kinks the path)
 const FLYBY_GLOW = 0.9;              // extra comet intensity while it spirals round a fly-by
 const TUNNEL_EASE_TIME = 1.8 * TUNNEL_TIME_SCALE; // s to reach (and leave) the cruise pace in a tunnel flight
@@ -192,7 +192,7 @@ const FLYBY_CAM_LAG_AT = 2;          // ... most when the comet is this far past
 // down for fly-bys and stops. Speed x TUNNEL_FAST at a zone's middle.
 const TUNNEL_FAST = 2.4;
 const TUNNEL_SPEED = 15.5 / TUNNEL_TIME_SCALE; // cruise pace, weighted units/s (sets the flight time)
-const TUNNEL_TRAVEL_MAX = 18 * TUNNEL_TIME_SCALE; // s
+const TUNNEL_TRAVEL_MAX = 22 * TUNNEL_TIME_SCALE; // s
 const RUSH_STREAKS = 0.35;           // star streaks at full rush (warp = 1)
 const RUSH_RINGS = 0.5;              // ring pulse speed-up at full rush
 const RUSH_FOV = 5;                  // degrees of extra FOV at full rush
