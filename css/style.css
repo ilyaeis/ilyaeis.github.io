@@ -405,6 +405,10 @@ body.panel-open .tap-prompt {
     .room-credit { left: 0; right: 0; max-width: none; text-align: center; font-size: 0.68rem; bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
     .tap-prompt { bottom: calc(3.4rem + env(safe-area-inset-bottom)); }
 }
+/* Side layout: the credit sits at the bottom left, under the stop: the prompt goes above it */
+@media (min-width: 700px) and (orientation: landscape) {
+    body:has(.room-credit:not([hidden])) .tap-prompt { bottom: calc(3.6rem + env(safe-area-inset-bottom)); }
+}
 /* Bottom panel layout (not the side query): the credit would cover the panel text */
 @media (max-width: 699px), (orientation: portrait) {
     body.panel-open .room-credit { display: none; }
@@ -450,12 +454,25 @@ body.panel-open .tap-prompt {
     text-shadow: 0 0 8px #000, 0 0 2px #000;
     pointer-events: none;
 }
-/* Narrow screens: below the nav row */
-@media (max-width: 699px) {
-    .room-tools { top: calc(3.2rem + env(safe-area-inset-top)); }
+/* Depth lens legend: near .. far in metres */
+.room-tools-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.3rem;
+    padding-left: 0.3rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    color: #bbb;
+    text-shadow: 0 0 8px #000, 0 0 2px #000;
+    pointer-events: none;
 }
-/* the journey waits while a tool is on */
-body[data-input="tool"] .tap-prompt { visibility: hidden; }
+.room-tools-legend[hidden] { display: none; }
+.room-tools-legend i { display: block; width: 7rem; height: 0.45rem; border-radius: 0.25rem; }
+/* Narrow screens: below the walk HUD (nav row, then the back button) */
+@media (max-width: 699px) {
+    .room-tools { top: calc(6.4rem + env(safe-area-inset-top)); }
+}
 
 .room-tools-label {
     position: fixed;

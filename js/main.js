@@ -80,14 +80,16 @@ import * as walk from './walk.js';
 
     document.body.addEventListener('pointerdown', (e) => {
         const owner = inputOwner();
-        if (e.target.closest(OVERLAYS) || owner === 'portal' || owner === 'tool') return;
-        if (owner === 'walk' && pointerDownPos) return;   // walk mode: one finger looks, a second one is ignored
+        if (e.target.closest(OVERLAYS) || owner === 'portal') return;
+        // walk mode (a tool too: it lives there): one finger looks, a second one is ignored
+        if (owner !== 'journey' && pointerDownPos) return;
         pointerDownPos = { id: e.pointerId, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, drag: false };
     });
 
-    // Walk mode (walk.js): a drag looks around, a tap walks or picks an object
+    // Walk mode (walk.js): a drag looks around (also while measuring), a tap walks or picks an object
     document.body.addEventListener('pointermove', (e) => {
-        if (!pointerDownPos || pointerDownPos.id !== e.pointerId || inputOwner() !== 'walk') return;
+        const owner = inputOwner();
+        if (!pointerDownPos || pointerDownPos.id !== e.pointerId || (owner !== 'walk' && owner !== 'tool')) return;
         const p = pointerDownPos;
         if (!p.drag && Math.hypot(e.clientX - p.x, e.clientY - p.y) >= TAP_THRESHOLD) p.drag = true;
         if (p.drag) walk.onDrag(e.clientX - p.lx, e.clientY - p.ly);
@@ -126,7 +128,7 @@ import * as walk from './walk.js';
     document.addEventListener('keydown', (e) => {
         const owner = inputOwner();
         if (owner === 'portal' || e.target.closest?.('.dimension')) return;
-        if (owner === 'walk') {
+        if (owner === 'walk' || owner === 'tool') {
             const k = e.key.toLowerCase();
             if (WALK_KEYS.includes(k) && !e.target.closest('input,textarea') && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();

@@ -1,23 +1,27 @@
 // Depth lens + measure tool for the apartment splat. Self-initialising.
-// A small toolbar (.room-tools) shows at the apartment stops (universe
-// 'rnd') and the landing. Depth: a cone round the pointer ray (phones: the
-// view centre) recolours the splats by their distance to the camera (a
-// Spark worldModifier, attached on first use). Measure: two clicks on the
-// splat (raycast on click only) give a line, two dots and "≈ x.xx m".
-// While a tool is on, input.js gives it the taps (main.js does not advance
-// the journey); Esc turns the tools off.
+// A small toolbar (.room-tools) shows in walk mode only ('journey:explore'
+// enter .. leave): the stop panel offers one action, "Explore the flat".
+// Depth: a cone round the pointer ray (phones: the view centre) recolours
+// the splats by their distance to the camera (a Spark worldModifier,
+// attached on first use): a perceptual ramp, bright near to dark far, on a
+// log scale, with a legend. Measure: two clicks on the splat (raycast on
+// click only) give a line, two dots and "≈ x.xx m". While measuring,
+// input.js gives the taps to this tool (a drag still looks round, the depth
+// lens leaves the taps to walking); Esc turns the tools off.
 
 import * as THREE from 'three';
 import { scene, camera, isMobile } from './attractors.js';
-import { StopType } from './world.js';
-import { apartment, M_PER_UNIT, roomMesh, objectMeshes, ROOM_BRIGHTNESS } from './room.js';
+import { apartment, M_PER_UNIT, roomMesh, objectMeshes } from './room.js';
 import { setToolOn } from './input.js';
 
 // ── Tuning ─────────────────────────────────────────────────────────
 const LENS_TAN = 0.18;               // cone half-angle tangent
-const LENS_NEAR_M = 0.3;             // ramp start (warm), metres from the camera
-const LENS_FAR_M = 3;                // ramp end (blue), metres (the stops view things 0.5-4 m away)
-const RAMP = [[1.0, 0.86, 0.35], [0.95, 0.22, 0.55], [0.12, 0.3, 1.0]];   // near, mid, far
+const LENS_NEAR_M = 0.5;             // ramp start (bright), metres from the camera
+const LENS_FAR_M = 6;                // ramp end (dark), metres (walk mode: the rooms are 1-6 m deep)
+// Near -> far: part of "inferno" (perceptual, lightness falls steadily), so
+// the ramp reads as depth. Log scale: equal steps per ratio of distance.
+const RAMP = [[0.98, 0.87, 0.35], [0.98, 0.56, 0.04], [0.80, 0.26, 0.28], [0.53, 0.13, 0.42], [0.26, 0.04, 0.41]];
+const LENS_GAIN = 0.75;              // the room is dimmed (room.js); this keeps the ramp clear and under the bloom threshold
 const MIN_RAYCAST_OPACITY = 0.3;     // ignore faint floaters
 const DOT_SIZE = 0.008;              // measure dot radius per unit of camera distance (about the same size on screen)
 const MEASURE_COLOR = 0xffd36b;
@@ -31,6 +35,16 @@ const bMark = bar.querySelector('.room-tools-mark');
 const hint = bar.querySelector('.room-tools-hint');
 const cross = document.querySelector('.room-tools-cross');
 const HINT_IDLE = 'Try the depth lens';
+
+// Legend under the buttons while the lens is on: the ramp, near .. far in metres
+const legend = document.createElement('div');
+legend.className = 'room-tools-legend';
+legend.hidden = true;
+const legendRamp = document.createElement('i');
+legendRamp.style.background = 'linear-gradient(90deg, ' +
+    RAMP.map(c => 'rgb(' + c.map(v => Math.round(v * 255)).join(',') + ')').join(', ') + ')';
+legend.append('near ' + LENS_NEAR_M + ' m', legendRamp, LENS_FAR_M + ' m far');
+hint.after(legend);
 
 let depthOn = false, measureOn = false, ready = false, shown = false;
 let lens = null;                     // { uOn, uCam, uRayO, uRayD, uNear, uFar } once built
@@ -48,7 +62,7 @@ const worldToMetres = (w) => w / apartment.scale * M_PER_UNIT;
 async function buildLens() {
     const { dyno } = await import('@sparkjsdev/spark');
     const { dynoBlock, splitGsplat, combineGsplat, dynoFloat, dynoVec3, dynoConst,
-            sub, mul, div, dot, length, distance, clamp, mix, smoothstep, step, max } = dyno;
+            sub, mul, div, dot, length, distance, clamp, mix, smoothstep, step, max, log } = dyno;
     const u = {
         uOn: dynoFloat(0),
         uCam: dynoVec3(new THREE.Vector3()),
@@ -57,15 +71,18 @@ async function buildLens() {
         uNear: dynoFloat(metresToWorld(LENS_NEAR_M)),
         uFar: dynoFloat(metresToWorld(LENS_FAR_M))
     };
-    // The modifier runs after recolor: dim the ramp like the room
-    const [C0, C1, C2] = RAMP.map(c => dynoConst('vec3', new THREE.Vector3(...c).multiplyScalar(ROOM_BRIGHTNESS)));
-    const F0 = dynoConst('float', 0), F1 = dynoConst('float', 1), F2 = dynoConst('float', 2);
+    // The modifier runs after recolor (the room's dimming): set the ramp's own level
+    const C = RAMP.map(c => dynoConst('vec3', new THREE.Vector3(...c).multiplyScalar(LENS_GAIN)));
+    const F0 = dynoConst('float', 0), F1 = dynoConst('float', 1), FN = dynoConst('float', RAMP.length - 1);
     const FE = dynoConst('float', 0.8), TAN = dynoConst('float', LENS_TAN);
     const block = dynoBlock({ gsplat: dyno.Gsplat }, { gsplat: dyno.Gsplat }, ({ gsplat }) => {
         const { center, rgb } = splitGsplat(gsplat).outputs;
-        // linear ramp of the distance to the camera (world units)
-        const d01 = clamp(div(sub(distance(center, u.uCam), u.uNear), sub(u.uFar, u.uNear)), F0, F1);
-        const ramp = mix(mix(C0, C1, clamp(mul(d01, F2), F0, F1)), C2, clamp(sub(mul(d01, F2), F1), F0, F1));
+        // log ramp of the distance to the camera: 0 at uNear, 1 at uFar
+        const d01 = clamp(div(log(div(max(distance(center, u.uCam), u.uNear), u.uNear)), log(div(u.uFar, u.uNear))), F0, F1);
+        // piecewise linear through the RAMP stops
+        let ramp = C[0];
+        const x = mul(d01, FN);
+        for (let i = 1; i < C.length; i++) ramp = mix(ramp, C[i], clamp(sub(x, dynoConst('float', i - 1)), F0, F1));
         // cone round the ray, soft edge
         const vv = sub(center, u.uRayO);
         const t = dot(vv, u.uRayD);
@@ -156,7 +173,8 @@ function placeLabel() {
 // ── State ──────────────────────────────────────────────────────────
 function refresh() {
     const active = depthOn || measureOn;
-    setToolOn(active);
+    setToolOn(measureOn);   // the depth lens is passive: taps still walk
+    legend.hidden = !depthOn;
     bDepth.setAttribute('aria-pressed', depthOn);
     bMeasure.setAttribute('aria-pressed', measureOn);
     bDepth.disabled = bMeasure.disabled = !ready;
@@ -164,7 +182,7 @@ function refresh() {
     cross.hidden = !(touch && active);
     if (!measureOn) clearMeasure();
     if (measureOn && pts.length === 0) hint.textContent = touch ? 'Aim at a point, then Mark' : 'Click two points';
-    else if (!measureOn) hint.textContent = depthOn ? 'Warm is near, blue is far' : HINT_IDLE;
+    else if (!measureOn) hint.textContent = depthOn ? 'Distance from your eye' : HINT_IDLE;
 }
 
 async function setDepth(on) {
@@ -222,21 +240,12 @@ document.body.addEventListener('pointerup', (e) => {
     down = null;
 });
 
-window.addEventListener('journey:stop', (e) => {
-    const { phase, universe, type } = e.detail;
-    if (universe !== 'rnd' && type !== StopType.LANDING) return;
-    shown = phase === 'enter';
+// The toolbar lives in walk mode (explore.js): shown on enter, tools off and hidden on leave
+window.addEventListener('journey:explore', (e) => {
+    shown = e.detail?.phase === 'enter';
     bar.hidden = !shown;
     if (shown) probe();
     else allOff();
-});
-
-// Walk mode (walk.js) owns the camera and the taps: tools off, toolbar hidden
-// until the next 'journey:stop' enter (back in VIEW)
-window.addEventListener('journey:explore', () => {
-    shown = false;
-    bar.hidden = true;
-    allOff();
 });
 
 requestAnimationFrame(tick);

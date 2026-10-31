@@ -3,9 +3,10 @@
 //   'journey'  taps advance the journey and hit the 3D links and the portal rim
 //   'portal'   a project app opens, is open or closes: no pointer or key input
 //   'walk'     walk mode (walk.js): a drag looks, a tap walks or picks, WASD walks
-//   'tool'     a room tool (depthTool.js) takes the taps
+//   'tool'     the measure tool (depthTool.js, in walk mode) takes the taps;
+//              a drag still looks round, WASD still walks
 // The orchestrator sets the owner of its phase; depthTool.js says when a
-// tool is on. A tool wins over the journey and walk mode, not over a portal.
+// tool is on. A tool wins over walk mode, not over a portal.
 
 let phaseOwner = 'journey';
 let toolOn = false;

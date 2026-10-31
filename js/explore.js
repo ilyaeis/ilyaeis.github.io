@@ -16,6 +16,9 @@ let walker = null;     // walk.js: { canWalk, enterWalk, exitWalk, update }
 export function init(journey) { J = journey; }
 export function registerWalker(w) { walker = w; }
 
+// 'journey:explore' { phase: 'enter' | 'leave' }: the room tools live in walk mode
+function emitExplore(phase) { window.dispatchEvent(new CustomEvent('journey:explore', { detail: { phase } })); }
+
 const viewPos = (stop) => stop.center.clone().addScaledVector(stop.normal, -J.fitFor(stop));
 
 export function enterExplore(immediate = false) {
@@ -28,7 +31,7 @@ export function enterExplore(immediate = false) {
     cam.setScreenShift(false, true);
     if (camera.view?.enabled) camera.clearViewOffset();
     J.enterPhase(J.Phase.EXPLORE);
-    window.dispatchEvent(new CustomEvent('journey:explore'));   // depthTool.js turns its tools off
+    emitExplore('enter');   // depthTool.js shows its toolbar
     walker.enterWalk({ immediate });
     return true;
 }
@@ -40,6 +43,7 @@ export function exitExplore() {
 }
 
 function endExplore() {
+    emitExplore('leave');
     const stop = J.stop;
     J.trail.line.visible = true;
     setHaloFocus(stop);
@@ -52,6 +56,7 @@ function endExplore() {
 // A jump or a flight while walking (agent API): leave at once
 export function leaveNow() {
     if (!J || J.phase !== J.Phase.EXPLORE) return;
+    emitExplore('leave');
     const stop = J.stop;
     walker.exitWalk(viewPos(stop), stop.center, J.baseFov, null, true);
     walker.update(0);
