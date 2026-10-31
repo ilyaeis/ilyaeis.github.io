@@ -132,13 +132,13 @@ const MILESTONES = [
     }},
     // Giraffe360 R&D (universe 'rnd'): one splat object per area (objects.js), in route order
     { label: 'SPLATTING', panel: {
-        title: '3DGS reconstruction pipeline',
-        subtitle: 'Sparse panorama views · Python · PyTorch · CUDA',
+        title: '3DGS reconstruction from sparse panorama views',
+        subtitle: 'Our custom pipeline · in production June 2026 · PyTorch · CUDA',
         items: [
-            { text: 'Influence accumulation: my densification method, shipped Jan 2026, still the team’s best.' },
-            { text: 'Analytic-Splatting in gsplat at CUDA level (June 2026).' }
+            { text: 'Built the pipeline; splat quality rose a lot over the year.' },
+            { text: 'Replaced the first densification with my influence-accumulation method.' }
         ],
-        more: { href: 'resume.html#influence-accumulation', label: 'details in the resume' }
+        more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post: the result' }
     }},
     { label: 'WINDOWS', panel: {
         title: 'Windows, outdoor views and mirrors',
@@ -340,7 +340,7 @@ const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 // flies on without a tap (orchestrator).
 const ROUTE = [
     { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 10, object: 'cherry', paletteIdx: 3,
-      summary: '3DGS reconstruction from sparse panorama views; influence accumulation, Analytic-Splatting, the pipeline restructuring.' },
+      summary: 'Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification, Analytic-Splatting, the pipeline restructuring.' },
     { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 11, object: 'vase', paletteIdx: 3,
       summary: 'Solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.' },
     { id: 'benchmarking',    universe: 'rnd', type: StopType.OBJECT, milestone: 12, object: 'gpu', paletteIdx: 3,

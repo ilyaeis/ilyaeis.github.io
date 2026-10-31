@@ -14,14 +14,16 @@ I work on 3D reconstruction and computer vision: Gaussian splatting pipelines, b
 
 Riga · 2025 – present. Giraffe360 makes cameras and software for real-estate virtual tours.
 
+- **Built our custom 3DGS pipeline from sparse panoramas.** [Giraffe360 post](https://www.instagram.com/p/DZsNRB8o772/)
+  I built it and led the research from early 2026. I replaced the first densification with my influence-accumulation method. When the team moved to a different method, I ported it and kept improving quality, up a lot this year.
 - **Solved blurry windows and mirrors in sparse-panorama 3DGS.** [Giraffe360 post](https://www.instagram.com/p/DZsNRB8o772/)
   Fixed blurry windows, outdoor views and mirrors; in production since June 2026. This was the main long-standing quality problem, and I found its root cause myself. I ran 140+ controlled training runs first, then a month-long campaign of 600+ experiments to cut haze, floaters and flicker. The winning setup shipped as the default on June 1, 2026, and Giraffe360 showcased it publicly.
 - **Shipped the looped drone video, from idea to production.** [Giraffe360 post](https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)
   I proposed it, restructured the video pipeline so it is easy to extend, then built the loop on it; agreed the look with designers; launched Oct 2026. I built the camera-path algorithm. It was one of my ideas awarded at the internal hackathon in Feb 2026 (special mention).
 - **Led the team that built outdoor splats and orbital videos.**
   2 weeks to show first results, 3 weeks to push good ones to production. I led the team. I built the toolkit that prepares the exterior splats: it rotates the scene to the correct orientation, selects the largest fragment and crops it. A per-frame outdoor-view video pipeline then renders the orbital video around the property.
-- **Influence accumulation: my densification method, still the team’s best.**
-  I found the research, implemented it, tested it and pushed it to production in Jan 2026. It is still the team’s best densification method. It measures how much each Gaussian contributes to the image during training and relocates the least useful ones, instead of adding new detail everywhere. This improves quality while keeping the model efficient. I implemented it partly with AI-assisted coding, and when the team moved to a new training approach, I ported it there.
+- **Influence accumulation: my densification method, still in the team’s pipeline.**
+  I found the research, implemented and tested it in Jan 2026. It is still used in the team’s pipeline. It measures how much each Gaussian contributes to the image during training and relocates the least useful ones, instead of adding new detail everywhere. This improves quality while keeping the model efficient. I implemented it partly with AI-assisted coding, and when the team moved to a new training approach, I ported it there.
 - **Implemented Analytic-Splatting in gsplat at CUDA level.**
   June 2026: exact per-pixel Gaussian integration, which reduces aliasing. I wrote both the computation and its training part, and used it in a downsampling algorithm. I also sped up training by measuring and reducing GPU idle time.
 - **Built tools to measure 3DGS quality against known ground truth.**

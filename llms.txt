@@ -23,7 +23,7 @@
 Each link below opens the page and lands at that stop. Ids are stable names; the order is not part of the contract. The page starts in the flat (universe `rnd`), in walk mode after the intro; a link to an `rnd` object starts walk mode at that object, its panel open.
 
 Universe `rnd` (Giraffe360 R&D, inside a Gaussian splat of a real apartment; the walk, "Next object" walks to the nearest one):
-- [3DGS reconstruction pipeline](https://ilyaeis.github.io/?go=splatting): 3DGS reconstruction from sparse panorama views; influence accumulation, Analytic-Splatting, the pipeline restructuring.
+- [3DGS reconstruction pipeline](https://ilyaeis.github.io/?go=splatting): Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification, Analytic-Splatting, the pipeline restructuring.
 - [Windows, outdoor views and mirrors](https://ilyaeis.github.io/?go=windows-mirrors): solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.
 - [Benchmarking and evaluation](https://ilyaeis.github.io/?go=benchmarking): validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.
 - [Meshes and viewers](https://ilyaeis.github.io/?go=mesh-generation): mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.
