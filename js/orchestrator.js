@@ -20,8 +20,10 @@ import * as explore from './explore.js';
 import { setPhaseOwner } from './input.js';
 import {
     buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
-    getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL, fitDistance, viasFor, flatExitVias, isIndoorFlight, apartment, setHaloFocus, snapHaloFocus
+    getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL, fitDistance, viasFor, flatExitVias, isIndoorFlight, apartment, setHaloFocus, snapHaloFocus,
+    graphToWorld, graphFrameTarget
 } from './world.js';
+import { EARLY_TAP as GRAPH_EARLY_TAP, CAM_PAN as GRAPH_CAM_PAN, PEN_INTENSITY as GRAPH_PEN_INTENSITY } from './eduGraph.js';
 
 export { CONTACT_EMAIL };
 
@@ -223,8 +225,16 @@ const VIEW_TAP_DELAY = {
     [StopType.ROCK]: 2.0,            // the HTML panel takes ~0.9 s to appear
     [StopType.PROJECT]: 2.0,
     [StopType.OBJECT]: 2.0,
-    [StopType.LANDING]: 1.5
+    [StopType.LANDING]: 1.5,
+    [StopType.GRAPH]: GRAPH_EARLY_TAP
 };
+
+// The timeline graph (one GRAPH stop, four frames; eduGraph.js): the pen
+// writes the comet trail at this rate (points per second: the trail is
+// COMET_CAPACITY points long, so about 1.2 s of pen shows)
+const GRAPH_TRAIL_HZ = COMET_CAPACITY / 1.2;
+// Frame 4 (Giraffe360): the panel says how many R&D objects the visitor found (walk.js keeps them)
+const COLLECTED_KEY = 'rnd.collected';
 
 // Object stops (the apartment): the comet traces the halo ring once, then
 // rides it, slowing from the trace pace to the loop pace (no speed jump)
@@ -379,8 +389,8 @@ export function init() {
     }
     else if (goTarget?.navigable) {     // ?go=<id>[&mode=fly|jump]
         const i = goTarget.index;
-        if (q.get('mode') === 'fly' && i >= 1) { jumpTo(i - 1); setupTravel(i, false); }
-        else jumpTo(i);
+        if (q.get('mode') === 'fly' && i >= 1 && (goTarget.frame ?? 1) === 1) { jumpTo(i - 1); setupTravel(i, false); }
+        else jumpTo(i, goTarget.frame ?? 1);
     }
     else if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
     else if (q.has('leg') && Number.isInteger(legQ) && legQ >= 1 && stops[legQ]) { jumpTo(legQ - 1); setupTravel(legQ, false); }
@@ -392,7 +402,8 @@ export function init() {
         introLinksEl = document.querySelector('.intro-links');
         const skip = introLinksEl?.querySelector('.intro-skip');
         if (skip) {
-            skip.href = '?go=' + stops[afterFlatIndex()].id;
+            const after = stops[afterFlatIndex()];
+            skip.href = '?go=' + (after.frames?.[0].id ?? after.id);
             introLinksEl.hidden = false;
         }
         emitIntro('enter');   // room.js loads the flat now
@@ -440,7 +451,7 @@ function afterFlatIndex() {
 // Dev only (dev/camlog.html): step without drawing, and read the state
 export function setSkipRender(v) { skipRender = v; }
 export function getState() {
-    return { phase, stopIndex, userDragging, phaseTime };
+    return { phase, stopIndex, userDragging, phaseTime, frame: stops[stopIndex]?.graph ? graphK : undefined };
 }
 export function devState() {
     return { phase, phaseTime, stopIndex, stopType: stops[stopIndex]?.type ?? -1, worldPos, cometPos,
@@ -452,24 +463,40 @@ export function devState() {
 function emitStop(phaseName, extra = null) {
     const stop = stops[stopIndex];
     if (!stop) return;
+    // the graph: the current frame's id, universe and panel (+ frame)
+    const f = stop.frames?.[graphK - 1];
+    const panel = f ? framePanel(f, graphK) : stop.panel || null;
     window.dispatchEvent(new CustomEvent('journey:stop', {
-        detail: { phase: phaseName, index: stopIndex, type: stop.type, panel: stop.panel || null,
-                  id: stop.id, universe: stop.universe, label: stop.panel?.title ?? stop.id, ...extra }
+        detail: { phase: phaseName, index: stopIndex, type: stop.type, panel,
+                  id: f?.id ?? stop.id, universe: f?.universe ?? stop.universe, label: panel?.title ?? stop.id,
+                  ...(f ? { frame: graphK } : {}), ...extra }
     }));
+}
+// Frame 4 (Giraffe360) adds "n / 6 R&D objects found in the flat"
+function framePanel(f, k) {
+    if (k !== stops[stopIndex].frames.length) return f.panel;
+    const ids = new Set(stops.filter(st => st.type === StopType.OBJECT).map(st => st.id));
+    let n = 0;
+    try { n = JSON.parse(localStorage.getItem(COLLECTED_KEY) || '[]').filter(id => ids.has(id)).length; } catch { /* no storage */ }
+    return { ...f.panel, items: [...f.panel.items, { text: `${n} / ${ids.size} R&D objects found in the flat` }] };
 }
 
 // Land the comet at stop n instantly (?stop, ?leg, ?go, journey.goTo jump).
-export function jumpTo(n) {
+export function jumpTo(n, frame = 1) {
     explore.leaveNow();
     intro.hideIntro(); hideTapPrompt();
     stopIndex = n;
     const stop = stops[n];
     setHaloFocus(stop); snapHaloFocus();
     trail.fade = 1; trail.attractorIdx = stop.paletteIdx ?? 0; clearTrail(trail); addTrailToScene(trail);
-    traceWorld(stop, 0, cometPos); worldPos.copy(stop.center);
-    cam.setOrbitCenter(stop.center.x, stop.center.y, stop.center.z);
-    controls.target.copy(stop.center);
-    camera.position.copy(stop.center).addScaledVector(stop.normal, -fitFor(stop));
+    traceWorld(stop, 0, cometPos);
+    // the graph: frame `frame` (its own camera target), grown at once past frame 1
+    graphStartFrame = stop.graph ? frame : 1;
+    const c = stop.graph ? graphFrameTarget(stop, frame, _vD) : stop.center;
+    worldPos.copy(c);
+    cam.setOrbitCenter(c.x, c.y, c.z);
+    controls.target.copy(c);
+    camera.position.copy(c).addScaledVector(stop.normal, -fitFor(stop));
     cam.setScreenShift(hasPanel(stop), true);
     tunnel.setFade(stop.tunnelS != null ? 1 : 0);
     setInside(stop.tunnelS != null ? 1 : 0);
@@ -480,7 +507,7 @@ export function jumpTo(n) {
 function setInside(f) { setInsideFade(f); }
 
 // Stops with an HTML panel beside them (screen shift, fit)
-function hasPanel(stop) { return stop.type === StopType.ROCK || stop.type === StopType.PROJECT || stop.type === StopType.OBJECT; }
+function hasPanel(stop) { return stop.type === StopType.ROCK || stop.type === StopType.PROJECT || stop.type === StopType.OBJECT || stop.type === StopType.GRAPH; }
 
 function showTapPrompt() { if (tapPromptEl) tapPromptEl.classList.add('visible'); }
 // (the intro links and the first prompt's key hint go with the first prompt:
@@ -517,6 +544,7 @@ const ROCK_FIT_BOTTOM = 0.55;        // bottom layout: ~55% of the height
 // for the panel, text backs off for the helix, objects stay inside the
 // walls: at most stop.fitMax).
 function fitFor(stop) {
+    if (stop.type === StopType.GRAPH) return stop.camDist;   // the graph's own fit (world.js buildGraphStop)
     if (stop.type === StopType.TEXT) {
         return Math.min(controls.maxDistance, fitDistance(stop.halfW, stop.halfH) * TEXT_FIT_MARGIN);
     }
@@ -1458,6 +1486,7 @@ function enterView() {
     tracing = true;    // draw the element's trajectory once before looping
     traceCursor = 0;
     traceAcc = 0;
+    if (stop.graph) enterGraph(stop);
 
     emitStop('enter');
     enterPhase(Phase.VIEW);
@@ -1611,6 +1640,7 @@ function loopPlanar(stop, dt) {
 
 function updateView(dt) {
     const stop = stops[stopIndex];
+    if (stop.graph) { updateGraph(stop, dt); return; }
 
     // Face the stop during the first moments, then hand the camera
     // back so the user can zoom/rotate freely
@@ -1645,6 +1675,81 @@ function updateView(dt) {
 
         const next = stopIndex === stops.length - 1 ? afterFlatIndex() : stopIndex + 1; // after the landing, back to the first stop after the flat
         setupTravel(next, false);
+    }
+}
+
+// ── GRAPH (the timeline: four frames, a tap per frame; eduGraph.js) ──
+// The comet flies in to where the pen enters frame 1 (points2d[0]). In VIEW
+// the graph plays its frame (eduGraph: the pen draws the axis, sweeps up
+// the new column, then idles round the window) and the pen writes the comet
+// trail. A tap before GRAPH_EARLY_TAP does nothing; before the frame's end
+// it grows the frame at once; after it the next frame starts from where the
+// comet is, and the camera pans (orbit centre and camera move together, so
+// a drag rotation stays) to the next window over GRAPH_CAM_PAN. After frame
+// 4 a tap flies on (the warp into the tunnel). Each frame sends its own
+// journey:stop 'enter' (id, universe, panel, frame).
+let graphK = 1;                 // the frame now (emitStop)
+let graphStartFrame = 1;        // the frame enterView starts (jumpTo)
+const graphTarget = new THREE.Vector3(), graphPanFrom = new THREE.Vector3(), graphPanTo = new THREE.Vector3();
+const _gp = new THREE.Vector3(), _gq = new THREE.Vector3();
+
+function enterGraph(stop) {
+    graphK = graphStartFrame;
+    graphStartFrame = 1;
+    stop.graph.start(graphK, null);
+    if (graphK > 1) stop.graph.snap();       // a jump lands on the grown frame
+    tracing = false;
+    graphFrameTarget(stop, graphK, graphTarget);
+    graphPanFrom.copy(graphTarget); graphPanTo.copy(graphTarget);
+    cam.setOrbitCenter(graphTarget.x, graphTarget.y, graphTarget.z);
+    if (graphK > 1) camAligned = true;         // a jump: the camera is at this frame's pose already
+}
+
+function updateGraph(stop, dt) {
+    const G = stop.graph;
+    stepFaceAlign(dt);
+    const t0 = G.time;
+    G.update(dt);
+    const t1 = G.time;
+    // the pen writes the trail (sub-stepped, dt-based)
+    trail.pointIntensity = GRAPH_PEN_INTENSITY;
+    const n = Math.max(1, Math.ceil(dt * GRAPH_TRAIL_HZ));
+    for (let i = 1; i <= n; i++) {
+        graphToWorld(stop, G.cometAt(t0 + (t1 - t0) * i / n, _gp), _gq);
+        pushPointWorld(trail, _gq.x, _gq.y, _gq.z);
+    }
+    trail.pointIntensity = 1.0;
+    graphToWorld(stop, G.cometAt(t1, _gp), cometPos);
+    graphToWorld(stop, G.cometAt(t1 + 0.05, _gp), _gq);
+    if (_gq.distanceToSquared(cometPos) > 1e-10) cometDir.subVectors(_gq, cometPos).normalize();
+    // the pan to this frame's window: the camera moves with the orbit centre
+    _gq.lerpVectors(graphPanFrom, graphPanTo, THREE.MathUtils.smootherstep(t1, 0, GRAPH_CAM_PAN));
+    _gp.subVectors(_gq, graphTarget);
+    if (_gp.lengthSq() > 0) {
+        graphTarget.copy(_gq);
+        camera.position.add(_gp); controls.target.add(_gp);
+        faceCenter.add(_gp); textFacePos.add(_gp);
+    }
+    cam.setOrbitCenter(graphTarget.x, graphTarget.y, graphTarget.z);
+    worldPos.copy(graphTarget);
+
+    const ready = t1 >= G.end && camAligned;
+    if (ready) showTapPrompt();
+    if (!tapPending) return;
+    tapPending = false;
+    if (t1 < GRAPH_EARLY_TAP) return;
+    if (t1 < G.end) { G.snap(); clearTrail(trail); return; }   // grow the frame at once
+    if (!camAligned) return;
+    hideTapPrompt();
+    if (graphK < G.NFRAMES) {
+        // the next frame, from where the comet is
+        graphK++;
+        G.start(graphK, stop.graph.group.worldToLocal(_gp.copy(cometPos)));
+        graphPanFrom.copy(graphTarget);
+        graphFrameTarget(stop, graphK, graphPanTo);
+        emitStop('enter');
+    } else {
+        setupTravel(stopIndex === stops.length - 1 ? afterFlatIndex() : stopIndex + 1, false);
     }
 }
 

@@ -10,7 +10,7 @@
 
 import * as THREE from 'three';
 import { scene, renderer, camera, bloomPass, isMobile, setStarVisibility } from './attractors.js';
-import { apartment, getInsideFade, setRoomFade, StopType, catalog, worldToRoom } from './world.js';
+import { apartment, getInsideFade, setRoomFade, StopType, entryAt, worldToRoom } from './world.js';
 
 // The apartment API for the add-ons (walk.js, depthTool.js): its frame
 // (position, quaternion, scale), room <-> world points and metres per unit
@@ -190,18 +190,14 @@ async function loadRoom() {
 
 // When to load (Spark and the splat, about 15 MB): at once in the intro
 // (the site starts in the flat). Deep links: by universe, never by index.
-// On entering a stop in the apartment, or in the universe right before it
-// in route order (the Giraffe360 rock; the flight from it is short).
+// On entering a stop in the apartment.
 // Elsewhere only when a flight into the apartment starts ('leave' with
 // `to`: the warp out from the last project is a long flight). So ?go to the
-// traits, the education rocks and the projects (or an open project app)
-// loads nothing.
-const route = catalog.filter(e => e.navigable);              // index = the stop index
+// graph frames and the projects (or an open project app) loads nothing.
 const inApartment = e => APARTMENT_UNIVERSES.includes(e?.universe);
-const leadUniverse = route[route.findIndex(inApartment) - 1]?.universe;
 function wantsRoom({ phase, universe, to }) {
-    if (phase === 'enter') return inApartment({ universe }) || universe === leadUniverse;
-    return to !== undefined && inApartment(route[to]);
+    if (phase === 'enter') return inApartment({ universe });
+    return to !== undefined && inApartment(entryAt(to));
 }
 
 // 'journey:intro' { phase: 'enter' } on load (the site starts in the flat), 'leave' at the first tap

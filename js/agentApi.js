@@ -35,9 +35,12 @@ function resolve(id) {
     return stopById(id);
 }
 
+// The catalog entry the journey is at (the graph: its current frame)
+const entryOf = (s) => navigable.find(e => e.index === s.stopIndex && (e.frame ?? 1) === (s.frame ?? 1)) ?? null;
+
 function current() {
     const s = getState();
-    const e = navigable[s.stopIndex] ?? null;
+    const e = entryOf(s);
     return {
         phase: PHASE_NAMES[s.phase],
         stop: (s.phase === Phase.VIEW || s.phase === Phase.EXPLORE || inPortal(s.phase)) && e ? e.id : null,
@@ -71,15 +74,16 @@ async function goTo(id, { mode = 'fly' } = {}) {
     const s = getState();
     const why = busy(s.phase);
     if (why) return { ok: false, reason: why, current: current() };
-    if (mode === 'fly' && e.index >= 1) {
+    const fly = mode === 'fly' && e.index >= 1 && (e.frame ?? 1) === 1;   // a later graph frame: a jump (grown)
+    if (fly) {
         const arrived = nextEnter(e.id);
         if (e.index === s.stopIndex + 1 && s.phase === Phase.VIEW) setupTravel(e.index, false);
         else { jumpTo(e.index - 1); setupTravel(e.index, false); }
         await arrived;
     } else {
-        jumpTo(e.index); // dispatches 'enter' synchronously
+        jumpTo(e.index, e.frame ?? 1); // dispatches 'enter' synchronously
     }
-    return { ok: true, stop: e.id, mode: mode === 'fly' && e.index >= 1 ? 'fly' : 'jump' };
+    return { ok: true, stop: e.id, mode: fly ? 'fly' : 'jump' };
 }
 
 async function step(delta) {
@@ -91,7 +95,7 @@ async function step(delta) {
         onTap();
         return { ok: true, stop: await arrived, mode: 'fly' };
     }
-    const prev = navigable[s.stopIndex - 1];
+    const prev = navigable[navigable.indexOf(entryOf(s)) - 1];
     if (s.phase !== Phase.VIEW || !prev) return { ok: false, reason: 'no-previous-stop', current: current() };
     return goTo(prev.id);
 }

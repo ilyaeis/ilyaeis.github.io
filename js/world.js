@@ -1,26 +1,24 @@
 // ── Static World ───────────────────────────────────────────────────
-// Builds every journey stop as pre-existing geometry at load: the
-// trait text block, milestone rocks and the contact landing are scattered
-// randomly through 3D space, each glowing in its own palette from
-// frame one. Five strange attractors hang beside the flight legs as
-// dim, slowly spinning scenery ("galaxies"). The comet (orchestrator)
-// flies between the stops and swings past a galaxy on the way.
-// After the last rock the comet flies in through the bay window of a real
-// apartment (a Gaussian splat, room.js renders it): six object stops (the
-// Giraffe360 R&D areas), each a splat object with a halo ring. It leaves
-// through the window into the projects tunnel (tunnel.js): the project
-// stops sit on its centreline, each with a live visualization
-// (projectViz.js); smaller fly-by projects hang on the wall. The tunnel
-// brings it back over the apartment roof, and it dives into the living
-// room to the contact landing.
+// Builds every journey stop as pre-existing geometry at load. The site
+// starts in a real apartment (a Gaussian splat, room.js renders it): six
+// object stops (the Giraffe360 R&D areas), each a splat object with a halo
+// ring. The comet leaves over the window wall to the timeline graph (one
+// GRAPH stop, eduGraph.js: traits, school, AI Talent, university,
+// Giraffe360, four frames), then warps into the projects tunnel
+// (tunnel.js): the project stops sit on its centreline, each with a live
+// visualization (projectViz.js); smaller fly-by projects hang on the wall.
+// The tunnel brings it back over the apartment roof, and it dives into the
+// living room to the contact landing. Strange attractors hang beside the
+// open-space flight legs as dim, slowly spinning scenery ("galaxies").
 
 import * as THREE from 'three';
 import { ATTRACTORS, rk4Step, isMobile, getPaletteColor, camera, controls } from './attractors.js';
 import { generateTextLines, generateRockWithLabel } from './strokeFont.js';
 import * as tunnel from './tunnel.js';
 import { buildProjectViz, FLYBY_TEXT_BOTTOM } from './projectViz.js';
+import { createGraph, fitGraph } from './eduGraph.js';
 
-export const StopType = { TEXT: 0, ROCK: 1, LANDING: 2, PROJECT: 3, OBJECT: 4 };
+export const StopType = { TEXT: 0, ROCK: 1, LANDING: 2, PROJECT: 3, OBJECT: 4, GRAPH: 5 };
 
 // ── Content ────────────────────────────────────────────────────────
 export const CONTACT_EMAIL = 'ilya.safronos@gmail.com';
@@ -251,7 +249,6 @@ const ROCK_HOP_MIN = 32;                 // rock → rock (same scene)
 const ROCK_HOP_MAX = 40;
 const MIN_SEPARATION = 26;
 const ROCK_SEPARATION = 22;              // rocks may sit near each other
-const TEXT_EXIT_MIN_DOT = 0.2;           // the hop after the traits: at least this aligned with the helix exit
 
 const TEXT_DIM_ALPHA = 0.25;            // the text block starts dim; lit as the comet traces it (1.0 = always lit)
 
@@ -280,13 +277,6 @@ const ROOM_ROOF = [0.1, 0.75, 0.5];      // above the cut ceiling: the dive into
 const WINDOW_STANDOFF = 16;              // world units outside the window wall: the entry lines up here (the dollhouse view)
 const LANDING_TEXT = [0, -0.11, -0.4];   // contact text centre, in front of the windows
 const LANDING_CAM_Z = 0.25;              // landing VIEW camera z (inside, sofa side); sets the scale
-const APARTMENT_HOP = [34, 42];          // GIRAFFE360 -> window
-const APARTMENT_DROP = [-0.32, -0.14];   // y of the hop direction (before normalising): the apartment sits lower
-// The window faces 90° ± WINDOW_YAW_SPREAD off the way back to GIRAFFE360,
-// on the side that puts GIRAFFE360 east of the living room (room +X): the
-// comet then dives in over the east wall heading west, straight at the
-// first object, and the tunnel leaves sideways, away from the rocks.
-const WINDOW_YAW_SPREAD = 40;            // deg
 const ENTRY_TOP = [0, 0.42, 0.1];        // the entry dive crosses the cut ceiling ENTRY_BACK before this point
 const ENTRY_BACK = 0.6;                  // room units
 const ENTRY_DIVE = 0.4;                  // descent per unit of horizontal travel
@@ -373,10 +363,6 @@ const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 // The text block is one stop; the comet traces it, spirals around it and
 // flies on without a tap (orchestrator).
 const ROUTE = [
-    { id: 'traits',     universe: 'intro',      type: StopType.TEXT,    paletteIdx: 0,
-      title: 'Traits', summary: 'Creative. Adaptive. Curious.' },
-    { id: 'giraffe360', universe: 'work',       type: StopType.ROCK,    milestone: 3, paletteIdx: 1,
-      summary: 'R&D engineer in 3D reconstruction and computer vision: 3DGS from sparse panorama views, benchmarking, research.' },
     { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 10, object: 'cherry', paletteIdx: 3,
       summary: '3DGS reconstruction from sparse panorama views; influence accumulation, Analytic-Splatting, the pipeline restructuring.' },
     { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 11, object: 'vase', paletteIdx: 3,
@@ -389,12 +375,16 @@ const ROUTE = [
       summary: 'MCP server for the team task board; mentoring on a new depth algorithm; the looped drone video.' },
     { id: 'tour-narration',  universe: 'rnd', type: StopType.OBJECT, milestone: 15, object: 'robot', paletteIdx: 3,
       summary: 'Earlier (Jul - Oct 2025): a small LLM service that wrote tour narration.' },
-    { id: 'rvkg',       universe: 'education',  type: StopType.ROCK,    milestone: 0, paletteIdx: 1,
-      summary: 'Programming and mathematics track; state mathematics olympiads.' },
-    { id: 'ai-talent',  universe: 'education',  type: StopType.ROCK,    milestone: 2, paletteIdx: 1,
-      summary: 'Ponder AI talent program.' },
-    { id: 'rtu',        universe: 'education',  type: StopType.ROCK,    milestone: 1, paletteIdx: 1,
-      summary: 'Professional Bachelor in Financial Engineering.' },
+    // The timeline graph: one stop, four frames (a tap per frame). Each frame
+    // has its own id, universe and panel; frame 1 also shows the trait words
+    { id: 'graph', universe: 'education', type: StopType.GRAPH, paletteIdx: 1, frames: [
+        { id: 'rvkg',       universe: 'education', milestone: 0,
+          summary: 'Programming and mathematics track; state mathematics olympiads. Frame 1 also shows my traits: curious, creative, adaptive.' },
+        { id: 'ai-talent',  universe: 'education', milestone: 2, summary: 'Ponder AI talent program.' },
+        { id: 'rtu',        universe: 'education', milestone: 1, summary: 'Professional Bachelor in Financial Engineering.' },
+        { id: 'giraffe360', universe: 'work',      milestone: 3,
+          summary: 'R&D engineer in 3D reconstruction and computer vision: 3DGS from sparse panorama views, benchmarking, research.' },
+    ] },
     { id: 'flow',       universe: 'projects',   type: StopType.PROJECT, milestone: 5, paletteIdx: 2,
       summary: 'Offline workout tracker app (Dart/Flutter).' },
     { id: 'calculator', universe: 'projects',   type: StopType.PROJECT, milestone: 8, paletteIdx: 2,
@@ -404,16 +394,17 @@ const ROUTE = [
     { id: 'contact',    universe: 'contact',    type: StopType.LANDING, paletteIdx: 4,
       title: 'Contact', summary: 'Get in touch by email, LinkedIn or GitHub.' }
 ];
+// Old ids that still land somewhere (?go, the agent API)
+const ALIASES = { traits: 'rvkg' };
 ROUTE.forEach((d, i) => {
-    if (d.type === StopType.ROCK || (d.type === StopType.OBJECT && ROUTE[i - 1].type !== StopType.OBJECT)) SCENERY_LEGS.push(i);
+    if (d.type === StopType.ROCK || d.type === StopType.GRAPH) SCENERY_LEGS.push(i);
 });
 // Universes are names, not indexes. A new universe is a new entry here
 // plus ROUTE entries that use its id.
 export const UNIVERSES = [
-    { id: 'intro',      title: 'Intro' },
-    { id: 'work',       title: 'Work' },
     { id: 'rnd',        title: 'Giraffe360 R&D' },
     { id: 'education',  title: 'Education' },
+    { id: 'work',       title: 'Work' },
     { id: 'projects',   title: 'Projects' },
     { id: 'contact',    title: 'Contact' },
 ];
@@ -430,8 +421,13 @@ const FLYBYS = [
 // Fly-bys are listed but not navigable (`near` = the stop they hang before).
 const TYPE_NAMES = { [StopType.TEXT]: 'text', [StopType.ROCK]: 'rock', [StopType.PROJECT]: 'project',
                      [StopType.LANDING]: 'landing', [StopType.OBJECT]: 'object' };
+// The graph is listed by its frames: { type 'graph-frame', index (the stop), frame 1..4 }
 export const catalog = [
-    ...ROUTE.map((d, index) => ({
+    ...ROUTE.flatMap((d, index) => d.frames ? d.frames.map((f, i) => ({
+        id: f.id, universe: f.universe, type: 'graph-frame', index, frame: i + 1,
+        title: MILESTONES[f.milestone].panel.title, summary: f.summary,
+        panel: MILESTONES[f.milestone].panel, portal: null, navigable: true
+    })) : [{
         id: d.id, universe: d.universe, type: TYPE_NAMES[d.type], index,
         title: d.title ?? MILESTONES[d.milestone].panel.title,
         summary: d.summary,
@@ -439,7 +435,7 @@ export const catalog = [
         portal: d.milestone !== undefined && MILESTONES[d.milestone].panel.portal
             ? { href: MILESTONES[d.milestone].panel.portal.href, label: MILESTONES[d.milestone].panel.portal.label } : null,
         navigable: true
-    })),
+    }]),
     ...FLYBYS.map(fb => {
         const near = ROUTE.filter(d => d.type === StopType.PROJECT)[fb.before].id;
         const panel = MILESTONES[fb.milestone].panel;
@@ -447,7 +443,9 @@ export const catalog = [
                  summary: fb.skills, panel, navigable: false, near };
     })
 ];
-export function stopById(id) { return catalog.find(e => e.id === id) ?? null; }
+export function stopById(id) { return catalog.find(e => e.id === (ALIASES[id] ?? id)) ?? null; }
+// The catalog entry of stop index i (the graph: its first frame)
+export function entryAt(i) { return catalog.find(e => e.navigable && e.index === i) ?? null; }
 
 
 // ── Stop shader ────────────────────────────────────────────────────
@@ -575,20 +573,20 @@ function randomHopDir(out) {
     return out;
 }
 
-// The rocks after the apartment (education), placed together as one chain
-// from `prev` (the apartment) to the tunnel throat: each clear of the tunnel
-// axis (all of it, the exit comes home too), of the apartment and of the
-// other stops. The chain leaves the window (`fwd`) and must come back to
+// The stops after the apartment (now one: the graph), placed together as a
+// chain from `prev` (the apartment) to the tunnel throat: each clear of the
+// tunnel axis (all of it, the exit comes home too), of the apartment and of
+// the other stops. The chain leaves the window (`fwd`) and must come back to
 // the throat, behind it and along the tunnel axis (no hairpin into the
 // warp), so it turns round somewhere: the best of the tries spreads that
-// turn over all its corners (the smallest largest turn). Each rock faces
-// its hop, so a corner is a turn at a departure; a sharp one makes the
-// comet loop back past the camera (speed dips, a whipping view).
-// tight[k]: rock k hops from a rock (the tight rock scene).
+// turn over all its corners (the smallest largest turn). A stop faces its
+// hop, so a corner is a turn at a departure; a sharp one makes the comet
+// loop back past the camera (speed dips, a whipping view).
+// tight[k]: stop k hops from a rock (the tight rock scene).
 function placeAfterApartment(prev, placed, tight, fwd) {
     const T0 = tunnel.centreWorld(0, new THREE.Vector3()), e1 = tunnel.tangentWorld(0, new THREE.Vector3());
     const chain = tight.map(() => new THREE.Vector3()), dir = new THREE.Vector3(), d0 = new THREE.Vector3();
-    const toThroat = new THREE.Vector3();
+    const toThroat = new THREE.Vector3(), flat = new THREE.Vector3();
     let best = null, bestScore = -Infinity;
     for (let i = 0; i < AFTER_TRIES; i++) {
         let p = prev, maxTurn = 0, sumTurn = 0;
@@ -602,7 +600,12 @@ function placeAfterApartment(prev, placed, tight, fwd) {
             d0.copy(dir); p = chain[k];
         }
         toThroat.subVectors(T0, p).normalize();
-        for (const a of [d0.angleTo(toThroat), toThroat.angleTo(e1)]) { maxTurn = Math.max(maxTurn, a); sumTurn += a; }
+        // the last stop (the graph) is upright and viewed level: the camera
+        // arrives looking along flat(d0) and leaves for the throat from there,
+        // so the pitch of the way in and the turn from that level view count too
+        flat.copy(d0).setY(0).normalize();
+        // (a steep dive to the throat counts double: the chase view pitches slowly)
+        for (const a of [d0.angleTo(toThroat), toThroat.angleTo(e1), d0.angleTo(flat), flat.angleTo(toThroat), 2 * Math.abs(Math.asin(toThroat.y))]) { maxTurn = Math.max(maxTurn, a); sumTurn += a; }
         const turnScore = 10 - maxTurn - 0.25 * sumTurn;
         if (turnScore <= bestScore) continue;            // a clear chain could not beat the best: skip the clearance
         let clear = Infinity;
@@ -860,8 +863,9 @@ export function setInsideFade(f) {
     getStopMaterial('outside').uniforms.uVis.value = out;
     getStopMaterial('inside').uniforms.uVis.value = f;
     for (const s of scenery) s.line.visible = out > 0.002;
+    for (const st of stops) st.graph?.setOutside(out);
     for (const st of stops) {
-        if (st.focusVis !== undefined) continue;              // updateWorld (focus fade)
+        if (st.focusVis !== undefined || !st.line) continue;  // updateWorld (focus fade); the graph has no stop line
         st.line.visible = st.type === StopType.PROJECT ? f > 0.002 : f < 0.998;
         if (st.viz) st.viz.group.visible = f > 0.002;
     }
@@ -985,37 +989,52 @@ function placeApartmentAndTunnel(length, s) {
     if (bestScore < 1) console.warn('tunnel placement: the apartment is not fully clear', bestScore.toFixed(2));
 }
 
-// The stops before the apartment in route order (the traits, the Giraffe360
-// rock): placed after it, clear of it and of the tunnel axis. GIRAFFE360 sits
-// a hop from the window, 90° ± WINDOW_YAW_SPREAD off its facing and a little
-// higher (APARTMENT_DROP), so the dive in over the cut ceiling heads west,
-// straight at the first object (as the old layout, built from GIRAFFE360
-// out). The traits sit a hop before it, its helix exit (-right) towards it.
-function placeLead(placed) {
-    const W = roomToWorld(...ROOM_WINDOW), d = new THREE.Vector3(), G = new THREE.Vector3(), T = new THREE.Vector3();
-    const corners = apartmentCorners();
-    const clearOf = (p, sep) => Math.min(tunnel.axisDistance(p, tunnelExitS) / TUNNEL_CLEAR,
-        ...corners.map(c => p.distanceTo(c) / sep), ...placed.map(q => p.distanceTo(q) / sep));
-    let best = null, bestScore = -Infinity;
-    for (let i = 0; i < AFTER_TRIES && bestScore < 1; i++) {
-        // d: the way back from the window to GIRAFFE360; the window faces flat(d) turned by 90° ± spread
-        const yaw = THREE.MathUtils.degToRad(90 + rand(-WINDOW_YAW_SPREAD, WINDOW_YAW_SPREAD));
-        d.copy(apartment.winDir).applyAxisAngle(_Y, -yaw).setY(-rand(APARTMENT_DROP[0], APARTMENT_DROP[1])).normalize();
-        G.copy(W).addScaledVector(d, rand(APARTMENT_HOP[0], APARTMENT_HOP[1]));
-        T.copy(G).addScaledVector(randomHopDir(d), rand(MIN_HOP, MAX_HOP));
-        // the traits face away from the apartment (normal), their helix leaves along -right
-        const n = T.clone().sub(apartmentCentre).normalize();
-        const right = new THREE.Vector3().crossVectors(n, _Y).normalize();
-        const exitDot = G.clone().sub(T).normalize().dot(right.negate());
-        const score = Math.min(clearOf(G, MIN_SEPARATION), clearOf(T, MIN_SEPARATION), T.distanceTo(G) / MIN_SEPARATION,
-                               exitDot >= TEXT_EXIT_MIN_DOT ? 1 : 0.5);
-        if (score > bestScore) { bestScore = score; best = { G: G.clone(), T: T.clone() }; }
-    }
-    if (bestScore < 1) console.warn('lead stops: not fully clear', bestScore.toFixed(2));
-    // the entry dive: the flight direction from GIRAFFE360, flattened, in room axes
-    const h = worldToRoom(W.clone().add(W.clone().sub(best.G))).sub(worldToRoom(W.clone()));
-    apartment.entryDir.set(h.x, 0, h.z).normalize();
-    return best;
+// ── The timeline graph (one stop, four frames; eduGraph.js) ────────
+// An upright plane facing the way the comet comes in (from the flat). The
+// fit (fitGraph) is one scale per device, so the camera only pans from
+// frame to frame; it sits at GRAPH_CAM_DIST × controls.maxDistance (orchestrator fitFor).
+const GRAPH_CAM_DIST = 0.94;
+// `center` = frame 1's camera target; `graphOrigin` = the graph's (0, 0).
+// points2d[0] = where the pen enters frame 1 (the flight ends there).
+function buildGraphStop(def, center, from) {
+    const normal = center.clone().sub(from).setY(0).normalize();
+    const right = new THREE.Vector3().crossVectors(normal, new THREE.Vector3(0, 1, 0)).normalize();
+    const up = new THREE.Vector3(0, 1, 0);
+    const tanV = Math.tan(camera.fov * Math.PI / 360);
+    const side = window.matchMedia('(min-width: 700px) and (orientation: landscape)').matches;   // camera.js PANEL_SIDE_QUERY
+    // a little under controls.maxDistance: the chase camera's offset is ~2 %
+    // longer than its distance, and OrbitControls would clamp it (a kink)
+    const camDist = GRAPH_CAM_DIST * controls.maxDistance;
+    const fit = fitGraph(camDist, tanV, camera.aspect, side);
+    const graph = createGraph({ phone: fit.phone });
+    const t1 = graph.frameTarget(1, fit.drop);
+    const origin = center.clone().addScaledVector(right, -t1.x * fit.scale).addScaledVector(up, -t1.y * fit.scale);
+    graph.group.position.copy(origin);
+    graph.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, up, normal.clone().negate()));
+    graph.group.scale.setScalar(fit.scale);
+    graph.group.updateMatrixWorld(true);
+    // point size: pixels per graph unit at unit distance (the prototype's uPx)
+    graph.setPx(window.innerHeight / (2 * tanV) * fit.scale);
+    const pxPerUnit = window.innerHeight / (2 * camDist * tanV);
+    window.eduGraphFit = { scale: +fit.scale.toFixed(3), phone: fit.phone,
+        labelPx: +(fit.labelPx * pxPerUnit).toFixed(1), captionPx: +(fit.captionPx * pxPerUnit).toFixed(1) };
+    const e = graph.entry();
+    const frames = def.frames.map(f => ({ ...f, panel: MILESTONES[f.milestone].panel }));
+    return {
+        id: def.id, universe: def.universe, type: def.type, paletteIdx: def.paletteIdx ?? 1,
+        panel: frames[0].panel, frames, tunnelS: null, viz: null,
+        graph, graphDrop: fit.drop, camDist, center, right, up, normal,
+        points2d: [{ x: (e.x - t1.x) * fit.scale, y: (e.y - t1.y) * fit.scale, c: 1 }], scale: 1,
+        halfW: 2.4 * fit.scale, halfH: 2.7 * fit.scale, blockMid: 0, blockHalfH: 2.7 * fit.scale
+    };
+}
+// The world point of a graph-local point (graph units)
+export function graphToWorld(stop, p, out = new THREE.Vector3()) {
+    return out.copy(p).applyMatrix4(stop.graph.group.matrixWorld);
+}
+// Frame k's camera target (world)
+export function graphFrameTarget(stop, k, out = new THREE.Vector3()) {
+    return graphToWorld(stop, stop.graph.frameTarget(k, stop.graphDrop), out);
 }
 
 // ── Object stops (in the apartment) ────────────────────────────────
@@ -1103,8 +1122,10 @@ function exitTowards(to) {
     const W = via(WALL_TOP, WALL_OUT);
     const hr = worldToRoom(to.clone()).sub(worldToRoom(W.p.clone())).setY(0).normalize();
     W.p.copy(roomToWorld(WALL_TOP[0] * THREE.MathUtils.clamp(2 * hr.x, -1, 1), WALL_TOP[1], WALL_TOP[2]));
-    const h = to.clone().sub(W.p).setY(0).normalize();
-    W.dir.copy(h).setY(-WALL_OUT[1] / WALL_OUT[2]).normalize();
+    // crossing it, the comet climbs at most WALL_OUT's slope, and heads down
+    // already when `to` lies lower (no bend at the wall top, then a dip)
+    const d = to.clone().sub(W.p), h = d.clone().setY(0), slope = -WALL_OUT[1] / WALL_OUT[2];
+    W.dir.copy(h.normalize()).setY(THREE.MathUtils.clamp(d.y / Math.hypot(d.x, d.z), -slope, slope)).normalize();
     return [W];
 }
 // Leaving the flat from anywhere inside it (the walk, or the intro spot):
@@ -1170,20 +1191,14 @@ export function buildWorld(scene) {
     landingScale = TEXT_SCALE * Math.min(1, controls.maxDistance / fitUnclamped(lx * TEXT_SCALE, ly * TEXT_SCALE));
     const roomScale = fitDistance(lx * landingScale, ly * landingScale) / (LANDING_CAM_Z - LANDING_TEXT[2]);
     apartment.objects = [];
-    // The apartment first (the site starts in it), then the tunnel from its
-    // window, then the stops before it in route order
+    // The apartment first (the site starts in it), then the tunnel from its window
     placeApartmentAndTunnel(tunnelExitS, roomScale);
     const placed = [apartmentCentre.clone()];
-    const lead = placeLead(placed);
-    placed.push(lead.T, lead.G);
-    let prev = lead.T.clone().sub(lead.T.clone().sub(apartmentCentre).normalize());   // the traits face away from the flat
-    let afterApartment = false;   // rocks after it are placed clear of it and the tunnel
-    let afterChain = [];          // ... as one chain (placeAfterApartment)
+    let prev = apartmentCentre.clone();
 
     for (const def of ROUTE) {
         let center, tunnelS = null;
         if (def.type === StopType.OBJECT) {
-            afterApartment = true;
             const palette = ATTRACTORS[def.paletteIdx ?? 0].palette;
             const stop = { id: def.id, universe: def.universe, type: def.type, paletteIdx: def.paletteIdx ?? 0,
                            panel: MILESTONES[def.milestone].panel, tunnelS: null, viz: null, objectName: def.object,
@@ -1203,17 +1218,16 @@ export function buildWorld(scene) {
             // In the living room, in front of the bay windows, facing the camera inside
             center = roomToWorld(...LANDING_TEXT);
             prev = center.clone().sub(apartment.winDir);
-        } else if (afterApartment) {
-            if (!afterChain.length) {
-                // this rock and the rocks right after it, as one chain (out over the window wall)
-                const i0 = ROUTE.indexOf(def), tightK = [];
-                for (let i = i0; ROUTE[i]?.type === StopType.ROCK; i++) tightK.push(ROUTE[i - 1].type === StopType.ROCK);
-                afterChain = placeAfterApartment(prev, placed, tightK, apartment.winDir);
-            }
-            center = afterChain.shift();
-        } else {
-            // before the apartment (placeLead): the traits, then GIRAFFE360
-            center = (def.type === StopType.TEXT ? lead.T : lead.G).clone();
+        } else if (def.type === StopType.GRAPH) {
+            // out over the window wall, then on to the tunnel throat (a chain of one)
+            center = placeAfterApartment(prev, placed, [false], apartment.winDir)[0];
+            const stop = buildGraphStop(def, center, prev);
+            scene.add(stop.graph.group);
+            stops.push(stop);
+            placed.push(center);
+            prevDef = def;
+            prev = center;
+            continue;
         }
         placed.push(center);
         prevDef = def;
