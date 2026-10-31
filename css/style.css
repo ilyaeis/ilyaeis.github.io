@@ -11,6 +11,7 @@ body {
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
     touch-action: none;
 }
 
@@ -23,6 +24,7 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     z-index: 1;
     mix-blend-mode: screen;
 }
@@ -40,7 +42,7 @@ body {
 /* Tap prompt */
 .tap-prompt {
     position: fixed;
-    bottom: 2.5rem;
+    bottom: calc(2.5rem + env(safe-area-inset-bottom));
     left: 50%;
     transform: translateX(-50%);
     color: #888;
@@ -68,8 +70,9 @@ body {
 /* Corner nav — persistent HTML links above the canvas */
 .site-nav {
     position: fixed;
-    top: 1.25rem;
-    right: 1.5rem;
+    /* links are 44 px tall (tap target); top/right undo the padding so the text stays put */
+    top: calc(0.35rem + env(safe-area-inset-top));
+    right: calc(1rem + env(safe-area-inset-right));
     z-index: 10;
     font-size: 0.8rem;
     letter-spacing: 0.1em;
@@ -79,7 +82,13 @@ body {
 .site-nav a {
     color: inherit;
     text-decoration: none;
-    margin-left: 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0 0.5rem;
+    margin-left: 0.4rem;
+    /* readable over the bright room */
+    text-shadow: 0 0 8px #000, 0 0 2px #000;
 }
 
 .site-nav a:hover,
@@ -113,6 +122,8 @@ body {
     pointer-events: none;
     letter-spacing: 0.04em;
     transition: opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s;
+    display: flex;
+    flex-direction: column;
 }
 
 .stop-panel.visible {
@@ -150,6 +161,39 @@ body {
 .stop-panel-items {
     list-style: none;
     margin-top: 1.5rem;
+    /* only the list scrolls: title and "more" link stay visible */
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
+/* Scroll hint: a fade at the bottom while there is more to read.
+   Chrome/Edge/Safari 26 (scroll-driven animation); older browsers show none. */
+.stop-panel-items::after {
+    content: '';
+    display: block;
+    position: sticky;
+    bottom: 0;
+    height: 1.75rem;
+    margin-top: -1.75rem;
+    background: linear-gradient(180deg, rgba(10, 10, 10, 0), rgba(10, 10, 10, 0.92));
+    opacity: 0;
+    pointer-events: none;
+}
+
+@supports (animation-timeline: scroll()) {
+    .stop-panel-items::after {
+        animation: items-more linear both;
+        animation-timeline: scroll(self);
+    }
+}
+
+@keyframes items-more {
+    0%, 85% { opacity: 1; }
+    100% { opacity: 0; }
 }
 
 .stop-panel-items li {
@@ -170,6 +214,15 @@ body {
     border-bottom: 1px solid #555;
 }
 
+/* Item links: 44 px tap target (negative margin keeps the layout compact); the underline is a background so padding does not push it away */
+.stop-panel-items a {
+    display: inline-block;
+    padding: 0.65rem 0;
+    margin: -0.45rem 0;
+    border-bottom: 0;
+    background: linear-gradient(#555, #555) 0 calc(100% - 0.65rem) / 100% 1px no-repeat;
+}
+
 .stop-panel a:hover,
 .stop-panel a:focus-visible {
     color: #fff;
@@ -181,7 +234,9 @@ body {
 .stop-panel a.stop-panel-more {
     display: inline-block;
     align-self: flex-start;
-    margin-top: 1.6rem;
+    margin-top: 0.9rem;
+    padding: 0.8rem 0;
+    border-bottom: 0;
     color: #888;
     font-size: 0.8rem;
     letter-spacing: 0.1em;
@@ -195,16 +250,25 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    max-height: 48vh;
-    overflow-y: auto;
-    touch-action: pan-y;
-    padding: 1.25rem 1.25rem 4.5rem;
+    max-height: 52vh;
+    overflow: hidden;
+    padding: 1rem 1.25rem calc(3.25rem + env(safe-area-inset-bottom));
     transform: translateY(18px);
     background: linear-gradient(180deg, rgba(10, 10, 10, 0), rgba(10, 10, 10, 0.85) 25%);
 }
 .stop-panel-title { font-size: 1.25rem; }
-.stop-panel-items { margin-top: 1rem; }
-.stop-panel-items li { font-size: 0.9rem; }
+.stop-panel-items { margin-top: 0.8rem; }
+.stop-panel-items li { font-size: 0.875rem; line-height: 1.45; }
+.stop-panel-items li + li { margin-top: 0.45rem; }
+
+/* Tap prompt while a panel is open: small pill at the very bottom, never over the text */
+body.panel-open .tap-prompt {
+    bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    font-size: 0.75rem;
+    padding: 0.2rem 0.7rem;
+    background: rgba(10, 10, 10, 0.85);
+    border-radius: 999px;
+}
 
 /* Side layout: panel on the right, rock on the left */
 @media (min-width: 700px) and (orientation: landscape) {
@@ -216,8 +280,6 @@ body {
         width: min(46vw, 540px);
         max-height: none;
         overflow: visible;
-        display: flex;
-        flex-direction: column;
         justify-content: center;
         padding: 3rem 3.5rem 3rem 2.5rem;
         transform: translateX(18px);
@@ -226,7 +288,30 @@ body {
     .stop-panel[hidden] { display: none; }
     .stop-panel-title { font-size: 1.5rem; }
     .stop-panel-items { margin-top: 1.5rem; }
-    .stop-panel-items li { font-size: 0.95rem; }
+    .stop-panel-items li { font-size: 0.95rem; line-height: 1.5; }
+    .stop-panel-items li + li { margin-top: 0.8rem; }
+    /* the stop sits in the left half: centre the prompt under it */
+    body.panel-open .tap-prompt {
+        left: 25%;
+        bottom: calc(2.5rem + env(safe-area-inset-bottom));
+        font-size: 0.85rem;
+        padding: 0;
+        background: none;
+    }
+}
+
+/* Short landscape (phones): title below the nav, list scrolls inside the panel */
+@media (min-width: 700px) and (orientation: landscape) and (max-height: 500px) {
+    .stop-panel {
+        justify-content: flex-start;
+        overflow: hidden;
+        padding: 3.4rem 1.25rem 1rem 1.5rem;
+    }
+    .stop-panel-title { font-size: 1.15rem; }
+    .stop-panel-items { margin-top: 0.8rem; }
+    .stop-panel-items li { font-size: 0.85rem; }
+    .stop-panel-items li + li { margin-top: 0.5rem; }
+    body.panel-open .tap-prompt { bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -253,7 +338,8 @@ body {
 }
 
 @media (max-width: 699px) {
-    .room-credit { left: 0; right: 0; max-width: none; text-align: center; font-size: 0.62rem; bottom: 0.4rem; }
+    .room-credit { left: 0; right: 0; max-width: none; text-align: center; font-size: 0.68rem; bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
+    .tap-prompt { bottom: calc(3.4rem + env(safe-area-inset-bottom)); }
 }
 /* Bottom panel layout (not the side query): the credit would cover the panel text */
 @media (max-width: 699px), (orientation: portrait) {
