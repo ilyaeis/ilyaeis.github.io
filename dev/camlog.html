@@ -43,7 +43,7 @@ import * as cam from './js/camera.js';
 const q = new URLSearchParams(location.search);
 const dtMode = q.get('dt') || '60';
 const hold = Number(q.get('hold') || 0);
-const MAX_TIME = 150;           // seconds; safety cap
+const MAX_TIME = 240;           // seconds; safety cap
 
 // Jitter: own RNG so the route (Math.random) stays the same as the fixed-dt runs
 let js = 12345;

@@ -17,7 +17,7 @@ import * as intro from './intro3d.js';
 import * as tunnel from './tunnel.js';
 import {
     buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
-    getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL
+    getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL, fitDistance, viasFor, isIndoorFlight, apartment, setHaloFocus, snapHaloFocus
 } from './world.js';
 
 export { CONTACT_EMAIL };
@@ -66,6 +66,33 @@ let warp = null;           // { kind: 'in' | 'out', g: path share of the jump, t
 let headS = -1e9;          // the viewer's arc parameter in the tunnel
 let followFrom = 2.5, followTo = 2.5; // chase distance: departure -> destination fit
 let easeC2 = false;        // tunnel flights: cruise time ease, speed from the path weights
+let indoor = false;        // object to object flight through the apartment
+let indoorDoorsEnd = -1;   // indoor: path share where the last doorway leg ends (-1: none)
+const _railPos = new THREE.Vector3(), _railLook = new THREE.Vector3();
+let railIn = 3;            // s: this flight's ease onto the rail (RAIL_IN)
+const railStartPos = new THREE.Vector3(), railStartLook = new THREE.Vector3(); // the camera pose at the departure
+const _railQ = new THREE.Quaternion(), _railQs = new THREE.Quaternion(), _qIdentity = new THREE.Quaternion();
+const railDir = new THREE.Vector3(), railDirVel = new THREE.Vector3();
+const _rpA = new THREE.Vector3();
+// Path point at share g averaged over ±halfW (triangle weights). Before the
+// start and past the end the path goes on straight along its end tangents,
+// so no sample sticks to an end (that would kink the camera's motion).
+const _rpT = new THREE.Vector3();
+function railPathPoint(g, halfW, out) {
+    out.set(0, 0, 0);
+    let sum = 0;
+    for (let k = -4; k <= 4; k++) {
+        const wt = 5 - Math.abs(k), gk = g + halfW * k / 4;
+        travelPoint(gk, _rpA);
+        if (gk < 0 || gk > 1) {
+            travelTangent(gk < 0 ? 0 : 1, _rpT);
+            _rpA.addScaledVector(_rpT, (gk < 0 ? gk : gk - 1) * travelWeightedLen);
+        }
+        out.addScaledVector(_rpA, wt);
+        sum += wt;
+    }
+    return out.divideScalar(sum);
+}
 const arrivePos = new THREE.Vector3(); // VIEW camera spot of the destination (face-on, fit distance)
 let arriveBlend = true;    // this flight arrives from the front: blend the camera into the VIEW pose
 let flyby = null;          // the fly-by the current flight spirals round (world.flybys entry)
@@ -107,7 +134,7 @@ const TRAVEL_LONG_SPEED = 14.0;      // u/s mean cap for very long hops (the lan
 const TRAVEL_POINTS_PER_FRAME = 30;  // comet substeps along the path
 const CAM_PATH_WINDOW = 0.2;         // s: half-width of the path smoothing the camera follows
 const CAM_PATH_SAMPLES = 9;          // path samples per frame for that smoothing
-const TRAVEL_ARC_SAMPLES = 256;      // arc-length table samples per leg (even speed, no jump at leg joins)
+const TRAVEL_ARC_SAMPLES = 1024;     // arc-length table samples per leg (even speed, no jump at leg joins; fine, so the camera jerk stays low at high frame rates)
 const TUNNEL_ARC_SAMPLES = 1024;     // tunnel and spiral legs are long and curved: a finer table keeps the speed smooth
 const LAUNCH_FLASH = 0.8;            // extra HDR intensity leaving the intro
 
@@ -158,8 +185,42 @@ const SPIRAL_CLIMB = 1.2;            // × blockHalfH: climbs from below the blo
 const VIEW_TAP_DELAY = {
     [StopType.ROCK]: 2.0,            // the HTML panel takes ~0.9 s to appear
     [StopType.PROJECT]: 2.0,
+    [StopType.OBJECT]: 2.0,
     [StopType.LANDING]: 1.5
 };
+
+// Object stops (the apartment): the comet traces the halo ring once, then
+// rides it, slowing from the trace pace to the loop pace (no speed jump)
+const OBJECT_TRACE_DURATION = 3.0;   // s for the ring trace (one turn)
+const OBJECT_LOOP_PERIOD = 8.0;      // s per turn once settled
+const OBJECT_LOOP_EASE = 1.5;        // s: time constant of that slow-down
+const OBJECT_LOOP_BOB = 0.05;        // × ring radius: gentle up and down (twice per turn)
+// Indoor flights (object -> object, through the doorways): room units, so
+// the pace in metres is the same on every screen (× apartment.scale)
+const INDOOR_SPEED = 0.55;           // room units/s mean (≈ 2 m/s)
+const INDOOR_MIN = 4.2;              // s
+const INDOOR_MAX = 7.0;
+const INDOOR_FOLLOW = 0.26;          // room units: chase distance between the doorways (keeps the camera clear of the jambs)
+const INDOOR_FOLLOW_IN = 0.25;       // path share over which the chase distance closes in after the departure
+const APPROACH_FIT = 0.8;            // the last via before an object: this × fit in front of it (the comet arrives face-on) ...
+const APPROACH_FIT_INDOOR = 0.5;     // ... from another room: closer, the rooms are small
+const VIA_PULL = 0.3;                // control arm at a via, × leg length (the comet crosses the via along its direction)
+// Indoor camera rail: the camera rides the comet's own path a little behind
+// and above it and looks a little ahead, so it passes the doorways where the
+// comet does (a chase camera lags in the turns and clips the walls)
+const RAIL_BACK = 0.3;               // room units of path behind the comet
+const RAIL_AHEAD = 0.3;              // ... the look point ahead of it (far: the view turns before the path does)
+const RAIL_UP = 0.07;                // ... above the path
+const RAIL_WINDOW = 0.2;             // room units: the rail path is averaged over ± this (twice that for the look point)
+const INDOOR_AFTER_RAIL = 1.2;       // s: an indoor flight lasts at least this long after the rail took over
+const RAIL_MAX_PITCH = THREE.MathUtils.degToRad(20); // the rail view looks at most this far up or down
+const RAIL_TURN_TIME = 0.6;          // s: smooth time of the rail view direction
+// s: the camera eases from the departure pose onto the rail; slower for a
+// bigger turn (RAIL_IN_RATE degrees per second of it), so the view never whips
+const RAIL_IN = [2.4, 4.6];
+const RAIL_IN_RATE = 36;
+const LIFT = 0.1;                    // room units: leaving an object, the comet first crosses this far above its top ...
+const LIFT_AHEAD = 0.35;             // ... and this far (room units) towards where it goes next (a gentle climb, not a jump up)
 
 // Projects tunnel (tunnel.js). Flights inside it follow the centreline.
 const TUNNEL_DEPART = 8;             // s after a project stop where the departure joins the centreline
@@ -262,6 +323,12 @@ export function setSkipRender(v) { skipRender = v; }
 export function getState() {
     return { phase, stopIndex, userDragging, phaseTime };
 }
+// Dev only: the current flight path, n samples (world units)
+export function devPath(n = 200) {
+    const out = [];
+    for (let i = 0; i <= n; i++) out.push(travelPoint(i / n, new THREE.Vector3()).toArray());
+    return out;
+}
 export function devState() {
     return { phase, phaseTime, stopIndex, stopType: stops[stopIndex]?.type ?? -1, worldPos, cometPos,
              tunnelFlight: phase === Phase.TRAVEL && easeC2, headS };
@@ -282,6 +349,7 @@ export function jumpTo(n) {
     intro.hideRocket(); hideTapPrompt();
     stopIndex = n;
     const stop = stops[n];
+    setHaloFocus(stop); snapHaloFocus();
     trail.fade = 1; trail.attractorIdx = stop.paletteIdx ?? 0; clearTrail(trail); addTrailToScene(trail);
     traceWorld(stop, 0, cometPos); worldPos.copy(stop.center);
     cam.setOrbitCenter(stop.center.x, stop.center.y, stop.center.z);
@@ -298,7 +366,7 @@ export function jumpTo(n) {
 function setInside(f) { setInsideFade(f); intro.setIntroVisible(f < 0.5); }
 
 // Stops with an HTML panel beside them (screen shift, fit)
-function hasPanel(stop) { return stop.type === StopType.ROCK || stop.type === StopType.PROJECT; }
+function hasPanel(stop) { return stop.type === StopType.ROCK || stop.type === StopType.PROJECT || stop.type === StopType.OBJECT; }
 
 function showTapPrompt() { if (tapPromptEl) tapPromptEl.classList.add('visible'); }
 function hideTapPrompt() { if (tapPromptEl) tapPromptEl.classList.remove('visible'); }
@@ -315,34 +383,19 @@ const ROCK_FIT_SIDE = 0.5;           // side layout: half the width
 const ROCK_FIT_BOTTOM = 0.55;        // bottom layout: ~55% of the height
 
 // ── Camera fit distance ────────────────────────────────────────────
-// Distance at which a 2D point set (scaled to world units, centered on
-// the orbit target) fits inside the camera view, with a small margin.
-function computeFitDistance(points, scale, availW = 1, availH = 1) {
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const p of points) {
-        if (p.x < minX) minX = p.x;
-        if (p.x > maxX) maxX = p.x;
-        if (p.y < minY) minY = p.y;
-        if (p.y > maxY) maxY = p.y;
-    }
-    // Content may be off-center (e.g. rock labels hang below) — size around origin
-    const w = 2 * Math.max(Math.abs(minX), Math.abs(maxX)) * scale;
-    const h = 2 * Math.max(Math.abs(minY), Math.abs(maxY)) * scale;
-    const tanV = Math.tan(camera.fov * Math.PI / 360);
-    const fit = 1.25 * Math.max((h / 2) / (tanV * availH), (w / 2) / (tanV * camera.aspect * availW));
-    return THREE.MathUtils.clamp(fit, controls.minDistance, controls.maxDistance);
-}
-
 // Camera distance the chase camera trails at on arrival, so it can
 // pre-compose the scene during the flight: face-on, backed off by the fit
-// distance (rocks leave room for the panel, text backs off for the helix).
+// distance (world.fitDistance of the stop's half size; rocks leave room
+// for the panel, text backs off for the helix, objects stay inside the
+// walls: at most stop.fitMax).
 function fitFor(stop) {
     if (stop.type === StopType.TEXT) {
-        return Math.min(controls.maxDistance, computeFitDistance(stop.points2d, stop.scale) * TEXT_FIT_MARGIN);
+        return Math.min(controls.maxDistance, fitDistance(stop.halfW, stop.halfH) * TEXT_FIT_MARGIN);
     }
-    if (!hasPanel(stop)) return computeFitDistance(stop.points2d, stop.scale);
+    if (!hasPanel(stop)) return fitDistance(stop.halfW, stop.halfH);
     const [w, h] = cam.isPanelSideLayout() ? [ROCK_FIT_SIDE, 1] : [1, ROCK_FIT_BOTTOM];
-    return computeFitDistance(stop.points2d, stop.scale, w, h);
+    const fit = fitDistance(stop.halfW, stop.halfH, w, h);
+    return stop.type === StopType.OBJECT ? Math.min(fit, stop.fitMax) : fit;
 }
 
 // ── Leg evaluation ─────────────────────────────────────────────────
@@ -639,8 +692,26 @@ export function setupTravel(destIdx, withCorkscrew) {
     warp = null;
     flyby = null;
     easeC2 = inTunnel || toTunnel;
-    if (inTunnel || toTunnel) buildTunnelLegs(from, dest, inTunnel, toTunnel);
-    else buildOpenLegs();
+    indoor = isIndoorFlight(from, dest);
+    indoorDoorsEnd = -1;
+    if (!inTunnel && toTunnel) tunnel.setUnwrapRef(0);   // the flight heads for the tunnel start (see tunnel.sOf)
+    railStartPos.copy(camera.position); railStartLook.copy(controls.target);
+    const vias = viasFor(from, dest);
+    const nDoors = indoor ? vias.length : 0;
+    if (dest.type === StopType.OBJECT) {
+        // the last via: face-on in front of the object, so the comet (and the
+        // chase camera behind it) arrives from the camera side
+        const k = indoor ? APPROACH_FIT_INDOOR : APPROACH_FIT;
+        vias.push({ p: dest.center.clone().addScaledVector(dest.normal, -k * fitFor(dest)), dir: dest.normal.clone() });
+    }
+    if (from?.type === StopType.OBJECT) {
+        // leave over the top of the object: the chase camera then passes above it, not through it
+        const next = vias.length ? vias[0].p : _targetPos;
+        const h = _vC.subVectors(next, from.center).setY(0).normalize();
+        vias.unshift({ p: from.center.clone().addScaledVector(h, LIFT_AHEAD * apartment.scale).setY(from.topY + LIFT * apartment.scale), dir: null });
+    }
+    if (inTunnel || toTunnel) buildTunnelLegs(from, dest, inTunnel, toTunnel, vias);
+    else buildOpenLegs(vias);
 
     // Time proportional to chord length
     let total = 0;
@@ -648,6 +719,16 @@ export function setupTravel(destIdx, withCorkscrew) {
     buildArcTable();
     travelDuration = THREE.MathUtils.clamp(total / TRAVEL_SPEED, TRAVEL_MIN, TRAVEL_MAX);
     travelDuration = Math.max(travelDuration, total / TRAVEL_LONG_SPEED); // very long hops take longer
+    if (indoor) {
+        // through the rooms at a walking-to-running pace (path length, not chords)
+        travelDuration = THREE.MathUtils.clamp(travelWeightedLen / (INDOOR_SPEED * apartment.scale), INDOOR_MIN, INDOOR_MAX);
+        if (nDoors) indoorDoorsEnd = legEndShare(nDoors);   // path share after the last doorway (leg 0 is the lift)
+        // how far the view turns: from the departure view to the way the comet goes after the lift
+        _vA.subVectors(controls.target, camera.position).normalize();
+        _vB.subVectors(travelLegs[1].p3, travelLegs[0].p3).setY(0).normalize();
+        railIn = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(_vA.angleTo(_vB)) / RAIL_IN_RATE, RAIL_IN[0], RAIL_IN[1]);
+        travelDuration = Math.max(travelDuration, railIn + INDOOR_AFTER_RAIL);
+    }
     if (easeC2) {
         // Tunnel flights: time from the weighted length (rush zones count less, spirals more)
         // (+ the ease time, so the cruise pace is TUNNEL_SPEED on every tunnel flight)
@@ -663,6 +744,7 @@ export function setupTravel(destIdx, withCorkscrew) {
     trail.attractorIdx = dest.paletteIdx ?? 0;
 
     stopIndex = destIdx;
+    setHaloFocus(dest);
     worldPos.copy(cometPos); // the camera hand-off starts from the real head, not the stop center
     cam.setMode(cam.Mode.FOLLOW, controls);
     // Pre-compose the destination so the camera is already framed on arrival.
@@ -698,13 +780,16 @@ function easeInverse(g) {
 
 // Departure leg onto the centreline at s, arriving along the tunnel
 // tangent (C1 join with the centreline leg that follows)
-function joinLeg(s) {
+function joinLeg(s, start = null) {
     const p3 = tunnel.centreWorld(s, new THREE.Vector3());
     // Leave mostly towards the join point, with a hint of the live heading
     // (loop or stroke) and no random arc: the camera, which faces the
-    // stop, barely has to turn, and the comet trail bends only a little
-    _vB.subVectors(p3, cometPos).normalize().addScaledVector(cometDir, JOIN_HEADING_MIX).normalize();
-    const leg = buildLeg(cometPos, _vB, p3, true, 0.35);
+    // stop, barely has to turn, and the comet trail bends only a little.
+    // From a via (start = { p, dir }): leave exactly along its direction.
+    const p0 = start ? start.p : cometPos;
+    if (start) _vB.copy(start.dir);
+    else _vB.subVectors(p3, cometPos).normalize().addScaledVector(cometDir, JOIN_HEADING_MIX).normalize();
+    const leg = buildLeg(p0, _vB, p3, true, 0.35);
     leg.p2.copy(p3).addScaledVector(tunnel.tangentWorld(s, _vA), -0.35 * leg.p0.distanceTo(p3));
     return leg;
 }
@@ -728,11 +813,15 @@ function pushCentre(sA, sB, endPos = null) {
 
 // Flights that touch the tunnel: warp in (open space -> tunnel), hops
 // inside it, warp out (tunnel -> open space).
-function buildTunnelLegs(from, dest, inTunnel, toTunnel) {
+// Warp in from the apartment: out of the window first (vias), then onto
+// the tunnel start. Warp out: the exit comes home behind the apartment,
+// over the roof (via), then a dive through the cut ceiling to the landing.
+function buildTunnelLegs(from, dest, inTunnel, toTunnel, vias) {
     if (!inTunnel) {
-        travelLegs.push(joinLeg(0));
+        const last = vias.length ? buildViaLegs(vias, null) : null;
+        travelLegs.push(joinLeg(0, last));
+        warp = { kind: 'in', leg: travelLegs.length - 1 };
         pushCentre(0, dest.tunnelS, _targetPos);
-        warp = { kind: 'in', leg: 0 };
     } else if (toTunnel) {
         const sJ = from.tunnelS + TUNNEL_DEPART;
         travelLegs.push(joinLeg(sJ));
@@ -740,28 +829,64 @@ function buildTunnelLegs(from, dest, inTunnel, toTunnel) {
     } else {
         const sJ = from.tunnelS + TUNNEL_DEPART;
         const exit = tunnel.centreWorld(tunnelExitS, new THREE.Vector3());
-        travelLegs.push(joinLeg(sJ), centreLeg(sJ, tunnelExitS),
-            buildLeg(exit, tunnel.tangentWorld(tunnelExitS, new THREE.Vector3()), _targetPos, true, 0.6));
+        travelLegs.push(joinLeg(sJ), centreLeg(sJ, tunnelExitS));
         warp = { kind: 'out', leg: 1 };
+        let p = exit, dir = tunnel.tangentWorld(tunnelExitS, new THREE.Vector3());
+        for (const v of vias) {
+            const leg = buildLeg(p, dir, v.p, true, 0.6);
+            if (v.dir) leg.p2.copy(v.p).addScaledVector(v.dir, -VIA_PULL * leg.p0.distanceTo(v.p));
+            travelLegs.push(leg);
+            p = v.p;
+            dir = v.dir ?? new THREE.Vector3().subVectors(leg.p3, leg.p2).normalize();
+        }
+        travelLegs.push(buildLeg(p, dir, _targetPos, true, 0.35, 0));
     }
 }
 
-// Open space: swing past a scenery galaxy when one sits near the flight line
-function buildOpenLegs() {
+// Chain of legs through via points ({ p, dir? }: with dir the comet crosses
+// p exactly along it). The first leg leaves the comet's live heading: from
+// an object or the landing tangent to its loop (no random swing, it is
+// indoors), else as any departure (buildFirstLeg). Indoor legs have no
+// random arc. Ends at `target`; with target null it ends at the last via
+// and returns { p, dir } there, for a leg that continues from it.
+function buildViaLegs(vias, target) {
+    const fromStop = stops[stopIndex];
+    const fromRoom = fromStop?.type === StopType.OBJECT;   // the landing leaves as any hover stop
+    const arc = indoor ? 0 : 1;
+    let p = cometPos, dir = cometDir;
+    vias.forEach((v, i) => {
+        let leg;
+        if (i === 0 && fromRoom) leg = buildLeg(cometPos, cometDir, v.p, true, 0.25, 0);
+        else if (i === 0) {
+            // a hover departure, but no Thales bend at the via end: the comet is fast there
+            leg = buildFirstLeg(v.p);
+            leg.p2.copy(v.p).addScaledVector(_vC.subVectors(v.p, leg.p1).normalize(), -VIA_PULL * leg.p0.distanceTo(v.p));
+        }
+        else leg = buildLeg(p, dir, v.p, true, VIA_PULL, arc);
+        if (v.dir) leg.p2.copy(v.p).addScaledVector(v.dir, -VIA_PULL * leg.p0.distanceTo(v.p));
+        travelLegs.push(leg);
+        p = v.p;
+        dir = v.dir ?? new THREE.Vector3().subVectors(leg.p3, leg.p2).normalize();
+    });
+    if (!target) return { p, dir };
+    travelLegs.push(buildLeg(p, dir, target, true, VIA_PULL, 0));
+    return null;
+}
+
+// Open space: swing past a scenery galaxy when one sits near the flight line.
+// With vias (into the apartment, out of it) the galaxy may come first.
+function buildOpenLegs(vias = []) {
+    const fromStop = stops[stopIndex];
+    const fromRoom = fromStop?.type === StopType.OBJECT || fromStop?.type === StopType.LANDING;
+    if (vias.length) {
+        const g = fromRoom ? null : pickViaScenery(cometPos, vias[0].p);
+        if (g) vias.unshift({ p: galaxyViaPoint(g, vias[0].p), dir: null });
+        buildViaLegs(vias, _targetPos);
+        return;
+    }
     const via = pickViaScenery(cometPos, _targetPos);
     if (via) {
-        // Near edge of the galaxy, not its center: the closest point on the
-        // flight line, pushed back out to the rim on that side
-        _vA.subVectors(_targetPos, cometPos);
-        const s = _vB.subVectors(via.center, cometPos).dot(_vA) / _vA.lengthSq();
-        _vec3.copy(cometPos).addScaledVector(_vA, s);
-        const viaPos = _vec3.sub(via.center).normalize()
-            .multiplyScalar(via.radius * VIA_RIM).add(via.center).clone()
-            .add(new THREE.Vector3(
-            rand(-VIA_JITTER, VIA_JITTER),
-            rand(-VIA_JITTER, VIA_JITTER),
-            rand(-VIA_JITTER, VIA_JITTER)
-        ));
+        const viaPos = galaxyViaPoint(via, _targetPos);
         const leg1 = buildFirstLeg(viaPos);
         // Depart the via along leg1's arrival tangent — smooth join
         _vec3.subVectors(leg1.p3, leg1.p2).normalize();
@@ -769,6 +894,17 @@ function buildOpenLegs() {
     } else {
         travelLegs.push(buildFirstLeg(_targetPos));
     }
+}
+
+// Near edge of the galaxy, not its center: the closest point on the
+// flight line (comet to `to`), pushed back out to the rim on that side
+function galaxyViaPoint(g, to) {
+    _vA.subVectors(to, cometPos);
+    const s = _vB.subVectors(g.center, cometPos).dot(_vA) / _vA.lengthSq();
+    _vec3.copy(cometPos).addScaledVector(_vA, s);
+    return _vec3.sub(g.center).normalize()
+        .multiplyScalar(g.radius * VIA_RIM).add(g.center).clone()
+        .add(new THREE.Vector3(rand(-VIA_JITTER, VIA_JITTER), rand(-VIA_JITTER, VIA_JITTER), rand(-VIA_JITTER, VIA_JITTER)));
 }
 
 // Spiral offset around the curve tangent — radius ramps in and out so
@@ -916,7 +1052,13 @@ function updateTravel(dt) {
     const k = flyby ? flybyFraming(sHead) : 0;
     // Rush: a gentle sense of speed at the fast zones (ring pulses, streaks, FOV)
     const rush = easeC2 ? tunnel.fastness(sHead) : 0;
-    const dist = followFrom + (followTo - followFrom) * THREE.MathUtils.smoothstep(t, 0, FOLLOW_EASE);
+    let dist = followFrom + (followTo - followFrom) * THREE.MathUtils.smoothstep(t, 0, FOLLOW_EASE);
+    if (indoor && indoorDoorsEnd > 0) {
+        // close in for the doorways, then back out to the destination fit
+        const near = INDOOR_FOLLOW * apartment.scale;
+        dist = followFrom + (near - followFrom) * THREE.MathUtils.smoothstep(t, 0, INDOOR_FOLLOW_IN);
+        dist += (followTo - near) * THREE.MathUtils.smoothstep(t, indoorDoorsEnd, 1);
+    }
     cam.setFollowDistance(dist + (FLYBY_CAM_DIST - dist) * k);
     trail.pointIntensity = 1 + WARP_COMET * w + FLYBY_GLOW * k; // the spiral glows
 
@@ -952,6 +1094,46 @@ function updateTravel(dt) {
         cam.setArrival(null, null, THREE.MathUtils.smootherstep(phaseTime + dt, travelDuration - ARRIVE_TIME, travelDuration));
     } else {
         cam.setArrival(null, null, THREE.MathUtils.smootherstep(x, 1 - ARRIVE_BLEND, 1));
+    }
+    if (indoor) {
+        const L = travelWeightedLen, s = apartment.scale;
+        // the path averaged over a window (no corner of the path reaches the camera)
+        railPathPoint(t - RAIL_BACK * s / L, RAIL_WINDOW * s / L, _railPos);
+        _railPos.y += RAIL_UP * s;
+        railPathPoint(t + RAIL_AHEAD * s / L, 2 * RAIL_WINDOW * s / L, _railLook);
+        // the rail direction on a spring: it turns smoothly even where the path bends hard
+        const d1 = _vB.subVectors(_railLook, _railPos);
+        const len1 = d1.length();
+        // a calm pitch: the climb over an object or a dip does not tip the view
+        const hl = Math.hypot(d1.x, d1.z), maxY = Math.tan(RAIL_MAX_PITCH) * hl;
+        d1.y = THREE.MathUtils.clamp(d1.y, -maxY, maxY);
+        if (phaseFirstFrame) { railDir.copy(d1).normalize(); railDirVel.set(0, 0, 0); phaseFirstFrame = false; }
+        cam.smoothDampVec(railDir, d1.normalize(), railDirVel, RAIL_TURN_TIME, dt);
+        railDir.normalize();
+        // From the departure pose onto the rail (the rail owns the camera for the
+        // whole flight): the position eases along a line, the view direction
+        // turns along the shortest arc (a lerp of the two look points could pass
+        // under the camera and spin the view)
+        const a = THREE.MathUtils.smootherstep(phaseTime + dt, 0, railIn);
+        const d0 = _vA.subVectors(railStartLook, railStartPos);
+        d1.copy(railDir);
+        const len = THREE.MathUtils.lerp(d0.length(), len1, a);
+        _railQ.setFromUnitVectors(d0.normalize(), d1);
+        d0.applyQuaternion(_railQs.slerpQuaternions(_qIdentity, _railQ, a));
+        _railPos.lerpVectors(railStartPos, _railPos, a);
+        // ... and onto the VIEW pose at the end, the same way (the arrival lerp of camera.js is off)
+        const w = arriveBlend ? THREE.MathUtils.smootherstep(x, 1 - ARRIVE_BLEND, 1) : 0;
+        if (w > 0) {
+            const d2 = _vC.subVectors(dest.center, arrivePos);
+            const len2 = THREE.MathUtils.lerp(len, d2.length(), w);
+            _railQ.setFromUnitVectors(d0, d2.normalize());
+            d0.applyQuaternion(_railQs.slerpQuaternions(_qIdentity, _railQ, w));
+            _railPos.lerp(arrivePos, w);
+            cam.setRail(_railPos, _railLook.copy(_railPos).addScaledVector(d0, len2), 1);
+        } else {
+            cam.setRail(_railPos, _railLook.copy(_railPos).addScaledVector(d0, len), 1);
+        }
+        cam.setArrival(null, null, 0);
     }
     // Fly-by: the camera frames the viz, looking down the tunnel. Its
     // anchor hangs back along the axis by up to FLYBY_CAM_LAG (a C2 bump in
@@ -1025,6 +1207,7 @@ function enterView() {
     const stop = stops[stopIndex];
     if (warp) endWarp();
     cam.setArrival(null, null, 0);
+    cam.setRail(null, null, 0);
     if (easeC2) {                    // rush effects off
         camera.fov = baseFov; camera.updateProjectionMatrix();
         tunnel.setRush(0); tunnel.updateStreaks(0, cometPos, cometDir, 0);
@@ -1106,12 +1289,27 @@ function helixPos(stop, u, out) {
 function loopPos(stop, u, out) {
     if (stop.type === StopType.TEXT) return helixPos(stop, u, out);
     if (stop.type === StopType.PROJECT) return frameLoopPos(stop, u, out);
+    if (stop.type === StopType.OBJECT) return ringLoopPos(stop, u, out);
     const w = Math.max(stop.halfW * 1.25, 0.4);
     const h = Math.max(stop.halfH * 1.6, 0.3);
     out.copy(stop.center)
         .addScaledVector(stop.right, w * Math.sin(0.7 * u))
         .addScaledVector(stop.up, h * Math.sin(1.3 * u))
         .addScaledVector(stop.normal, 0.35 * Math.sin(0.9 * u));
+    return out;
+}
+
+// Object stops: the comet rides the halo ring. Its angle starts at the
+// trace pace (u = 0 is the ring's last traced point) and eases to the loop
+// pace, so the speed never jumps.
+function ringLoopPos(stop, u, out) {
+    const w0 = 2 * Math.PI / OBJECT_TRACE_DURATION, w1 = 2 * Math.PI / OBJECT_LOOP_PERIOD;
+    const a = w1 * u + (w0 - w1) * OBJECT_LOOP_EASE * (1 - Math.exp(-u / OBJECT_LOOP_EASE));
+    const R = stop.haloR;
+    out.copy(stop.center)
+        .addScaledVector(stop.right, R * Math.cos(a))
+        .addScaledVector(stop.up, R * Math.sin(a));
+    out.y += OBJECT_LOOP_BOB * R * Math.sin(2 * a);
     return out;
 }
 
@@ -1173,11 +1371,12 @@ function updateView(dt) {
 
     // Face the stop during the first moments, then hand the camera
     // back so the user can zoom/rotate freely
-    const isText = stop.type === StopType.TEXT;
-    if (stepFaceAlign(dt) && stop.type === StopType.ROCK) controls.autoRotateSpeed = 0.3; // projects stay face-on
+    const isText = stop.type === StopType.TEXT, isObject = stop.type === StopType.OBJECT;
+    if (stepFaceAlign(dt) && stop.type === StopType.ROCK) controls.autoRotateSpeed = 0.3; // projects and objects stay face-on
     if (tracing) {
-        tracePlanar(stop, dt, isText ? TEXT_TRACE_DURATION : TRACE_DURATION); // draw the trajectory once, then loop
-        if (isText) lightStop(stop, traceCursor);
+        // draw the trajectory once, then loop
+        tracePlanar(stop, dt, isText ? TEXT_TRACE_DURATION : isObject ? OBJECT_TRACE_DURATION : TRACE_DURATION);
+        if (isText || isObject) lightStop(stop, traceCursor);   // the dim text or halo lights up as it is traced
     } else {
         loopPlanar(stop, dt);
         loopPosSettled(stop, loopT, cometPos); // comet head rides the orbit
