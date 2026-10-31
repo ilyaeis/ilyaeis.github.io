@@ -118,7 +118,7 @@
 
     <section>
         <h2>Experience</h2>
-        <div class="entry">
+        <div id="giraffe360" class="entry">
             <div class="row">
                 <h3>Giraffe360 <span class="role">— R&amp;D Engineer</span></h3>
                 <p class="meta">Riga · <time datetime="2025">2025</time> – present</p>
@@ -142,7 +142,7 @@
                     <summary><span class="hl">Led the team that built outdoor splats and orbital videos.</span></summary>
                     <div class="why">2 weeks to show first results, 3 weeks to push good ones to production. I led the team. <span class="more-text">I built the toolkit that prepares the exterior splats: it rotates the scene to the correct orientation, selects the largest fragment and crops it. A per-frame outdoor-view video pipeline then renders the orbital video around the property.</span></div>
                 </details>
-                <details class="item">
+                <details id="influence-accumulation" class="item">
                     <summary><span class="hl">Influence accumulation: my densification method, still the team’s best.</span></summary>
                     <div class="why">I found the research, implemented it, tested it and pushed it to production in Jan 2026. It is still the team’s best densification method. <span class="more-text">It measures how much each Gaussian contributes to the image during training and relocates the least useful ones, instead of adding new detail everywhere. This improves quality while keeping the model efficient. I implemented it partly with AI-assisted coding, and when the team moved to a new training approach, I ported it there.</span></div>
                 </details>
@@ -150,7 +150,7 @@
                     <summary><span class="hl">Implemented Analytic-Splatting in gsplat at CUDA level.</span></summary>
                     <div class="why">June 2026: exact per-pixel Gaussian integration, which reduces aliasing. <span class="more-text">I wrote both the computation and its training part, and used it in a downsampling algorithm. I also sped up training by measuring and reducing GPU idle time.</span></div>
                 </details>
-                <details class="item">
+                <details id="ground-truth" class="item">
                     <summary><span class="hl">Built tools to measure 3DGS quality against known ground truth.</span></summary>
                     <div class="why">Validation tools and ground-truth datasets (July 2026) to check quality against known truth. <span class="more-text">Before, quality was checked only with no-reference metrics. In March 2026 I also built an experiment runner, so every teammate can run and track training experiments on a local GPU, driven by an AI agent.</span></div>
                 </details>
@@ -166,7 +166,7 @@
                         <summary><span class="hl">Led the pipeline restructuring and created a 3DGS monorepo.</span></summary>
                         <div class="why">Led the restructuring (July 2026) and created a monorepo for all 3DGS extensions and client apps: ~3000-line files split, duplication removed, defects fixed. <span class="more-text">I added an automatic check that stops files and functions growing too large. Cleaning up the drone camera path exposed three hidden defects: for example, the camera jerked away when two highlighted features sat close together, and its tilt could drift outside the allowed range. The cleanup also let me fix the half-floor camera problem, open for a long time: in rooms higher or lower than the rest of the storey, the camera sat too low and showed the floor. The fix shipped for all video types.</span></div>
                     </details>
-                    <details class="item">
+                    <details id="splat-viewer" class="item">
                         <summary><span class="hl">Built an embeddable Rust/wgpu splat viewer and a comparison tool.</span></summary>
                         <div class="why">Rust/wgpu viewer (May 2026) that any app can embed and control, plus a multi-view comparison tool (Jan 2026). <span class="more-text">In July 2026 I added single-view PLY comparison to the new viewer: folder browsing, live scene swapping and combining several scenes. It also renders ordinary point-cloud PLY files. The comparison tool loads reconstructions from experiment-tracking tasks and opens each in its own window with optional camera sync, so teams can compare from any viewpoint, not only through video.</span></div>
                     </details>
@@ -186,11 +186,11 @@
                         <summary><span class="hl">Three hackathon ideas recognized; the looped drone shipped.</span></summary>
                         <div class="why">Internal hackathon, Feb 2026 (13 teams, 51 ideas): three of my ideas recognized, one top 20, two special mentions. <span class="more-text">The ideas were text and logo inside the scene on video (top 20), a video made from still photos (special mention) and a looped drone in each room (special mention). The looped drone then became a shipped feature.</span></div>
                     </details>
-                    <details class="item">
+                    <details id="mcp-server" class="item">
                         <summary><span class="hl">Built an MCP server for the team task board.</span></summary>
                         <div class="why">An MCP server (June 2026, Node.js) so AI agents and tools can read and write the team task board. <span class="more-text">It covers projects, tasks and decisions, with authentication and a one-time setup, and colleagues use it. I also added a compact graph view of the task tree with detailed cards (assignee, status, age, project members).</span></div>
                     </details>
-                    <details class="item">
+                    <details id="tour-narration" class="item">
                         <summary><span class="hl">Earlier: a small LLM service that wrote tour narration.</span></summary>
                         <div class="why">Jul–Oct 2025: a small LLM service that wrote tour narration (OpenAI API, AWS, S3).</div>
                     </details>
@@ -202,7 +202,7 @@
 
     <section>
         <h2>Education</h2>
-        <div class="entry">
+        <div id="rtu" class="entry">
             <div class="row">
                 <h3>Riga Technical University <span class="role">— Professional Bachelor, Financial Engineering</span></h3>
                 <p class="meta"><time datetime="2024">2024</time> – <time datetime="2028">2028</time> (expected)</p>
@@ -225,7 +225,7 @@
             </details>
         </div>
 
-        <div class="entry">
+        <div id="rvkg" class="entry">
             <div class="row">
                 <h3>Riga State Classical Gymnasium <span class="role">— Programming and Mathematics track</span></h3>
             </div>
@@ -244,7 +244,7 @@
                 <summary><span class="hl">load-balancing-experiments — seven experiments on DNS, queueing and load balancing.</span></summary>
                 <div class="why">Seven reproducible experiments for an RTU networks project: DNS round robin and anycast measured from Riga, a queueing simulation of load-balancing policies (“power of two choices”), consistent / rendezvous / Maglev hashing, a mini load balancer with health checks, packet capture. <span class="meta">(2026, Python)</span> <a href="https://github.com/ilyaeis/load-balancing-experiments">Code on GitHub ↗</a></div>
             </details>
-            <details class="item">
+            <details id="flow" class="item">
                 <summary><span class="hl">flow — offline workout tracker in Dart/Flutter, in daily use.</span></summary>
                 <div class="why">Log sets with live timers; analysis of volume, load (ACWR), records and body measurements; custom formulas, JSON/CSV/PDF export, CI with golden-image tests. In daily use. <span class="meta">(2026, Dart/Flutter, private)</span></div>
             </details>
