@@ -42,7 +42,7 @@ const FAR_DIM = [6, 32, 0.12];           // alpha × this far down the tunnel (k
 const FLARE_LENGTH = 11;                 // mouth: radius × e^(d / this), d = distance past the tunnel end
 const FLARE_MAX = 14;                    // radius factor cap at the far mouth
 const FLARE_ALPHA = 0.5;                 // alpha × factor^-this (the wide mouth stays faint)
-const VORTEX_SPEED = 1.6;                // rad/s the mouth swirls during the warp
+const VORTEX_SPEED = 3.2;                // rad/s the mouth swirls during the warp (the warp lasts ~1 s)
 // Strands: pitch (units per turn), handedness, angle offset, palette position, alpha
 const STRANDS = [
     { pitch: 9, hand: 1, off: 0.0, col: 0.0, alpha: 0.42 },
@@ -80,7 +80,7 @@ const STREAK_COUNT = isMobile ? 80 : 160;
 const STREAK_R = [1.2, 9];               // cylinder radius around the comet
 const STREAK_LEN = [2.5, 9];
 const STREAK_SPAN = 60;                  // cylinder length (wraps)
-const STREAK_SPEED = 55;                 // units/s backwards past the comet
+const STREAK_SPEED = 110;                // units/s backwards past the comet
 const STREAK_INTENSITY = 1.6;
 
 // ── Shaders ────────────────────────────────────────────────────────

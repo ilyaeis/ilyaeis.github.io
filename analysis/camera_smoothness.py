@@ -19,9 +19,13 @@ Thresholds ("smooth" = no metric goes above its limit):
   cam jerk   <= 400 u/s3   Measured over a 50 ms window, so a one-frame
                            step in acceleration counts the same at any dt.
   look speed <= 30 u/s     The look target must not jump either.
-  Tunnel flights only (frames logged with tunnel=1): cam speed and look speed
-  <= 60 u/s. The comet legitimately rushes down the straight middle of each
-  tunnel hop (~50 u/s); rotation, acceleration and jerk keep their limits.
+  Tunnel flights only (frames logged with tunnel=1): cam/look speed <= 120 u/s,
+  cam accel <= 160 u/s2, cam jerk <= 1600 u/s3. The tunnel runs at 2x pace
+  (TUNNEL_TIME_SCALE in orchestrator.js): the comet rushes down the straight
+  middle of each hop at ~75 u/s, and at twice the speed over the same path
+  acceleration grows 4x (v^2 x curvature, v dv/ds), so these are the
+  open-space limits scaled for that. Rotation limits are the same everywhere,
+  so the view never whips.
 """
 import argparse, html, json, os, re, subprocess, sys
 import numpy as np
@@ -39,7 +43,8 @@ LIMITS = {  # metric: (limit, unit)
     'look_speed': (30, 'u/s'),
 }
 JERK_WIN = 0.05  # s
-TUNNEL_SPEED_LIMIT = 60  # u/s, cam_speed / look_speed in tunnel flights
+# Tunnel flights only (frames logged with tunnel=1): see the header
+TUNNEL_LIMITS = {'cam_speed': 120, 'look_speed': 120, 'cam_accel': 160, 'cam_jerk': 1600}
 
 
 def run_chrome(url, dt):
@@ -108,8 +113,8 @@ def metrics(log):
 def spikes(m, key):
     """Runs of frames above the limit -> list of (frame, t, phase, stop, peak)."""
     lim = LIMITS[key][0]
-    if key in ('cam_speed', 'look_speed'):
-        lim = np.where(m['tunnel'] > 0, TUNNEL_SPEED_LIMIT, lim)
+    if key in TUNNEL_LIMITS:
+        lim = np.where(m['tunnel'] > 0, TUNNEL_LIMITS[key], lim)
     over = m[key] > lim
     out, i, n = [], 0, len(over)
     while i < n:
