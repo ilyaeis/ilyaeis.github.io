@@ -16,7 +16,8 @@ Thresholds ("smooth" = no metric goes above its limit):
                            width (~87 deg) in about 1 s. Faster reads as a whip pan.
   rot accel  <= 400 deg/s2 A turn may not start or stop in a snap: reaching
                            90 deg/s takes at least ~0.25 s.
-  cam speed  <= 30 u/s     The comet peaks near 1.5 x 9 u/s. More is a jump.
+  cam speed  <= 30 u/s     The comet peaks at 11-16 u/s in open space (measured,
+                           seeds 1-6). More is a jump.
   cam accel  <= 40 u/s2    About 3x the comet's own ease-in/out peak.
   cam jerk   <= 400 u/s3   Measured over a 50 ms window, so a one-frame
                            step in acceleration counts the same at any dt.
@@ -24,7 +25,7 @@ Thresholds ("smooth" = no metric goes above its limit):
   Tunnel flights only (frames logged with tunnel=1): cam/look speed <= 120 u/s,
   cam accel <= 160 u/s2, cam jerk <= 1600 u/s3. The tunnel runs at 2x pace
   (TUNNEL_TIME_SCALE in orchestrator.js): the comet rushes down the straight
-  middle of each hop at ~75 u/s, and at twice the speed over the same path
+  middle of each hop at 74 u/s (up to 86 on the warp in), and at twice the speed over the same path
   acceleration grows 4x (v^2 x curvature, v dv/ds), so these are the
   open-space limits scaled for that. Rotation limits are the same everywhere,
   so the view never whips.
