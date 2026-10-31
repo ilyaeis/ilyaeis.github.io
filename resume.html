@@ -134,7 +134,7 @@
                 <div class="item-row">
                     <details class="item">
                         <summary><span class="hl">Shipped the looped drone video, from idea to production.<span class="print"> instagram.com/giraffe360/reel/Dd9ODBVIHhE</span></span></summary>
-                        <div class="why">I proposed it, agreed the look with designers, built the camera-path algorithm and shipped it; launched by Giraffe360, Oct 2026. <span class="more-text">A customer asked for it. It was also one of my ideas awarded at the internal hackathon in Feb 2026 (a special mention, among 13 teams and 51 ideas). The original drone code, written by a colleague, was hard to understand and extend, so I first restructured the whole video pipeline to make it easy to configure (the restructuring described below). Then I built the looped drone on top of that setup.</span></div>
+                        <div class="why">I proposed it, agreed the look with designers, built the camera-path algorithm and shipped it; launched by Giraffe360, Oct 2026. <span class="more-text">A customer asked for it. It was also one of my ideas awarded at the internal hackathon in Feb 2026 (special mention). The original drone code, written by a colleague, was hard to understand and extend, so I first restructured the whole video pipeline to make it easy to configure (the restructuring described below). Then I built the looped drone on top of that setup.</span></div>
                     </details>
                     <a class="post screen" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">Giraffe360 post ↗</a>
                 </div>
@@ -164,27 +164,27 @@
                     </details>
                     <details class="item">
                         <summary><span class="hl">Led the pipeline restructuring and created a 3DGS monorepo.</span></summary>
-                        <div class="why">Led the restructuring (July 2026) and created a monorepo for all 3DGS extensions and client apps: ~3000-line files split, duplication removed, defects fixed. <span class="more-text">I added an automatic check that stops files and functions growing too large. Cleaning up the drone camera path exposed three hidden defects: for example, the camera jerked away when two highlighted features sat close together, and its tilt could drift outside the allowed range. The cleanup also let me fix the half-floor camera problem, open for a long time: in rooms higher or lower than the rest of the storey, the camera sat too low and showed the floor. The fix shipped for all video types.</span></div>
+                        <div class="why">Led the restructuring (July 2026) and created a monorepo for all 3DGS extensions and client apps: ~3000-line files split, duplication removed, defects fixed. <span class="more-text">I added an automatic check that stops files and functions growing too large. Cleaning up the drone camera path exposed three hidden defects: for example, the camera jerked away when two highlighted features sat close together, and its tilt could drift outside the allowed range. The cleanup also let me fix a long-standing camera-path bug: in rooms higher or lower than the rest of the storey, the camera sat too low and showed the floor. The fix shipped for all video types.</span></div>
                     </details>
                     <details id="splat-viewer" class="item">
                         <summary><span class="hl">Built an embeddable Rust/wgpu splat viewer and a comparison tool.</span></summary>
                         <div class="why">Rust/wgpu viewer (May 2026) that any app can embed and control, plus a multi-view comparison tool (Jan 2026). <span class="more-text">In July 2026 I added single-view PLY comparison to the new viewer: folder browsing, live scene swapping and combining several scenes. It also renders ordinary point-cloud PLY files. The comparison tool loads reconstructions from experiment-tracking tasks and opens each in its own window with optional camera sync, so teams can compare from any viewpoint, not only through video.</span></div>
                     </details>
                     <details class="item">
-                        <summary><span class="hl">Prototyped mirror planes and a fly-in dollhouse video intro.</span></summary>
-                        <div class="why">Two working prototypes (June 2026): mirror planes that render correct reflections, and a fly-in “dollhouse” video intro. <span class="more-text">In my mirror comparison, current production is on the left with imperfect mirrors and the new concept on the right with a correct reflection. Production quality still needs better depth, so the work continues with a colleague. The fly-in shot starts high above the property with the ceilings removed and all rooms visible, then descends and blends into an eye-level walkthrough of the real splat.</span></div>
+                        <summary><span class="hl">Prototyped two new video concepts: correct mirror reflections and a fly-in intro.</span></summary>
+                        <div class="why">Two working prototypes (June 2026): correct reflections in mirrors, and a fly-in video intro. <span class="more-text">The fly-in shot starts high above the property with the ceilings removed and all rooms visible, then descends and blends into an eye-level walkthrough of the real splat.</span></div>
                     </details>
                     <details class="item">
                         <summary><span class="hl">Worked on mesh generation and point-count reduction for viewers.</span></summary>
-                        <div class="why">Mesh generation from splats, combined with Gaussian splats; a point-count reduction stage (May 2026) for viewers. <span class="more-text">The reduction stage cuts the number of splats while keeping the major details, for example capping window points at about 1 million. Viewers and compressed scene files need it, so that every client device can run at least some level of detail. It is a prototype on a separate branch.</span></div>
+                        <div class="why">Mesh generation from splats, combined with Gaussian splats; a point-count reduction stage (May 2026) for viewers. <span class="more-text">The reduction stage cuts the number of splats while keeping the major details. Viewers and compressed scene files need it, so that every client device can run at least some level of detail. It is a prototype on a separate branch.</span></div>
                     </details>
                     <details class="item">
                         <summary><span class="hl">Made diffusion-based artifact fixing runnable on shared GPUs.</span></summary>
-                        <div class="why">Made a diffusion-based artifact-fixing tool (Difix, then NVIDIA Fixer) run remotely on shared GPUs in Feb 2026. <span class="more-text">Before, it ran out of memory on every local machine, so nobody on the team could evaluate it. Running it on the shared ClearML platform turned it from a black box into something the team can test.</span></div>
+                        <div class="why">Made a diffusion-based artifact-fixing tool (Difix, then NVIDIA Fixer) run remotely on shared GPUs in Feb 2026. <span class="more-text">Before, it ran out of memory on every local machine, so nobody on the team could evaluate it. Running it on shared GPUs turned it from a black box into something the team can test.</span></div>
                     </details>
                     <details class="item">
                         <summary><span class="hl">Three hackathon ideas recognized; the looped drone shipped.</span></summary>
-                        <div class="why">Internal hackathon, Feb 2026 (13 teams, 51 ideas): three of my ideas recognized, one top 20, two special mentions. <span class="more-text">The ideas were text and logo inside the scene on video (top 20), a video made from still photos (special mention) and a looped drone in each room (special mention). The looped drone then became a shipped feature.</span></div>
+                        <div class="why">Internal hackathon, Feb 2026: three of my ideas recognized, two with special mentions. <span class="more-text">The ideas were text and logo inside the scene on video, a video made from still photos (special mention) and a looped drone in each room (special mention). The looped drone then became a shipped feature.</span></div>
                     </details>
                     <details id="mcp-server" class="item">
                         <summary><span class="hl">Built an MCP server for the team task board.</span></summary>
@@ -298,7 +298,7 @@
             <div><dt>3D &amp; vision</dt><dd>Gaussian splatting, 3D reconstruction, computer vision, depth estimation, anti-aliasing, mesh generation, diffusion-based artifact fixing, PyTorch, CUDA kernels</dd></div>
             <div><dt>Research</dt><dd>Paper-to-production, benchmarking and evaluation</dd></div>
             <div><dt>Languages</dt><dd>Python, C++, Dart/Flutter, JavaScript, Java, SQL</dd></div>
-            <div><dt>Tools</dt><dd>Linux, Docker, Git/GitLab CI, ClearML, AWS S3, Pygame, Selenium, pandas</dd></div>
+            <div><dt>Tools</dt><dd>Linux, Docker, Git/GitLab CI, AWS S3, Pygame, Selenium, pandas</dd></div>
             <div><dt>Other</dt><dd>OpenAI API / LLM prompting, neuroevolution (NEAT), three.js/WebGL</dd></div>
             <div><dt>Spoken</dt><dd>Latvian, English, Russian</dd></div>
         </dl>
