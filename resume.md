@@ -12,17 +12,17 @@ I work on 3D reconstruction and computer vision: Gaussian splatting pipelines, b
 
 Riga · 2025 – present. Giraffe360 makes cameras and software for real-estate virtual tours.
 
-- Solved the long-standing window, outdoor-view and mirror quality problem in 3DGS video. I found the root cause (wrong depth behind windows and walls), handled depth differently inside and outside the room, and added a training-time correction. 700+ controlled experiments back it. It runs in production and was [publicly showcased by Giraffe360](https://www.instagram.com/p/DZsNRB8o772/).
+- Solved the long-standing window, outdoor-view and mirror quality problem in 3DGS video. I found the root cause (wrong depth behind windows and walls), handled depth differently inside and outside the room, and added a training-time correction. 700+ controlled experiments back it. It runs in production and was publicly showcased by Giraffe360: [Giraffe360 post](https://www.instagram.com/p/DZsNRB8o772/).
+- Looped drone video, end to end: proposed the feature, agreed its look with the designers, developed the camera-path algorithm and shipped it to production. A customer-requested feature, launched by Giraffe360 in Oct 2026: [Giraffe360 post](https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/).
 - Research to production: developed “influence accumulation”, which measures each Gaussian’s contribution to the image and relocates the least useful ones during training (in production). Implemented Analytic-Splatting (exact per-pixel Gaussian integration) in gsplat at CUDA level, which reduces aliasing; it is used in a downsampling algorithm.
-- Benchmarking and evaluation: validation tools and ground-truth datasets, so the team measures quality against known truth; an experiment runner for agent-driven research loops on local GPUs; GPU training and evaluation on ClearML.
-- Led the restructuring of the reconstruction-pipeline codebase: a code-quality standard, ~3000-line files split, duplication removed, hidden camera-path defects fixed. This made it possible to fix a long-standing half-floor camera-height problem.
-- An embeddable Rust/wgpu splat viewer package with host control and single-view PLY comparison, and a side-by-side multi-view comparison tool.
-- An exterior (outdoor) orbital-view toolkit, used in production.
+- Benchmarking and evaluation: validation tools and ground-truth datasets, to measure quality against known truth; an experiment runner for agent-driven research loops on local GPUs; ClearML GPU runs.
+- Led the pipeline codebase restructuring: code-quality standard, ~3000-line files split, duplication removed, hidden camera-path defects fixed. It enabled the half-floor camera-height fix.
+- Embeddable Rust/wgpu splat viewer (host control, PLY comparison); multi-view comparison tool.
 - Working prototypes: mirror planes with correct reflections; a fly-in “dollhouse” video intro.
-- A point-count reduction stage for web viewers.
+- Exterior (outdoor) orbital-view toolkit in production; point-count reduction stage for web viewers.
 - Mesh generation from splats, including combining meshes with Gaussian splats.
 - Diffusion-based artifact fixing (Difix, NVIDIA Fixer) made runnable on shared GPUs.
-- 3 ideas recognized at an internal hackathon (top 20 and 2 special mentions).
+- Hackathon: 3 ideas recognized (top 20, 2 mentions); the looped drone became a shipped feature.
 - Mentored a junior engineer through a depth bug.
 - An MCP server so AI agents can read and write the team task board (Node.js).
 - Earlier (Jul–Oct 2025): a small LLM service that wrote tour narration (OpenAI API, AWS, S3).
