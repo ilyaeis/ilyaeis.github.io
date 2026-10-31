@@ -72,7 +72,9 @@
            a graphing calculator, a workout tracker; Monte Carlo price paths,
            a load balancer and a NEAT network fly past), warps out, dives
            back through the apartment roof and lands at my contact details
-           in the living room.</p>
+           in the living room. In the apartment, a depth lens colours the
+           splat by distance, and a measure tool gives approximate metric
+           distances (about ±3 %).</p>
         <h2>Journey milestones</h2>
         <ul>
             <li>Riga State Classical Gymnasium (Rīgas Valsts klasiskā ģimnāzija), Programming and Mathematics track
@@ -170,6 +172,16 @@
 
     <p class="room-credit" hidden>Apartment: "london" scene, Zip-NeRF dataset (Barron et al. 2023), CC BY 4.0, reconstructed with gsplat</p>
 
+    <div class="room-tools" role="toolbar" aria-label="Room tools" hidden>
+        <div class="room-tools-row">
+            <button type="button" data-tool="depth" aria-pressed="false" disabled>Depth</button>
+            <button type="button" data-tool="measure" aria-pressed="false" disabled>Measure</button>
+            <button type="button" class="room-tools-mark" hidden>Mark</button>
+        </div>
+        <p class="room-tools-hint" aria-live="polite">Try the depth lens</p>
+    </div>
+    <div class="room-tools-cross" hidden></div>
+
     <aside class="stop-panel" aria-live="polite" hidden>
         <p class="stop-panel-dates"></p>
         <h2 class="stop-panel-title"></h2>
@@ -181,6 +193,7 @@
     <script type="module" src="js/stopPanel.js"></script>
     <script type="module" src="js/agentApi.js"></script>
     <script type="module" src="js/room.js"></script>
+    <script type="module" src="js/depthTool.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

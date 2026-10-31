@@ -345,3 +345,88 @@ body.panel-open .tap-prompt {
 @media (max-width: 699px), (orientation: portrait) {
     body.panel-open .room-credit { display: none; }
 }
+
+/* Room tools (js/depthTool.js): depth lens + measure, at the apartment stops and the landing */
+.room-tools {
+    position: fixed;
+    top: calc(0.35rem + env(safe-area-inset-top));
+    left: calc(0.75rem + env(safe-area-inset-left));
+    z-index: 10;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    color: #888;
+}
+.room-tools[hidden] { display: none; }
+.room-tools-row { display: flex; gap: 0.4rem; }
+.room-tools button {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    padding: 0 0.9rem;
+    font: inherit;
+    letter-spacing: inherit;
+    color: #c8c8c8;
+    background: rgba(10, 10, 10, 0.6);
+    border: 1px solid #444;
+    border-radius: 999px;
+    cursor: pointer;
+}
+.room-tools button[hidden] { display: none; }
+.room-tools button:disabled { opacity: 0.4; cursor: default; }
+.room-tools button[aria-pressed="true"],
+.room-tools .room-tools-mark {
+    color: #0a0a0a;
+    background: #ffd36b;
+    border-color: #ffd36b;
+}
+.room-tools button:focus-visible { outline: 1px solid #aaa; outline-offset: 2px; }
+.room-tools-hint {
+    margin-top: 0.35rem;
+    padding-left: 0.3rem;
+    font-size: 0.72rem;
+    text-shadow: 0 0 8px #000, 0 0 2px #000;
+    pointer-events: none;
+}
+/* Narrow screens: below the nav row */
+@media (max-width: 699px) {
+    .room-tools { top: calc(3.2rem + env(safe-area-inset-top)); }
+}
+/* the journey waits while a tool is on */
+body.room-tool-on .tap-prompt { visibility: hidden; }
+
+.room-tools-label {
+    position: fixed;
+    z-index: 6;
+    transform: translate(-50%, -140%);
+    padding: 0.2rem 0.55rem;
+    border-radius: 0.3rem;
+    background: rgba(10, 10, 10, 0.8);
+    color: #ffd36b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.room-tools-label[hidden] { display: none; }
+
+/* Phone crosshair at the screen centre (the lens and the Mark ray) */
+.room-tools-cross {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    z-index: 6;
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    pointer-events: none;
+}
+.room-tools-cross[hidden] { display: none; }
+.room-tools-cross::before,
+.room-tools-cross::after {
+    content: '';
+    position: absolute;
+    background: #fff;
+    opacity: 0.85;
+    box-shadow: 0 0 3px #000;
+}
+.room-tools-cross::before { left: 10px; top: 0; width: 2px; height: 22px; }
+.room-tools-cross::after { top: 10px; left: 0; width: 22px; height: 2px; }

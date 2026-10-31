@@ -25,7 +25,7 @@ const FADE_FULL = 3;                 // opacity 1 at this distance or less
 const INDOOR_FADE = [0.6, 0.05];     // outside distance where that fade starts .. is done
 // The bright room must not drown the glowing strokes. Dim the splat colors,
 // and raise the bloom threshold while the room shows (strokes are HDR > 1).
-const ROOM_BRIGHTNESS = 0.42;
+export const ROOM_BRIGHTNESS = 0.42;
 // The objects have baked white light; the room is lit by warm lamps and is
 // dimmed. Tint and dim the objects the same way, so they sit in the scene
 // (× each spot's `light` from world.js OBJECT_SPOTS: lamps near or not)
@@ -42,6 +42,9 @@ let bloomOutside = 0.1;               // read from the bloom pass on load
 let group = null;                     // the apartment frame
 const meshes = [];                    // splat meshes (room + objects): opacity
 const objects = [];                   // object meshes: idle animation
+// For depthTool.js (lens + raycast): the room mesh once loaded, and the object meshes
+export let roomMesh = null;
+export const objectMeshes = [];
 let loading = false;
 let time = 0, lastNow = 0;
 const _p = new THREE.Vector3();
@@ -110,6 +113,7 @@ async function loadRoom() {
                 meshes.push(shadow);
             }
             objects.push(m);
+            objectMeshes.push(m, ...(m.userData.fans ?? []));
             g.add(holder);
         });
         for (const m of meshes) { m.opacity = 0; m.visible = false; }
@@ -117,6 +121,7 @@ async function loadRoom() {
         bloomOutside = bloomPass.threshold;
         await room.initialized;
         group = g;
+        roomMesh = room;
         scene.add(g);
         g.updateMatrixWorld(true);
         requestAnimationFrame(tick);

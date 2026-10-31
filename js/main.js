@@ -61,13 +61,16 @@ import {
     let pointerDownPos = null;
     const TAP_THRESHOLD = 10; // pixels
 
+    // While a room tool (depthTool.js) is on, taps belong to the tool
+    const toolOn = () => document.body.classList.contains('room-tool-on');
+
     document.body.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.site-nav, .stop-panel')) return;
+        if (e.target.closest('.site-nav, .stop-panel, .room-tools') || toolOn()) return;
         pointerDownPos = { x: e.clientX, y: e.clientY };
     });
 
     document.body.addEventListener('pointerup', (e) => {
-        if (e.target.closest('.site-nav, .stop-panel')) return;
+        if (e.target.closest('.site-nav, .stop-panel, .room-tools') || toolOn()) return;
         if (!pointerDownPos) return;
         const dx = e.clientX - pointerDownPos.x;
         const dy = e.clientY - pointerDownPos.y;
@@ -86,7 +89,7 @@ import {
 
     // Keyboard: Enter / Space advance the journey (links and buttons keep their own behavior)
     document.addEventListener('keydown', (e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button')) {
+        if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button') && !toolOn()) {
             e.preventDefault();
             onTap();
         }
@@ -94,7 +97,7 @@ import {
 
     // Prevent any residual scrolling / bounce on mobile (nav links stay tappable)
     document.addEventListener('touchmove', (e) => {
-        if (!e.target.closest('.site-nav, .stop-panel')) e.preventDefault();
+        if (!e.target.closest('.site-nav, .stop-panel, .room-tools')) e.preventDefault();
     }, { passive: false });
 
     // ── Animation Loop ─────────────────────────────────────────
