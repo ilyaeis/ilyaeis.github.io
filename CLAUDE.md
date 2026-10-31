@@ -12,7 +12,6 @@ The same content exists in three places. Keep them in sync when journey content 
 - `resume.html` (+ `css/resume.css`) — the plain-HTML resume, linked from the page. Closed `<details>` hold the extra detail; all text is in the HTML. Its JSON-LD (`ProfilePage`) shares the Person `@id` with `index.html`.
 - `resume.md`, `resume.json` (JSON Resume), `resume.pdf` — machine and print copies of the resume. `llms.txt` indexes them (update only if URLs change). Dates are year-only where the month is unknown; add months in `resume.html`, its JSON-LD, `resume.md`, `resume.json` and `js/world.js`.
 - Regenerate the PDF after any `resume.html` change: serve the site, then `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume.pdf "http://localhost:PORT/resume.html?expand=1"`. It must stay 2 pages.
-- Guestbook: `resume.html` uses GitHub Issues (label `guestbook`) while `WORKER_URL` in its script is empty. To switch to the Cloudflare Worker, follow `dev/guestbook-worker/README.md`, then set `WORKER_URL`.
 
 ## Commands
 

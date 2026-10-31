@@ -92,8 +92,7 @@ window.journey = {
     next: () => step(1),
     previous: () => step(-1),
     whenIdle,
-    resumeLinks: () => ({ html: '/resume.html', md: '/resume.md', json: '/resume.json', llms: '/llms.txt',
-        guestbook: 'https://github.com/ilyaeis/ilyaeis.github.io/issues/new?labels=guestbook' })
+    resumeLinks: () => ({ html: '/resume.html', md: '/resume.md', json: '/resume.json', llms: '/llms.txt' })
 };
 
 // ── WebMCP (native only, feature detected, no polyfill) ────────────

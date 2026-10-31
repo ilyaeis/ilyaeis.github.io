@@ -177,30 +177,12 @@ details.more > summary::before { content: '+'; display: inline-block; width: 1.2
 details.more[open] > summary::before { content: '–'; }
 details.more > summary:hover { color: #e0e0e0; }
 
-#agents p, #guestbook { font-size: 0.95rem; }
-#agents p { margin-bottom: 0.5rem; }
-.gb-list { list-style: none; padding: 0; }
-.gb-list li { border-left: 2px solid #333; padding-left: 0.75rem; margin-top: 0.7rem; }
-#gb-form { margin-top: 1.25rem; display: grid; gap: 0.6rem; max-width: 30rem; }
-#gb-form label { display: grid; gap: 0.2rem; color: #888; font-size: 0.85rem; }
-#gb-form input, #gb-form textarea {
-    font: inherit;
-    color: #e0e0e0;
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 3px;
-    padding: 0.5rem;
-}
-#gb-form button { justify-self: start; }
-.hp { position: absolute; left: -9999px; }
-code { font-size: 0.85em; overflow-wrap: anywhere; }
 
 @media print {
     @page {
         margin: 1.5cm;
     }
     .topbar,
-    #agents,
     details.more > summary {
         display: none;
     }
