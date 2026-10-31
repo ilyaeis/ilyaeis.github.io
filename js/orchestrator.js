@@ -302,6 +302,8 @@ const FLYBY_SPIRAL_W = 5.5;           // the spiral leg is this much slower agai
 const FLYBY_CAM_DIST = 4.6;          // chase distance while framing a fly-by (the camera offset is ~2% longer: stay under controls.maxDistance 5, or OrbitControls clamps and kinks the path)
 const FLYBY_GLOW = 0.9;              // extra comet intensity while it spirals round a fly-by
 const TUNNEL_EASE_TIME = 1.8 * TUNNEL_TIME_SCALE; // s to reach (and leave) the cruise pace in a tunnel flight
+const WARP_IN_EASE = 2.0;            // × that on the warp in: the comet turns from the graph to the throat while still slow (the chase camera swings less)
+let tunnelEase = TUNNEL_EASE_TIME;   // this flight's ease time
 const FLYBY_CAM_L = 20;              // s: half-width of the fly-by framing (C2 bump round the viz)
 const FLYBY_CAM_LAG = 2;             // s: the camera anchor hangs back this far behind the comet at the fly-by
 const FLYBY_CAM_LAG_AT = 2;          // ... most when the comet is this far past the viz
@@ -384,12 +386,11 @@ export function init() {
     const goTarget = q.has('go') ? stopById(q.get('go')) : null;
     if (goTarget?.navigable && goTarget.universe === 'rnd' && explore.hasWalker()) {
         // ?go=<object id>: walk mode at that object, facing it, its panel open
-        intro.hideIntro(); hideTapPrompt();
-        explore.enterAtObject(goTarget.index);
+        walkAt(goTarget.index);
     }
     else if (goTarget?.navigable) {     // ?go=<id>[&mode=fly|jump]
         const i = goTarget.index;
-        if (q.get('mode') === 'fly' && i >= 1 && (goTarget.frame ?? 1) === 1) { jumpTo(i - 1); setupTravel(i, false); }
+        if (q.get('mode') === 'fly' && i >= 1 && (goTarget.frame ?? 1) === 1) flyTo(i);
         else jumpTo(i, goTarget.frame ?? 1);
     }
     else if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
@@ -483,6 +484,7 @@ function framePanel(f, k) {
 
 // Land the comet at stop n instantly (?stop, ?leg, ?go, journey.goTo jump).
 export function jumpTo(n, frame = 1) {
+    if (stops[n].type === StopType.OBJECT && explore.hasWalker() && phase !== Phase.EXPLORE) { walkAt(n); return; }   // objects are walked to
     explore.leaveNow();
     intro.hideIntro(); hideTapPrompt();
     stopIndex = n;
@@ -839,6 +841,13 @@ function stepFaceAlign(dt) {
 // after the flat. The walk's wider FOV eases back (updateTravel).
 export function leaveFlat() {
     const dest = afterFlatIndex();
+    if (REDUCED_MOTION.matches) {
+        // no lift flight: straight to the graph (the walk's FOV goes back at once)
+        if (phase === Phase.EXPLORE) { emitStop('leave', { to: dest }); explore.leaveInPlace(); }
+        camera.fov = baseFov; camera.updateProjectionMatrix();
+        jumpTo(dest);
+        return;
+    }
     if (phase === Phase.EXPLORE) {
         emitStop('leave', { to: dest });   // the panel and the room credit go
         explore.leaveInPlace();
@@ -855,6 +864,36 @@ export function leaveFlat() {
     fromFlat = true;
     setupTravel(dest, false);
 }
+
+// Arrive at stop i by flight (?go=<id>&mode=fly, the agent API): from the
+// stop before it; the first stop after the flat: the lift out of the flat
+// from the intro spot (or from the walk)
+export function flyTo(i) {
+    if (stops[i - 1]?.type !== StopType.OBJECT) { jumpTo(i - 1); setupTravel(i, false); return; }
+    if (phase !== Phase.EXPLORE) {
+        intro.hideIntro(); hideTapPrompt();
+        trail.fade = 1; clearTrail(trail); addTrailToScene(trail);
+        const landing = stops.find(st => st.type === StopType.LANDING);
+        cometPos.copy(landing.center); cometDir.copy(landing.normal);
+        pushPointWorld(trail, cometPos.x, cometPos.y, cometPos.z);
+        worldPos.copy(cometPos);
+    }
+    leaveFlat();
+}
+
+// Walk mode at object stop i (?go=<object id>, the agent API): from
+// anywhere; while walking already, a guided walk to it (Next object style)
+export function walkAt(i) {
+    if (!explore.hasWalker()) { jumpTo(i); return { ok: true }; }
+    if (phase === Phase.EXPLORE) { stopIndex = i; return explore.guideTo(i); }   // (current() reports it)
+    emitStop('leave');
+    intro.hideIntro(); hideTapPrompt();
+    tunnel.setFade(0); setInside(0);
+    clearTrail(trail);
+    explore.enterAtObject(i);
+    return { ok: true, object: stops[i].id };
+}
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 // ── Travel setup ───────────────────────────────────────────────────
 export function setupTravel(destIdx, withCorkscrew) {
@@ -925,7 +964,8 @@ export function setupTravel(destIdx, withCorkscrew) {
     if (easeC2) {
         // Tunnel flights: time from the weighted length (rush zones count less, spirals more)
         // (+ the ease time, so the cruise pace is TUNNEL_SPEED on every tunnel flight)
-        travelDuration = THREE.MathUtils.clamp(travelWeightedLen / TUNNEL_SPEED + TUNNEL_EASE_TIME, TRAVEL_MIN, TUNNEL_TRAVEL_MAX);
+        tunnelEase = TUNNEL_EASE_TIME * (inTunnel ? 1 : WARP_IN_EASE);
+        travelDuration = THREE.MathUtils.clamp(travelWeightedLen / TUNNEL_SPEED + tunnelEase, TRAVEL_MIN, TUNNEL_TRAVEL_MAX);
     }
     corkscrew = withCorkscrew;
     fromFlat = false;
@@ -1253,7 +1293,7 @@ function updateRocketExit(dt) {
 // rush zones, slow round a fly-by.
 function travelEase(x) {
     if (easeC2) {
-        const a = Math.min(TUNNEL_EASE_TIME / travelDuration, 0.4), V = 1 / (1 - a);
+        const a = Math.min(tunnelEase / travelDuration, 0.4), V = 1 / (1 - a);
         const P = y => y * y * y - y * y * y * y / 2;     // integral of smoothstep
         if (x < a) return V * a * P(x / a);
         if (x > 1 - a) return 1 - V * a * P((1 - x) / a);
@@ -1682,7 +1722,7 @@ function updateView(dt) {
 // The comet flies in to where the pen enters frame 1 (points2d[0]). In VIEW
 // the graph plays its frame (eduGraph: the pen draws the axis, sweeps up
 // the new column, then idles round the window) and the pen writes the comet
-// trail. A tap before GRAPH_EARLY_TAP does nothing; before the frame's end
+// trail. A tap before GRAPH_EARLY_TAP waits for it; before the frame's end
 // it grows the frame at once; after it the next frame starts from where the
 // comet is, and the camera pans (orbit centre and camera move together, so
 // a drag rotation stays) to the next window over GRAPH_CAM_PAN. After frame
@@ -1735,9 +1775,8 @@ function updateGraph(stop, dt) {
 
     const ready = t1 >= G.end && camAligned;
     if (ready) showTapPrompt();
-    if (!tapPending) return;
+    if (!tapPending || t1 < GRAPH_EARLY_TAP) return;   // an early tap waits for GRAPH_EARLY_TAP
     tapPending = false;
-    if (t1 < GRAPH_EARLY_TAP) return;
     if (t1 < G.end) { G.snap(); clearTrail(trail); return; }   // grow the frame at once
     if (!camAligned) return;
     hideTapPrompt();
@@ -1752,6 +1791,9 @@ function updateGraph(stop, dt) {
         setupTravel(stopIndex === stops.length - 1 ? afterFlatIndex() : stopIndex + 1, false);
     }
 }
+
+// The agent API: the graph frame now (0 elsewhere), and one frame back (grown)
+export function graphFrame() { return stops[stopIndex]?.graph && phase === Phase.VIEW ? graphK : 0; }
 
 // ── Landing mail hit-plane ─────────────────────────────────────────
 // Built by world.js; clickable only while viewing the contact landing

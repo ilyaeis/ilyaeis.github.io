@@ -18,7 +18,7 @@ import { setHaloFocus, stops } from './world.js';
 const TRAIL_FADE = 0.8;  // s: the comet streak of the morph fades as the walk starts
 
 let J = null;          // the orchestrator interface
-let walker = null;     // walk.js: { canWalk, enterWalk, exitWalk, leaveInPlace, update }
+let walker = null;     // walk.js: { canWalk, enterWalk, exitWalk, leaveInPlace, update, next, guideTo, allCollected, touring }
 let flat = null;       // room.js: { ready(), whenReady(), hold(on) }
 
 export function init(journey) { J = journey; }
@@ -95,6 +95,12 @@ function endExplore() {
     cam.setScreenShift(J.hasPanel(stop));
     J.enterView();
 }
+
+// The agent API while walking: the tour, a guided walk to an object, Next object
+export function touring() { return !!walker?.touring; }
+export function guideTo(index) { return walker?.guideTo(stops[index]) ?? { ok: false, why: 'no walker' }; }
+export function nextObject() { return walker?.next() ?? { ok: false, why: 'no walker' }; }
+export function allCollected() { return !!walker?.allCollected(); }
 
 // "Skip the flat →" / "Continue →" (walk.js): on with the journey from here
 export function skipFlat() { if (J?.phase === J.Phase.EXPLORE) J.leaveFlat(); }

@@ -324,7 +324,8 @@ const OBJECT_SPOTS = {
     chair:  { x: -1.66, z: 0.97, cam: [-1.30, -0.12, 0.72], fitMax: 0.6, doors: [['LW2', -1], ['LW1', -1], ['LH', -1]], light: 0.75 },
     // hall: hung on the wall above the sofa (wall z = 0.124 x + 0.439, so the
     // camera looks along the wall normal), panel 1.15-1.85 m above the floor, 1 m wide
-    board:  { x: -2.04, z: 0.245, y: -0.163, scale: 0.24, cam: [-2.114, -0.012, 0.840], fitMax: 0.66, doors: [], haloTilt: 90, light: 1.15 },
+    // (walkM: the walk stands this far back, so the ring fits a phone screen too)
+    board:  { x: -2.04, z: 0.245, y: -0.163, scale: 0.24, cam: [-2.114, -0.012, 0.840], fitMax: 0.66, doors: [], haloTilt: 90, light: 1.15, walkM: 2.3 },
     // living room: on the floor with the toys by the bay window, 30 cm tall
     robot:  { x: 0.42, z: -0.18, scale: 0.083, cam: [0.25, -0.25, 0.12], fitMax: 0.5, doors: [['LH', 1], ['LW1', 1], ['LW2', 1]] },
 };
@@ -1091,7 +1092,8 @@ function buildObjectStop(def, palette) {
         halfH,
         blockMid: 0,
         blockHalfH: halfH,
-        fitMax: spot.fitMax * s
+        fitMax: spot.fitMax * s,
+        walkM: spot.walkM                    // walk.js: the guide goal's distance (m), when set
     };
 }
 

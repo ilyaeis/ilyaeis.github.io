@@ -334,7 +334,7 @@ function endPath() { path = null; if (marker) marker.visible = false; }
 function objectGoal(h) {
     if (h.goal !== undefined) return h.goal;
     const n = worldToRoom(_v.copy(h.stop.center).sub(h.stop.normal)).sub(h.room).setY(0).normalize();
-    const d0 = Math.max(GUIDE_VIEW_M * M, (G.eye - h.room.y) / Math.tan(GUIDE_PITCH)), a0 = Math.atan2(n.z, n.x);
+    const d0 = Math.max((h.stop.walkM ?? GUIDE_VIEW_M) * M, (G.eye - h.room.y) / Math.tan(GUIDE_PITCH)), a0 = Math.atan2(n.z, n.x);
     let best = null, bestS = Infinity;
     for (const da of [0, 0.35, -0.35, 0.7, -0.7]) for (const k of [1, 0.85, 1.2]) {
         const x = h.room.x + Math.cos(a0 + da) * d0 * k, z = h.room.z + Math.sin(a0 + da) * d0 * k;
@@ -377,6 +377,19 @@ function next() {
     guide = way.stop; slowTurn = true;
     return { ...r, object: way.stop.id };
 }
+// A guided walk to one object (the agent API: journey.goTo(<object id>) while walking)
+function guideTo(stop) {
+    if (mode !== 'walk') return { ok: false, why: 'not walking' };
+    const h = halos.find(x => x.stop === stop), g = h && objectGoal(h), st = nearestFree(pos.x, pos.y, 0.3 * M);
+    const raw = g && st && astar(st[0], st[1], g[0], g[1]);
+    if (!raw) return { ok: false, why: 'no path' };
+    hideHint();
+    select(null);
+    const r = followRaw(raw);
+    guide = stop; slowTurn = true;
+    return { ...r, object: stop.id };
+}
+const allCollected = () => objectStops().every(s => collected.has(s.id));
 function onArrive() {
     if (!guide) return;
     const st = guide;
@@ -821,7 +834,7 @@ export function setKeys(set) { keys = set; }
 // Enter (not on a link or button): "Next object" in the tour
 export function onEnter() { if (tour && mode === 'walk' && nextBtn && !nextBtn.hidden) next(); }
 
-registerWalker({ canWalk, enterWalk, exitWalk, leaveInPlace, update });
+registerWalker({ canWalk, enterWalk, exitWalk, leaveInPlace, update, next, guideTo, allCollected, get touring() { return tour && mode !== 'off'; } });
 
 // ── Dev (checks and screenshots): window.__walk ────────────────────
 window.__walk = {

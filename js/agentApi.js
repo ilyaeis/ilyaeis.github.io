@@ -5,7 +5,8 @@
 // raw indexes are accepted only as a fallback.
 
 import { catalog, stopById, UNIVERSES } from './world.js';
-import { Phase, getState, jumpTo, setupTravel, onTap } from './orchestrator.js';
+import { Phase, getState, jumpTo, setupTravel, onTap, walkAt, leaveFlat, flyTo, graphFrame } from './orchestrator.js';
+import * as explore from './explore.js';
 
 const VERSION = 1;
 const PHASE_NAMES = { [Phase.INTRO]: 'intro', [Phase.ROCKET_EXIT]: 'launch', [Phase.TRAVEL]: 'travel', [Phase.VIEW]: 'view',
@@ -13,13 +14,14 @@ const PHASE_NAMES = { [Phase.INTRO]: 'intro', [Phase.ROCKET_EXIT]: 'launch', [Ph
                       [Phase.EXPLORE]: 'explore' };
 // A project app (dimension.js) is open or opening / closing: no navigation
 const inPortal = (p) => p === Phase.PORTAL_IN || p === Phase.DIMENSION || p === Phase.PORTAL_OUT;
-// Why navigation is refused now (null: allowed). Walk mode keeps its own Back button.
+// Why navigation is refused now (null: allowed). In walk mode an object id
+// is a guided walk there, any other id leaves the flat.
 function busy(p) {
     if (inPortal(p)) return 'in-portal';
-    if (p === Phase.EXPLORE) return 'exploring';
     if (p === Phase.TRAVEL || p === Phase.ROCKET_EXIT) return 'travelling';
     return null;
 }
+const walkable = (e) => e.universe === 'rnd' && explore.hasWalker();
 const navigable = catalog.filter(e => e.navigable);
 
 function brief(e) {
@@ -74,11 +76,16 @@ async function goTo(id, { mode = 'fly' } = {}) {
     const s = getState();
     const why = busy(s.phase);
     if (why) return { ok: false, reason: why, current: current() };
+    // An object (the flat): walk mode there; while walking, a guided walk (it does not wait for the arrival)
+    if (walkable(e)) {
+        const r = walkAt(e.index);
+        return r?.ok === false ? { ok: false, reason: r.why, current: current() } : { ok: true, stop: e.id, mode: 'walk' };
+    }
     const fly = mode === 'fly' && e.index >= 1 && (e.frame ?? 1) === 1;   // a later graph frame: a jump (grown)
     if (fly) {
         const arrived = nextEnter(e.id);
         if (e.index === s.stopIndex + 1 && s.phase === Phase.VIEW) setupTravel(e.index, false);
-        else { jumpTo(e.index - 1); setupTravel(e.index, false); }
+        else flyTo(e.index);          // (the first graph frame: the lift out of the flat, also from the walk)
         await arrived;
     } else {
         jumpTo(e.index, e.frame ?? 1); // dispatches 'enter' synchronously
@@ -91,10 +98,24 @@ async function step(delta) {
     const why = busy(s.phase);
     if (why) return { ok: false, reason: why, current: current() };
     if (delta > 0) {
+        if (s.phase === Phase.EXPLORE && explore.touring()) {
+            // the walk: Next object (no wait for the arrival), at 6/6 on out of the flat
+            if (!explore.allCollected()) {
+                const r = explore.nextObject();
+                return r.ok ? { ok: true, stop: r.object, mode: 'walk' } : { ok: false, reason: r.why, current: current() };
+            }
+            const arrived = nextEnter();
+            leaveFlat();
+            return { ok: true, stop: await arrived, mode: 'fly' };
+        }
+        if (s.phase === Phase.EXPLORE) return { ok: false, reason: 'exploring', current: current() };
         const arrived = nextEnter();
         onTap();
         return { ok: true, stop: await arrived, mode: 'fly' };
     }
+    // a graph frame past the first: one frame back (grown)
+    const k = graphFrame();
+    if (k > 1) { jumpTo(s.stopIndex, k - 1); return { ok: true, stop: current().stop, mode: 'jump' }; }
     const prev = navigable[navigable.indexOf(entryOf(s)) - 1];
     if (s.phase !== Phase.VIEW || !prev) return { ok: false, reason: 'no-previous-stop', current: current() };
     return goTo(prev.id);
