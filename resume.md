@@ -14,7 +14,7 @@ I work on 3D reconstruction and computer vision: Gaussian splatting pipelines, b
 
 Riga · 2025 – present. Giraffe360 makes cameras and software for real-estate virtual tours.
 
-- **Solved blurry windows, outdoor views and mirrors in 3DGS video.** [Giraffe360 post](https://www.instagram.com/p/DZsNRB8o772/)
+- **Solved blurry windows and mirrors in sparse-panorama 3DGS.** [Giraffe360 post](https://www.instagram.com/p/DZsNRB8o772/)
   This was a long-standing quality problem. I found the root cause (wrong depth behind windows and walls), handled depth differently inside and outside the room, and added a training-time correction. 700+ controlled experiments back it. It runs in production and was publicly showcased by Giraffe360.
 - **Shipped the looped drone video, from idea to production.** [Giraffe360 post](https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)
   I proposed the feature, agreed its look with the designers, developed the camera-path algorithm and shipped it to production. A customer-requested feature, launched by Giraffe360 in Oct 2026.
