@@ -29,6 +29,7 @@
         "An exterior (outdoor) orbital-view toolkit, used in production.",
         "Working prototypes: mirror planes with correct reflections; a fly-in “dollhouse” video intro.",
         "A point-count reduction stage for web viewers.",
+        "Mesh generation from splats, including combining meshes with Gaussian splats.",
         "Diffusion-based artifact fixing (Difix, NVIDIA Fixer) made runnable on shared GPUs.",
         "3 ideas recognized at an internal hackathon (top 20 and 2 special mentions).",
         "Mentored a junior engineer through a depth bug.",
