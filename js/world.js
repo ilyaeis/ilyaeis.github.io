@@ -207,6 +207,8 @@ const SCENERY_SCALE_MAX = 6.0;
 const SCENERY_STANDOFF = 0.35;           // center sits this × leg length beside the leg midpoint
 const SCENERY_STANDOFF_MIN = 5.0;
 const SCENERY_SPIN = 0.04;               // rad/s about local Y
+const SCENERY_TRIES = 24;                // random angles round the leg; the one farthest from the stops' views wins
+const PANEL_FIT = [0.5, 0.55];           // a stop's view share beside its panel (orchestrator ROCK_FIT_SIDE / ROCK_FIT_BOTTOM): the farthest VIEW camera
 // leg i = flight into stops[i]; leg 0 is the intro corkscrew into the text,
 // leg 1 (text -> rock 1) has the first galaxy. Attractor k % ATTRACTORS.length is reused
 // when there are more legs than attractors.
@@ -751,6 +753,13 @@ function buildPlanarStop(def, center, right, up, palette) {
 // Each curve sits beside one flight leg so the comet can swing past it.
 function buildScenery(scene) {
     scenery = [];
+    // Each stop's view: a sphere round the VIEW camera spot and the stop
+    // (the fit, with room for a panel: the largest one), so no galaxy curve
+    // runs through a rock, its label or the space in front of it
+    const views = stops.map(st => {
+        const fit = fitDistance(st.halfW, st.halfH, PANEL_FIT[0], PANEL_FIT[1]);
+        return { c: st.center.clone().addScaledVector(st.normal, -fit / 2), r: fit / 2 + Math.hypot(st.halfW, st.halfH) };
+    });
     const perp = new THREE.Vector3();
     const base = new THREE.Vector3();
     const cand = new THREE.Vector3();
@@ -774,12 +783,13 @@ function buildScenery(scene) {
         base.normalize();
         const base2 = new THREE.Vector3().crossVectors(dir, base).normalize();
 
-        let center = null, bestD = -1;
-        for (let t = 0; t < PLACE_TRIES; t++) {
+        let center = null, bestD = -Infinity;
+        for (let t = 0; t < SCENERY_TRIES; t++) {
             const ang = Math.random() * Math.PI * 2;
             perp.copy(base).multiplyScalar(Math.cos(ang)).addScaledVector(base2, Math.sin(ang));
             cand.copy(mid).addScaledVector(perp, standoff);
             let d = Infinity;
+            for (const v of views) d = Math.min(d, cand.distanceTo(v.c) - v.r - radius);   // out of every stop's view
             for (const st of stops) d = Math.min(d, cand.distanceTo(st.center));
             for (const sc of scenery) d = Math.min(d, cand.distanceTo(sc.center));
             d = Math.min(d, tunnel.axisDistance(cand, tunnelExitS) - tunnel.TUNNEL_RADIUS - radius - 4); // off the tunnel
