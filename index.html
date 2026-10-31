@@ -43,15 +43,52 @@
     </script>
 
     <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <script type="importmap">
     {
         "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+            "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js",
             "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-            "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.4.0/spark.module.js"
+            "@sparkjsdev/spark": "https://cdn.jsdelivr.net/npm/@sparkjsdev/spark@2.4.0/dist/spark.module.min.js"
         }
     }
     </script>
+    <!-- Start the imports at once, not one level after the other (each
+         level costs a round trip on a phone network). A module missing here
+         only loads later; keep the list in sync with the start-up imports. -->
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.core.min.js">
+    <link rel="modulepreload" href="js/orchestrator.js">
+    <link rel="modulepreload" href="js/world.js">
+    <link rel="modulepreload" href="js/projectViz.js">
+    <link rel="modulepreload" href="js/eduGraph.js">
+    <link rel="modulepreload" href="js/strokeFont.js">
+    <link rel="modulepreload" href="js/tunnel.js">
+    <link rel="modulepreload" href="js/attractors.js">
+    <link rel="modulepreload" href="js/camera.js">
+    <link rel="modulepreload" href="js/intro3d.js">
+    <link rel="modulepreload" href="js/portal.js">
+    <link rel="modulepreload" href="js/explore.js">
+    <link rel="modulepreload" href="js/input.js">
+    <link rel="modulepreload" href="js/walk.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/EffectComposer.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/RenderPass.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/UnrealBloomPass.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/Pass.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/ShaderPass.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/MaskPass.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/shaders/CopyShader.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/shaders/LuminosityHighPassShader.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/FontLoader.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/SVGLoader.js">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/geometries/TextGeometry.js">
+    <!-- The intro's font and icons (intro3d.js loads them after the scripts run) -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/three@0.162.0/examples/fonts/helvetiker_regular.typeface.json" as="fetch" crossorigin>
+    <link rel="preload" href="svg/linkedin.svg" as="fetch" crossorigin>
+    <link rel="preload" href="svg/github.svg" as="fetch" crossorigin>
+    <!-- The flat's splat and Spark start downloading now (the site starts in the flat) -->
+    <script type="module" src="js/roomFetch.js"></script>
 </head>
 <body>
     <canvas id="attractor" tabindex="-1"></canvas>

@@ -1,7 +1,8 @@
 // Procedural Gaussian-splat objects for the "R&D universe".
 // buildObject(name, { count, rng }) returns a SplatMesh: about 1 unit tall,
 // origin at the base centre, +Y up, front facing +Z.
-// mesh.userData.idle(t) is a cheap idle animation (call it every frame).
+// mesh.userData.idle(t) is a cheap idle animation (call it every frame;
+// userData.animates: it moves anything).
 import * as THREE from 'three';
 import { SplatMesh, PackedSplats } from '@sparkjsdev/spark';
 
@@ -746,6 +747,7 @@ export function buildObject(name, { count = 4000, rng = mulberry32(7) } = {}) {
   const baseY = mesh.rotation.y;
   // idle: the objects stand on real surfaces, so they stay put; the toy
   // robot turns a little, and the GPU fans spin
+  mesh.userData.animates = name === 'robot' || !!mesh.userData.fans;
   mesh.userData.idle = (t) => {
     if (name === 'robot') mesh.rotation.y = baseY + 0.25 * Math.sin(t * 0.45);
     if (mesh.userData.fans) mesh.userData.fans.forEach((f, i) => { f.rotation.z = -t * (3 + i * 0.4); });

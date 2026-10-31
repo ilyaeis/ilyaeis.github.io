@@ -17,6 +17,18 @@ export const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent)
 const MAX_POINTS = isMobile ? 30000 : 60000;
 const BLOOM_RES_SCALE = isMobile ? 0.25 : 0.5;
 const MAX_PIXEL_RATIO = isMobile ? 1.5 : 2;
+// Adaptive resolution: while frames stay slow (a weak GPU in the splat
+// flat: a phone, an old laptop) the pixel ratio steps down, and back up
+// while they stay fast. A step up that turns slow again lowers the
+// ceiling (no flip-flop); a step down that brings no gain is undone and
+// sets the floor (the GPU is not the limit, or the frame rate is capped).
+const ADAPT_FRAMES = 40;             // frames per decision (their median frame time)
+const ADAPT_SLOW = 1 / 45;           // s: a median over this is slow
+const ADAPT_FAST = 1 / 57;           // s: under this is fast (60 Hz at full speed)
+const ADAPT_UP_AFTER = 5;            // fast decisions in a row before a step up
+const ADAPT_STEP = 0.8;              // pixel ratio factor per step
+const ADAPT_GAIN = 0.9;              // a step down must cut the frame time to this share
+const MIN_PIXEL_RATIO = 0.75;
 
 // ── Attractor Definitions ──────────────────────────────────────────
 export const ATTRACTORS = [
@@ -362,8 +374,11 @@ export function initScene(canvas) {
         cam0.radius * Math.cos(cam0.elevation) * Math.cos(initTheta)
     );
 
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
+    // No antialias: the scene renders into the composer's target, which has
+    // no MSAA anyway; the canvas only gets the final full-screen pass.
+    // high-performance: the discrete GPU on a laptop that has two.
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(pixelRatioAt(0));
     renderer.setSize(w, h);
     renderer.setClearColor(0x000000, 1);
 
@@ -495,6 +510,53 @@ export function render() {
         u.uSceneDist.value = Math.max(camera.position.distanceTo(controls.target), 0.5);
     }
     composer.render();
+    adaptResolution();
+}
+
+// ── Adaptive resolution (see ADAPT_*) ──────────────────────────────
+let adaptLevel = 0, adaptCeiling = 0, adaptFloor = Infinity, lastRender = 0;
+let fastRuns = 0, downFrom = 0, steppedUp = false;
+const adaptDts = [];
+function pixelRatioAt(level) {
+    const top = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
+    return Math.max(Math.min(top, MIN_PIXEL_RATIO), top * ADAPT_STEP ** level);
+}
+function setAdaptLevel(level) {
+    adaptLevel = level;
+    renderer.setPixelRatio(pixelRatioAt(level));
+    composer.setPixelRatio(pixelRatioAt(level));   // (resizes its targets and the bloom)
+}
+function adaptResolution() {
+    const now = performance.now();
+    const dt = lastRender ? (now - lastRender) / 1000 : 0;
+    lastRender = now;
+    if (dt <= 0 || dt > 0.25) return;   // (a pause: a hidden tab, an open app)
+    adaptDts.push(dt);
+    if (adaptDts.length < ADAPT_FRAMES) return;
+    const median = adaptDts.sort((a, b) => a - b)[ADAPT_FRAMES >> 1];
+    adaptDts.length = 0;
+    const lower = adaptLevel < adaptFloor && pixelRatioAt(adaptLevel + 1) < pixelRatioAt(adaptLevel);
+    if (median > ADAPT_SLOW) {
+        fastRuns = 0;
+        if (downFrom && median > downFrom * ADAPT_GAIN) {   // the last step down did not help
+            downFrom = 0;
+            setAdaptLevel(adaptLevel - 1);
+            adaptFloor = adaptLevel;
+            return;
+        }
+        if (steppedUp) adaptCeiling = adaptLevel + 1;      // too much: stay below this one
+        steppedUp = false;
+        if (lower) { downFrom = median; setAdaptLevel(adaptLevel + 1); }
+    } else {
+        downFrom = 0;
+        steppedUp = false;
+        fastRuns = median < ADAPT_FAST ? fastRuns + 1 : 0;
+        if (fastRuns >= ADAPT_UP_AFTER && adaptLevel > adaptCeiling) {
+            fastRuns = 0;
+            steppedUp = true;
+            setAdaptLevel(adaptLevel - 1);
+        }
+    }
 }
 
 // ── Exported API ───────────────────────────────────────────────────
