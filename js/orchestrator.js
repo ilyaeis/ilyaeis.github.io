@@ -413,12 +413,13 @@ export function devState() {
 }
 
 // Tell the DOM (stopPanel.js) which stop the comet enters or leaves
-function emitStop(phaseName) {
+// (extra: { to } on a 'leave' that starts a flight: the destination index)
+function emitStop(phaseName, extra = null) {
     const stop = stops[stopIndex];
     if (!stop) return;
     window.dispatchEvent(new CustomEvent('journey:stop', {
         detail: { phase: phaseName, index: stopIndex, type: stop.type, panel: stop.panel || null,
-                  id: stop.id, universe: stop.universe, label: stop.panel?.title ?? stop.id }
+                  id: stop.id, universe: stop.universe, label: stop.panel?.title ?? stop.id, ...extra }
     }));
 }
 
@@ -765,7 +766,7 @@ function stepFaceAlign(dt) {
 export function setupTravel(destIdx, withCorkscrew) {
     const dest = stops[destIdx];
     explore.leaveNow();
-    emitStop('leave'); // before stopIndex moves to the destination
+    emitStop('leave', { to: destIdx }); // before stopIndex moves to the destination
     stops[stopIndex]?.viz?.rim?.setHover(false);
 
     // Aim at the FIRST stroke point so the comet flies straight into the

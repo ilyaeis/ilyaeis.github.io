@@ -2,13 +2,13 @@
 // CC BY 4.0, reconstructed with gsplat) with the six R&D splat objects
 // (objects.js) inside. Self-initialising. It listens for the 'journey:stop'
 // event (see stopPanel.js), loads Spark, the splat and the objects lazily a
-// stop before the apartment, and fades them in as the camera comes
-// close. world.js places the apartment frame (`apartment`); this module
+// stop before the apartment (wantsRoom), and fades them in as the camera
+// comes close. world.js places the apartment frame (`apartment`); this module
 // only renders into it, so the orchestrator and the camera need no changes.
 
 import * as THREE from 'three';
 import { scene, renderer, camera, bloomPass, isMobile, setStarVisibility } from './attractors.js';
-import { apartment, getInsideFade, setRoomFade, StopType } from './world.js';
+import { apartment, getInsideFade, setRoomFade, StopType, catalog } from './world.js';
 
 // The apartment API for the add-ons (walk.js, depthTool.js): its frame
 // (position, quaternion, scale), room <-> world points and metres per unit
@@ -18,10 +18,8 @@ import { setIntroRoomHidden } from './intro3d.js';
 // ── Tuning ─────────────────────────────────────────────────────────
 const ROOM_URL = 'assets/room/apartment.sog';
 const ROOM_LITE_URL = 'assets/room/apartment-lite.sog';   // mobile
-// Start loading when the comet enters any stop outside these universes:
-// the traits do not load it (the first view stays light); the Giraffe360
-// rock, the stop before the apartment, does
-const NO_PREFETCH_UNIVERSES = ['intro'];
+// The stops inside the apartment, by universe (the R&D objects, the landing)
+const APARTMENT_UNIVERSES = ['rnd', 'contact'];
 // Fade by the camera distance outside the apartment box, in room units
 // (0 inside). From outside it reads as a dollhouse (the ceiling is cut),
 // so it shows from far: the comet sees it before it dives in.
@@ -145,9 +143,24 @@ async function loadRoom() {
     }
 }
 
+// When to load (Spark and the splat, about 15 MB): by universe, never by
+// index. On entering a stop in the apartment, or in the universe right
+// before it in route order (the Giraffe360 rock: the work path; the flight
+// from it is short). Elsewhere only when a flight into the apartment starts
+// ('leave' with `to`: the warp out from the last project is a long flight).
+// So the intro, the traits, the education rocks and the projects (also by
+// ?go, or an open project app) load nothing.
+const route = catalog.filter(e => e.navigable);              // index = the stop index
+const inApartment = e => APARTMENT_UNIVERSES.includes(e?.universe);
+const leadUniverse = route[route.findIndex(inApartment) - 1]?.universe;
+function wantsRoom({ phase, universe, to }) {
+    if (phase === 'enter') return inApartment({ universe }) || universe === leadUniverse;
+    return to !== undefined && inApartment(route[to]);
+}
+
 window.addEventListener('journey:stop', e => {
     const { phase, universe, type } = e.detail;
-    if (phase === 'enter' && !NO_PREFETCH_UNIVERSES.includes(universe)) loadRoom();
+    if (wantsRoom(e.detail)) loadRoom();
     // The credit shows at the apartment stops and the landing
     if (creditEl && (universe === 'rnd' || type === StopType.LANDING)) creditEl.hidden = phase !== 'enter';
 });
