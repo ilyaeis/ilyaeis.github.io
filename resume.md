@@ -63,7 +63,7 @@ More about this role:
 Nov 2024 – Jan 2025 · Mākslīgā intelekta talantu programma
 
 - **Selective program in C++, Python, maths and AI.**
-  Selective program: C++, Python, maths and AI development with industry mentors. Led to the Giraffe360 role.
+  Selective program: C++, Python, maths and AI development with industry mentors. Theory of AI: its history, neural network architectures (CNNs, transformers, GANs, VAEs), computer vision and reinforcement learning. Led to the Giraffe360 role.
 
 ### Riga State Classical Gymnasium — Programming and Mathematics track
 

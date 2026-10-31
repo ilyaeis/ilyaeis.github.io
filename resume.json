@@ -60,6 +60,7 @@
       "studyType": "Program",
       "startDate": "2024-11",
       "endDate": "2025-01",
+      "courses": ["Theory of AI: its history, neural network architectures (CNNs, transformers, GANs, VAEs), computer vision and reinforcement learning"],
       "url": "https://www.ponder.lv/mi-programma"
     },
     {
