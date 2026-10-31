@@ -120,9 +120,102 @@ dl.skills dd {
     }
 }
 
+html { color-scheme: dark; }
+
+.topbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-bottom: 2rem;
+}
+.topbar .back { margin-bottom: 0; }
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 1rem;
+    font-size: 0.8rem;
+}
+.actions a { color: #888; text-decoration: none; }
+.actions a:hover, .actions a:focus-visible { color: #e0e0e0; }
+
+button {
+    font: inherit;
+    color: #e0e0e0;
+    background: none;
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 0.35rem 0.7rem;
+    min-height: 2.75rem;
+    cursor: pointer;
+}
+button:hover { border-color: #888; }
+
+:focus-visible { outline: 2px solid #e0e0e0; outline-offset: 2px; }
+
+.title { margin-top: 0.25rem; }
+
+h3 { margin-top: 1rem; }
+h2 + h3 { margin-top: 0; }
+h3 + .meta { font-size: 0.9rem; margin-bottom: 0.25rem; }
+
+details.more { margin-top: 0.4rem; }
+details.more > summary {
+    cursor: pointer;
+    color: #888;
+    font-size: 0.9rem;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+}
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: '+'; display: inline-block; width: 1.2rem; }
+details.more[open] > summary::before { content: '–'; }
+details.more > summary:hover { color: #e0e0e0; }
+
+#agents p, #guestbook { font-size: 0.95rem; }
+#agents p { margin-bottom: 0.5rem; }
+.gb-list { list-style: none; padding: 0; }
+.gb-list li { border-left: 2px solid #333; padding-left: 0.75rem; margin-top: 0.7rem; }
+#gb-form { margin-top: 1.25rem; display: grid; gap: 0.6rem; max-width: 30rem; }
+#gb-form label { display: grid; gap: 0.2rem; color: #888; font-size: 0.85rem; }
+#gb-form input, #gb-form textarea {
+    font: inherit;
+    color: #e0e0e0;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 0.5rem;
+}
+#gb-form button { justify-self: start; }
+.hp { position: absolute; left: -9999px; }
+code { font-size: 0.85em; overflow-wrap: anywhere; }
+
 @media print {
     @page {
         margin: 1.5cm;
+    }
+    .topbar,
+    #agents,
+    details.more > summary {
+        display: none;
+    }
+    details {
+        display: block;
+    }
+    h3,
+    .meta {
+        break-after: avoid;
+    }
+    h3 {
+        margin-top: 0.6rem;
+    }
+    h2 + h3 {
+        margin-top: 0;
     }
     body {
         background: #fff;
@@ -160,8 +253,7 @@ dl.skills dd {
     .projects li {
         margin-top: 0.2rem;
     }
-    li,
-    section {
+    li {
         break-inside: avoid;
     }
 }

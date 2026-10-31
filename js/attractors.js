@@ -334,6 +334,14 @@ function createStarfield() {
     scene.add(starPoints);
 }
 
+const BLOOM_STRENGTH = 1.2;
+const BLOOM_WARP_BOOST = 1.4;            // extra bloom strength at the warp peak
+
+// Warp flash (orchestrator): w = 0..1
+export function setBloomBoost(w) {
+    if (bloomPass) bloomPass.strength = BLOOM_STRENGTH + BLOOM_WARP_BOOST * w;
+}
+
 export function initScene(canvas) {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -360,7 +368,7 @@ export function initScene(canvas) {
     const bloomH = Math.floor(h * BLOOM_RES_SCALE);
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    bloomPass = new UnrealBloomPass(new THREE.Vector2(bloomW, bloomH), 1.2, 0.5, 0.1);
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(bloomW, bloomH), BLOOM_STRENGTH, 0.5, 0.1);
     composer.addPass(bloomPass);
 
     // Controls — rotation and zoom, no pan. Always available.

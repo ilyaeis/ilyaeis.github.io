@@ -7,6 +7,7 @@
     <meta name="description" content="Ilja Safronovs — R&amp;D engineer working on 3D Gaussian splatting reconstruction at Giraffe360, and Financial Engineering student at Riga Technical University. Interactive WebGL portfolio; plain resume at /resume.html.">
     <meta name="author" content="Ilja Safronovs">
     <meta name="theme-color" content="#0a0a0a">
+    <meta name="agent-api" content="window.journey v1; tools also via document.modelContext; docs: /llms.txt#journey">
     <link rel="canonical" href="https://ilyaeis.github.io/">
     <link rel="me" href="https://github.com/ilyaeis">
 
@@ -24,14 +25,16 @@
     {
         "@context": "https://schema.org",
         "@type": "Person",
+        "@id": "https://ilyaeis.github.io/#me",
+        "subjectOf": { "@id": "https://ilyaeis.github.io/resume.html" },
         "name": "Ilja Safronovs",
         "url": "https://ilyaeis.github.io/",
-        "email": "mailto:ilya.safronos@gmail.com",
+        "email": "ilya.safronos@gmail.com",
         "jobTitle": "R&D Engineer",
         "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
         "alumniOf": { "@type": "CollegeOrUniversity", "name": "Riga Technical University" },
         "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
-        "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "Mesh Generation", "OpenAI API", "Large Language Models", "Prompt Engineering", "AWS S3", "PyTorch", "CUDA", "Python", "C++", "Dart", "Flutter", "JavaScript", "Financial Engineering"],
+        "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "Mesh Generation", "OpenAI API", "Large Language Models", "Prompt Engineering", "AWS S3", "PyTorch", "CUDA", "Python", "C++", "Dart", "Flutter", "JavaScript", "Financial Engineering", "Monte Carlo methods", "GARCH", "Value at Risk"],
         "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
     }
     </script>
@@ -40,8 +43,9 @@
     <script type="importmap">
     {
         "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+            "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+            "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.4.0/spark.module.js"
         }
     }
     </script>
@@ -57,20 +61,37 @@
            WebGL journey: a glowing comet corkscrews out of the intro and
            flies through a pre-built world. It spirals once around my three
            traits (Creative, Adaptive, Curious), lighting the words as it
-           traces them, then swings past five strange attractors drifting like
+           traces them, then swings past strange attractors drifting like
            galaxies, stops at my milestone rocks (each with a short
-           description; tap to continue) and lands at my contact details.</p>
+           description; tap to continue), then warps into a glowing tunnel
+           where my projects run as live visualizations (sorting algorithms,
+           a graphing calculator, a workout tracker; Monte Carlo price paths,
+           a load balancer and a NEAT network fly past), warps out and lands
+           at my contact details, floating
+           inside a 3D Gaussian splat of a real living room (Zip-NeRF "london"
+           scene, CC BY 4.0).</p>
         <h2>Journey milestones</h2>
         <ul>
-            <li>Riga State Classical Gymnasium (Rīgas Valsts klasiskā ģimnāzija)</li>
-            <li>2024 — Riga Technical University, Bachelor in Financial
-                Engineering</li>
+            <li>Riga State Classical Gymnasium (Rīgas Valsts klasiskā ģimnāzija), Programming and Mathematics track
+                (today named "Programming + AI"); Latvian state mathematics olympiads;
+                Small Mathematics University (Mazā matemātikas universitāte) at the University of Latvia</li>
+            <li>2024 — Riga Technical University, professional bachelor in Financial
+                Engineering (data analysis qualification), expected 2028</li>
+            <li>2024 — AI Talent Program (Ponder, Mākslīgā intelekta talantu
+                programma): selective program with training in C++, Python,
+                maths and AI development; it led to the Giraffe360 role</li>
             <li>2025 — Giraffe360, R&amp;D Engineer in Riga: 3D Gaussian
                 splatting reconstruction, diffusion-based artifact fixing
                 and mesh generation; earlier, an OpenAI-API service that
                 writes prompts and descriptions for tour videos</li>
-            <li>Projects — selected repositories at github.com/ilyaeis (listed
-                below)</li>
+            <li>2026 — load-balancing-experiments (RTU networks project, Python)</li>
+            <li>2026 — flow, offline workout tracker (Dart, Flutter)</li>
+            <li>2026 — monte-carlo-finance, Monte Carlo Methods in Finance: option pricing, GARCH volatility, VaR backtests (Python)</li>
+            <li>2025 — projects_with_NEAT, neuroevolution agents that learn games (Python)</li>
+            <li>2023 — Offline Graphing Calculator, 4th place in the Riga Business
+                School (RTU) programming competition for secondary school
+                students, built with Iļja Volinskis</li>
+            <li>2022 — sort_visualization, sorting algorithm visualizer (C++, SFML)</li>
         </ul>
         <h2>Strange attractors in the background</h2>
         <ul>
@@ -84,7 +105,10 @@
         <ul>
             <li><a href="https://github.com/ilyaeis/load-balancing-experiments">load-balancing-experiments</a> — reproducible load-balancing experiments (Python)</li>
             <li>flow — offline workout tracker (Dart, Flutter)</li>
+            <li><a href="https://github.com/ilyaeis/monte-carlo-finance">monte-carlo-finance</a> — Monte Carlo option pricing, GARCH volatility, VaR backtests, efficient frontier (Python)</li>
+            <li><a href="https://github.com/ilyaeis/crypto-quant-lab">crypto-quant-lab</a> — 59 backtested drift and volatility-targeting rules on 6 coins (Python)</li>
             <li><a href="https://github.com/ilyaeis/projects_with_NEAT">projects_with_NEAT</a> — neuroevolution agents that learn games (Python)</li>
+            <li>Offline Graphing Calculator — offline graphing calculator; 4th place in the Riga Business School (RTU) programming competition (2023)</li>
             <li><a href="https://github.com/ilyaeis/RTU_program_parser">RTU_program_parser</a> — timetable scraper (Python, Selenium, pandas)</li>
             <li><a href="https://github.com/ilyaeis/Snake_plus_Maze_Path_algorithm_gen_2">Snake_plus_Maze_Path_algorithm_gen_2</a> — maze generation and path-finding (Python, Pygame)</li>
             <li><a href="https://github.com/ilyaeis/bezier-curve-js">bezier-curve-js</a> — interactive Bezier-curve tool (JavaScript)</li>
@@ -108,6 +132,8 @@
 
     <div class="tap-prompt">tap to continue</div>
 
+    <p class="room-credit" hidden>Room: "london" scene, Zip-NeRF dataset (Barron et al. 2023), CC BY 4.0, reconstructed with gsplat</p>
+
     <aside class="stop-panel" aria-live="polite" hidden>
         <p class="stop-panel-dates"></p>
         <h2 class="stop-panel-title"></h2>
@@ -117,6 +143,8 @@
     </aside>
 
     <script type="module" src="js/stopPanel.js"></script>
+    <script type="module" src="js/agentApi.js"></script>
+    <script type="module" src="js/room.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

@@ -1,0 +1,7 @@
+name = "guestbook"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[[kv_namespaces]]
+binding = "GUESTBOOK"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

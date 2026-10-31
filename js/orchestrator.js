@@ -10,12 +10,13 @@ import {
     controls, camera, scene,
     createTrailSystem, addTrailToScene, clearTrail,
     pushPointWorld, updateTrailAttributes, updateTrailGlow,
-    addJourneyTime, render, isPaused, isMobile
+    addJourneyTime, render, isPaused, isMobile, setBloomBoost
 } from './attractors.js';
 import * as cam from './camera.js';
 import * as intro from './intro3d.js';
+import * as tunnel from './tunnel.js';
 import {
-    buildWorld, stops, StopType, planePointToWorld, scenery, updateScenery, lightStop,
+    buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
     getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL
 } from './world.js';
 
@@ -38,6 +39,7 @@ let totalTime = 0;
 
 let trail = null;          // the comet
 let skipRender = false;    // dev (?t=S): simulate() steps without drawing
+let frozen = false;        // dev (?freeze): keep drawing the ?t=S state, no time passes
 let stopIndex = -1;        // VIEW: current stop · TRAVEL: destination
 
 const worldPos = new THREE.Vector3();   // what the FOLLOW camera tracks
@@ -47,6 +49,7 @@ const cometDir = new THREE.Vector3(1, 0, 0); // comet heading (departures)
 const _vec3 = new THREE.Vector3();
 const _vA = new THREE.Vector3();
 const _vB = new THREE.Vector3();
+const _vC = new THREE.Vector3(), _vD = new THREE.Vector3();
 const _startPos = new THREE.Vector3();
 const _targetPos = new THREE.Vector3();
 const _future = new THREE.Vector3();
@@ -56,9 +59,22 @@ const _loopOffset = new THREE.Vector3(); // trajectory-end → orbit settle offs
 // when a third scene sits near the corridor between stops: the comet
 // flies straight through it on the way.
 let travelLegs = [];       // [{ p0, p1, p2, p3 }]
-let travelFracs = [];      // cumulative end fraction of each leg (by length)
+let travelArc = [];        // arc-length table: [{ s, leg, lt }], s = 0..1 along the whole path
 let travelDuration = 0;
 let corkscrew = false;     // first flight spirals around its curve
+let warp = null;           // { kind: 'in' | 'out', g: path share of the jump, t: its time }
+let headS = -1e9;          // the viewer's arc parameter in the tunnel
+let followFrom = 2.5, followTo = 2.5; // chase distance: departure -> destination fit
+let easeC2 = false;        // tunnel flights: cruise time ease, speed from the path weights
+const arrivePos = new THREE.Vector3(); // VIEW camera spot of the destination (face-on, fit distance)
+let arriveBlend = true;    // this flight arrives from the front: blend the camera into the VIEW pose
+let flyby = null;          // the fly-by the current flight spirals round (world.flybys entry)
+let shiftBack = true;      // screen shift restored after the fly-by
+let travelWeightedLen = 0; // path length with the fly-by slowdown weights
+let headingOverride = null; // camera heading for this frame (fly-by framing), else cometDir
+const _camDir = new THREE.Vector3();
+const _hR = new THREE.Vector3(), _hU = new THREE.Vector3();
+let baseFov = 60;
 
 // Scratch frames (flight arcs, corkscrew basis)
 const _arcRight = new THREE.Vector3();
@@ -67,6 +83,9 @@ const _tan = new THREE.Vector3();
 
 // View state
 const textFacePos = new THREE.Vector3(); // face-on camera target
+const faceCenter = new THREE.Vector3();  // stop center the face-align glides around
+const faceSph = new THREE.Spherical(), _sph = new THREE.Spherical();
+const faceR = { x: 0, v: 0 }, facePhi = { x: 0, v: 0 }, faceTheta = { x: 0, v: 0 }; // springs
 let camAligned = false;    // once true, stop steering — user gets control
 let userDragging = false;  // true while the user holds a rotate/zoom gesture
 let loopT = 0;             // planar-stop loop parameter
@@ -79,9 +98,14 @@ const COMET_CAPACITY = isMobile ? 600 : 1200;
 
 // Travel — stops are 30-50 units apart now, so the comet moves fast
 const TRAVEL_SPEED = 9.0;            // world units per second
-const TRAVEL_MIN = 2.5;              // seconds
-const TRAVEL_MAX = 7.0;
+const TRAVEL_MIN = 5.0;              // seconds
+const TRAVEL_MAX = 8.0;
+const TRAVEL_LONG_SPEED = 14.0;      // u/s mean cap for very long hops (the landing -> first rock loop)
 const TRAVEL_POINTS_PER_FRAME = 30;  // comet substeps along the path
+const CAM_PATH_WINDOW = 0.2;         // s: half-width of the path smoothing the camera follows
+const CAM_PATH_SAMPLES = 9;          // path samples per frame for that smoothing
+const TRAVEL_ARC_SAMPLES = 256;      // arc-length table samples per leg (even speed, no jump at leg joins)
+const TUNNEL_ARC_SAMPLES = 1024;     // tunnel and spiral legs are long and curved: a finer table keeps the speed smooth
 const LAUNCH_FLASH = 0.8;            // extra HDR intensity leaving the intro
 
 // Fly-by: a scenery galaxy within this corridor of the flight line (and
@@ -103,6 +127,8 @@ const CORK_FOLLOW_DIST = 4.0;        // chase distance on the corkscrew launch s
 const HOVER_LOOKAHEAD = 5.0;         // seconds of loop motion to aim along
 
 // Viewing
+const FACE_ALIGN_TIME = 0.6;         // s: smooth time of the camera onto the face-on pose
+const FACE_ALIGN_MAX_TURN = THREE.MathUtils.degToRad(70); // rad/s: glide speed cap around the stop
 const LOOP_SUBSTEPS = 8;             // comet substeps on planar-stop loops
 const LOOP_SETTLE_RATE = 1.5;        // how fast the fly-off eases onto the orbit
 
@@ -128,8 +154,57 @@ const SPIRAL_CLIMB = 1.2;            // × blockHalfH: climbs from below the blo
 
 const VIEW_TAP_DELAY = {
     [StopType.ROCK]: 2.0,            // the HTML panel takes ~0.9 s to appear
+    [StopType.PROJECT]: 2.0,
     [StopType.LANDING]: 1.5
 };
+
+// Projects tunnel (tunnel.js). Flights inside it follow the centreline.
+const TUNNEL_DEPART = 8;             // s after a project stop where the departure joins the centreline
+const ARRIVE_BLEND = 0.3;            // share of the flight time over which the camera blends into the VIEW pose (time-based, so dt-free)
+const ARRIVE_TIME = 2.6;             // tunnel stops: blend over the last this many seconds
+const ARRIVE_MIN_DOT = 0.3;          // ... only if the arrival heading is this aligned with the stop's facing
+const FOLLOW_EASE = 0.3;             // path share over which the chase distance eases to the destination fit
+const JOIN_HEADING_MIX = 1.0;        // departure into the tunnel: share of the live heading in the first control arm
+const TUNNEL_LAND = 6;               // the last units of s blend from the centreline onto the label start
+const PROJECT_LOOP_SPEED = 0.9;      // world units/s round the viz frame
+const PROJECT_LOOP_PAD = 0.28;       // loop runs this far outside the frame
+// Warp in / out: a bump around the jump point of the flight (time-based, so dt-free)
+// Fly-bys: the comet leaves the centreline, slows down and spirals round
+// the viz (a helix leg round the tunnel axis), then rejoins it. The camera
+// frames the viz meanwhile (focus + tunnel heading), then turns back.
+const FLYBY_SPAN = 4;                // s: the helix runs over fly-by s +- this
+const FLYBY_TURNS = 1.5;             // turns over the helix leg
+const FLYBY_PAD = 0.35;              // helix radius = viz half-diagonal + this
+const FLYBY_RAMP = 0.35;             // share of the helix leg where the radius grows (and shrinks at the end)
+const FLYBY_SLOW = 1.6;              // path weight 1 + this at the fly-by: the comet is ~3.5x slower mid-spiral
+const FLYBY_SLOW_H = 14;             // s: half-width of that slow bump
+const FLYBY_SPIRAL_W = 3;            // the spiral leg is this much slower again in the middle
+const FLYBY_CAM_DIST = 4.6;          // chase distance while framing a fly-by (the camera offset is ~2% longer: stay under controls.maxDistance 5, or OrbitControls clamps and kinks the path)
+const FLYBY_GLOW = 0.9;              // extra comet intensity while it spirals round a fly-by
+const TUNNEL_EASE_TIME = 1.8;        // s to reach (and leave) the cruise pace in a tunnel flight
+const FLYBY_CAM_L = 20;              // s: half-width of the fly-by framing (C2 bump round the viz)
+const FLYBY_CAM_LAG = 2;             // s: the camera anchor hangs back this far behind the comet at the fly-by
+const FLYBY_CAM_LAG_AT = 2;          // ... most when the comet is this far past the viz
+// Tunnel pacing: flights rush through the fast zones (tunnel.js) and slow
+// down for fly-bys and stops. Speed x TUNNEL_FAST at a zone's middle.
+const TUNNEL_FAST = 2.4;
+const TUNNEL_SPEED = 15.5;           // cruise pace, weighted units/s (sets the flight time)
+const TUNNEL_TRAVEL_MAX = 18;        // s
+const RUSH_STREAKS = 0.35;           // star streaks at full rush (warp = 1)
+const RUSH_RINGS = 0.5;              // ring pulse speed-up at full rush
+const RUSH_FOV = 5;                  // degrees of extra FOV at full rush
+// Warp = a wormhole. Warp in: as the comet nears the tunnel start, a
+// funnel of the tunnel's own rings and strands fades in ahead, swirling,
+// while the outside world fades out; stars stretch into streaks as the
+// comet dives through the throat; the walls narrow into the tunnel.
+// Warp out is the reverse: the end flares open behind the comet and the
+// outside world fades back in. All cross-fades, no cuts.
+const WARP_RISE = 0.9;               // s: streaks / FOV / bloom rise before the jump (throat)
+const WARP_FALL = 1.4;               // s: ... and settle after it
+const WARP_FOV = 12;                 // extra degrees of FOV at the peak (gentle)
+const WARP_COMET = 1.2;              // extra comet intensity at the peak
+const WARP_FADE_PRE = 2.2;           // s: the worlds cross-fade from this long before the jump
+const WARP_FADE_POST = 0.4;          // ... to this long after it (reversed on the way out)
 
 // Rocket → comet morph duration (3D rocket — see intro3d.js)
 const ROCKET_MORPH_DURATION = intro.CHARGE_DURATION;
@@ -151,13 +226,22 @@ export function init() {
         camAligned = true;
     });
     controls.addEventListener('end', () => { userDragging = false; });
+    baseFov = camera.fov;
+    tunnel.setFlare(0, tunnelExitS);
     const q = new URLSearchParams(location.search);
     const stopQ = Number(q.get('stop')), legQ = Number(q.get('leg'));
-    if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
+    const goTarget = q.has('go') ? stopById(q.get('go')) : null;
+    if (goTarget?.navigable) {          // ?go=<id>[&mode=fly|jump]
+        const i = goTarget.index;
+        if (q.get('mode') === 'fly' && i >= 1) { jumpTo(i - 1); setupTravel(i, false); }
+        else jumpTo(i);
+    }
+    else if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
     else if (q.has('leg') && Number.isInteger(legQ) && legQ >= 1 && stops[legQ]) { jumpTo(legQ - 1); setupTravel(legQ, false); }
     else showTapPrompt();
     const tQ = Number(q.get('t'));
     if (q.has('t') && tQ > 0 && tQ <= 30) simulate(tQ);
+    frozen = q.has('freeze');
 }
 
 // Dev only (?t=S): step the simulation S seconds before the first frame
@@ -170,17 +254,28 @@ function simulate(seconds) {
 
 export function onTap() { tapPending = true; }
 
+// Dev only (dev/camlog.html): step without drawing, and read the state
+export function setSkipRender(v) { skipRender = v; }
+export function getState() {
+    return { phase, stopIndex, userDragging, phaseTime };
+}
+export function devState() {
+    return { phase, phaseTime, stopIndex, stopType: stops[stopIndex]?.type ?? -1, worldPos, cometPos,
+             tunnelFlight: phase === Phase.TRAVEL && easeC2, headS };
+}
+
 // Tell the DOM (stopPanel.js) which stop the comet enters or leaves
 function emitStop(phaseName) {
     const stop = stops[stopIndex];
     if (!stop) return;
     window.dispatchEvent(new CustomEvent('journey:stop', {
-        detail: { phase: phaseName, index: stopIndex, type: stop.type, panel: stop.panel || null }
+        detail: { phase: phaseName, index: stopIndex, type: stop.type, panel: stop.panel || null,
+                  id: stop.id, universe: stop.universe, label: stop.panel?.title ?? stop.id }
     }));
 }
 
-// Dev only: land the comet at stop n instantly (?stop=N, ?leg=N).
-function jumpTo(n) {
+// Land the comet at stop n instantly (?stop, ?leg, ?go, journey.goTo jump).
+export function jumpTo(n) {
     intro.hideRocket(); hideTapPrompt();
     stopIndex = n;
     const stop = stops[n];
@@ -189,9 +284,18 @@ function jumpTo(n) {
     cam.setOrbitCenter(stop.center.x, stop.center.y, stop.center.z);
     controls.target.copy(stop.center);
     camera.position.copy(stop.center).addScaledVector(stop.normal, -fitFor(stop));
-    cam.setScreenShift(stop.type === StopType.ROCK, true);
+    cam.setScreenShift(hasPanel(stop), true);
+    tunnel.setFade(stop.tunnelS != null ? 1 : 0);
+    setInside(stop.tunnelS != null ? 1 : 0);
     enterView();
 }
+
+// The world outside the tunnel (and the intro objects) vs the tunnel's own content
+// f = 0 outside .. 1 inside; the far intro objects switch at the middle
+function setInside(f) { setInsideFade(f); intro.setIntroVisible(f < 0.5); }
+
+// Stops with an HTML panel beside them (screen shift, fit)
+function hasPanel(stop) { return stop.type === StopType.ROCK || stop.type === StopType.PROJECT; }
 
 function showTapPrompt() { if (tapPromptEl) tapPromptEl.classList.add('visible'); }
 function hideTapPrompt() { if (tapPromptEl) tapPromptEl.classList.remove('visible'); }
@@ -233,13 +337,39 @@ function fitFor(stop) {
     if (stop.type === StopType.TEXT) {
         return Math.min(controls.maxDistance, computeFitDistance(stop.points2d, stop.scale) * TEXT_FIT_MARGIN);
     }
-    if (stop.type !== StopType.ROCK) return computeFitDistance(stop.points2d, stop.scale);
+    if (!hasPanel(stop)) return computeFitDistance(stop.points2d, stop.scale);
     const [w, h] = cam.isPanelSideLayout() ? [ROCK_FIT_SIDE, 1] : [1, ROCK_FIT_BOTTOM];
     return computeFitDistance(stop.points2d, stop.scale, w, h);
 }
 
-// ── Cubic Bezier evaluation (single leg) ───────────────────────────
+// ── Leg evaluation ─────────────────────────────────────────────────
+// A leg is a cubic Bezier { p0..p3 } or a stretch of the tunnel
+// centreline { tunnel: true, s0, s1, endOffset }: the last TUNNEL_LAND
+// units blend onto the destination's first stroke point.
 function legPoint(leg, t, out) {
+    if (leg.helix) {
+        const s = leg.s0 + (leg.s1 - leg.s0) * t;
+        tunnel.centreWorld(s, out);
+        // smootherstep: zero acceleration where the spiral leaves and rejoins the centreline
+        const ramp = THREE.MathUtils.smootherstep(t, 0, FLYBY_RAMP) * (1 - THREE.MathUtils.smootherstep(t, 1 - FLYBY_RAMP, 1));
+        const r = leg.R * ramp;
+        if (r > 0) {
+            out.addScaledVector(leg.offset, ramp);   // the spiral axis runs through the viz, beside the centreline
+            tunnel.frameWorld(s, _hR, _hU);
+            const a = leg.phase + 2 * Math.PI * FLYBY_TURNS * t;
+            out.addScaledVector(_hR, r * Math.cos(a)).addScaledVector(_hU, r * Math.sin(a));
+        }
+        return out;
+    }
+    if (leg.tunnel) {
+        const s = leg.s0 + (leg.s1 - leg.s0) * t;
+        tunnel.centreWorld(s, out);
+        if (leg.endOffset) {
+            const f = THREE.MathUtils.smoothstep(s, leg.s1 - TUNNEL_LAND, leg.s1);
+            out.addScaledVector(leg.endOffset, f);
+        }
+        return out;
+    }
     const u = 1 - t;
     const uu = u * u;
     const uuu = uu * u;
@@ -251,13 +381,85 @@ function legPoint(leg, t, out) {
     return out;
 }
 
-// ── Whole-path evaluation (legs chained by length fraction) ────────
+// ── Whole-path evaluation (by arc length) ──────────────────────────
+// gt is the share of the path length, so the comet speed depends only on
+// the time ease: no speed jump where two legs join, no Bezier speed bumps.
+function buildArcTable() {
+    travelArc = [{ s: 0, leg: 0, lt: 0 }];
+    let len = 0;
+    travelLegs.forEach((leg, i) => {
+        legPoint(leg, 0, _vB);
+        const n = leg.helix || leg.tunnel ? TUNNEL_ARC_SAMPLES : TRAVEL_ARC_SAMPLES;
+        for (let k = 1; k <= n; k++) {
+            legPoint(leg, k / n, _vA);
+            if (leg.helix || leg.tunnel) {
+                // Tunnel legs: weight light in the fast zones, heavy round a fly-by,
+                // heavier still on the spiral. The spiral is timed by the centreline
+                // under it, not by its own stretched path, so the comet's progress
+                // along the tunnel stays smooth.
+                const lt = (k - 0.5) / n;
+                let w = tunnelWeight(leg.s0 + (leg.s1 - leg.s0) * lt);
+                if (leg.helix) {           // follows the spiral radius ramp, so the comet's pace on the spiral is even
+                    const ss = THREE.MathUtils.smootherstep;
+                    w *= 1 + (FLYBY_SPIRAL_W - 1) * ss(lt, 0, FLYBY_RAMP) * (1 - ss(lt, 1 - FLYBY_RAMP, 1));
+                }
+                // centre legs: by path length; the spiral: by the length of the
+                // centreline under it (so the pace matches at the joins)
+                const s0 = leg.s0 + (leg.s1 - leg.s0) * (k - 1) / n, s1 = leg.s0 + (leg.s1 - leg.s0) * k / n;
+                len += w * (leg.helix ? tunnel.centreWorld(s0, _vC).distanceTo(tunnel.centreWorld(s1, _vD)) : _vA.distanceTo(_vB));
+            } else {
+                len += _vA.distanceTo(_vB);
+            }
+            _vB.copy(_vA);
+            travelArc.push({ s: len, leg: i, lt: k / n });
+        }
+    });
+    for (const e of travelArc) e.s /= len || 1;
+    travelWeightedLen = len;
+}
+
+// Path weight in the tunnel (time per unit of path): light in the fast
+// zones, heavy round a fly-by (C2 bump over FLYBY_SLOW_H), so the comet
+// rushes between the stops and slows down for each spiral
+function tunnelWeight(s) {
+    let slow = 0;
+    for (const f of flybys) {
+        const u = (s - f.s) / FLYBY_SLOW_H;
+        if (Math.abs(u) < 1) slow += (1 - u * u) ** 3;
+    }
+    return (1 + FLYBY_SLOW * slow) / (1 + (TUNNEL_FAST - 1) * tunnel.fastness(s));
+}
+
 function travelPoint(gt, out) {
-    let i = 0;
-    while (i < travelLegs.length - 1 && gt > travelFracs[i]) i++;
-    const start = i === 0 ? 0 : travelFracs[i - 1];
-    const lt = THREE.MathUtils.clamp((gt - start) / (travelFracs[i] - start), 0, 1);
-    return legPoint(travelLegs[i], lt, out);
+    gt = THREE.MathUtils.clamp(gt, 0, 1);
+    let lo = 0, hi = travelArc.length - 1;
+    while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (travelArc[mid].s < gt) lo = mid; else hi = mid;
+    }
+    const a = travelArc[lo], b = travelArc[hi];
+    const f = b.s > a.s ? (gt - a.s) / (b.s - a.s) : 0;
+    // Leg join: the next leg starts at local t = 0
+    const lt = a.leg === b.leg ? a.lt + (b.lt - a.lt) * f : b.lt * f;
+    return legPoint(travelLegs[b.leg], lt, out);
+}
+
+// The comet's arc parameter in the tunnel at path share gt: the leg's own
+// s on centreline / spiral legs (smooth; projecting the spiralling head
+// would wobble), else the projection of the point
+function travelS(gt) {
+    gt = THREE.MathUtils.clamp(gt, 0, 1);
+    let lo = 0, hi = travelArc.length - 1;
+    while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (travelArc[mid].s < gt) lo = mid; else hi = mid;
+    }
+    const a = travelArc[lo], b = travelArc[hi];
+    const f = b.s > a.s ? (gt - a.s) / (b.s - a.s) : 0;
+    const lt = a.leg === b.leg ? a.lt + (b.lt - a.lt) * f : b.lt * f;
+    const leg = travelLegs[b.leg];
+    if (leg.tunnel || leg.helix) return leg.s0 + (leg.s1 - leg.s0) * lt;
+    return tunnel.sOf(legPoint(leg, lt, _vB));
 }
 
 function travelTangent(gt, out) {
@@ -272,8 +474,9 @@ function randSign() { return Math.random() < 0.5 ? -1 : 1; }
 
 // ── Build one flight leg from a start position + direction to a target ──
 // Every transition swoops: the control points get random perpendicular
-// offsets so no two flights arc the same way.
-function buildLeg(startPos, startDir, targetPos, pull = 0.4, arc = 1) {
+// offsets so no two flights arc the same way. keepStartDir leaves p1 on
+// the start direction, so a chained leg joins without a kink.
+function buildLeg(startPos, startDir, targetPos, keepStartDir = false, pull = 0.4, arc = 1) {
     const leg = {
         p0: startPos.clone(),
         p1: new THREE.Vector3(),
@@ -295,8 +498,9 @@ function buildLeg(startPos, startDir, targetPos, pull = 0.4, arc = 1) {
     _arcRight.normalize();
     _arcUp.crossVectors(_arcRight, _vec3).normalize();
     const sign = randSign();
-    leg.p1.addScaledVector(_arcRight, sign * dist * arc * rand(0.15, 0.3));
-    leg.p1.addScaledVector(_arcUp, randSign() * dist * arc * rand(0.05, 0.15));
+    const p1Arc = keepStartDir ? 0 : 1;
+    leg.p1.addScaledVector(_arcRight, p1Arc * sign * dist * arc * rand(0.15, 0.3));
+    leg.p1.addScaledVector(_arcUp, p1Arc * randSign() * dist * arc * rand(0.05, 0.15));
     leg.p2.addScaledVector(_arcRight, -sign * dist * arc * rand(0.1, 0.2));
     leg.p2.addScaledVector(_arcUp, randSign() * dist * arc * rand(0.04, 0.1));
     return leg;
@@ -376,19 +580,37 @@ function pickViaScenery(from, to) {
 
 // ── Face-on camera alignment ───────────────────────────────────────
 // Aim the camera at a planar stop: compute the face-on position once,
-// then ease toward it each frame until arrival — unless the user
-// already took over.
+// then glide toward it each frame until arrival — unless the user
+// already took over. The glide moves in spherical coordinates around
+// the stop (distance, elevation, azimuth), so the camera swings around
+// the side and never cuts over the top or through the stop.
 function beginFaceAlign(stop) {
     const dist = fitFor(stop);
-    const center = stop.center, dir = stop.normal;
-    textFacePos.copy(center).addScaledVector(dir, -dist);
+    faceCenter.copy(stop.center);
+    textFacePos.copy(faceCenter).addScaledVector(stop.normal, -dist);
+    faceSph.setFromVector3(_vec3.subVectors(textFacePos, faceCenter));
+    _sph.setFromVector3(_vec3.subVectors(camera.position, faceCenter));
+    faceR.x = _sph.radius; facePhi.x = _sph.phi; faceTheta.x = _sph.theta;
+    // Start with the camera's current motion (no speed jump on arrival)
+    const v = cam.cameraVel, sp = Math.sin(_sph.phi), cp = Math.cos(_sph.phi);
+    const st = Math.sin(_sph.theta), ct = Math.cos(_sph.theta), r = Math.max(_sph.radius, 1e-3);
+    faceR.v = v.x * sp * st + v.y * cp + v.z * sp * ct;
+    facePhi.v = (v.x * cp * st - v.y * sp + v.z * cp * ct) / r;
+    faceTheta.v = sp > 1e-3 ? (v.x * ct - v.z * st) / (r * sp) : 0;
     camAligned = userDragging; // user already in control → don't steer
 }
 
 // Returns true on the frame the camera arrives (settles)
-function stepFaceAlign(dt, speed = 2.5) {
+function stepFaceAlign(dt) {
     if (camAligned) return false;
-    camera.position.lerp(textFacePos, 1 - Math.exp(-speed * dt));
+    // Shortest way round in azimuth
+    let dTheta = faceSph.theta - faceTheta.x;
+    dTheta = Math.atan2(Math.sin(dTheta), Math.cos(dTheta));
+    cam.smoothDampScalar(faceR, faceSph.radius, FACE_ALIGN_TIME, dt);
+    cam.smoothDampScalar(facePhi, faceSph.phi, FACE_ALIGN_TIME, dt, FACE_ALIGN_MAX_TURN);
+    cam.smoothDampScalar(faceTheta, faceTheta.x + dTheta, FACE_ALIGN_TIME, dt, FACE_ALIGN_MAX_TURN);
+    _sph.set(faceR.x, facePhi.x, faceTheta.x);
+    camera.position.setFromSpherical(_sph).add(faceCenter);
     if (camera.position.distanceToSquared(textFacePos) < 0.0025) {
         camAligned = true;
         return true;
@@ -397,7 +619,7 @@ function stepFaceAlign(dt, speed = 2.5) {
 }
 
 // ── Travel setup ───────────────────────────────────────────────────
-function setupTravel(destIdx, withCorkscrew) {
+export function setupTravel(destIdx, withCorkscrew) {
     const dest = stops[destIdx];
     emitStop('leave'); // before stopIndex moves to the destination
 
@@ -406,11 +628,124 @@ function setupTravel(destIdx, withCorkscrew) {
     // tracing from there.
     traceWorld(dest, 0, _targetPos);
 
-    // Swing past a scenery galaxy when one sits near the flight line.
     // The flight starts from the comet's *actual* head — cometPos — not
     // the stop center, so the trail flows on instead of snapping back.
-    const via = pickViaScenery(cometPos, _targetPos);
+    const from = stops[stopIndex];
+    const inTunnel = from?.tunnelS != null, toTunnel = dest.tunnelS != null;
     travelLegs = [];
+    warp = null;
+    flyby = null;
+    easeC2 = inTunnel || toTunnel;
+    if (inTunnel || toTunnel) buildTunnelLegs(from, dest, inTunnel, toTunnel);
+    else buildOpenLegs();
+
+    // Time proportional to chord length
+    let total = 0;
+    for (const l of travelLegs) total += l.p0.distanceTo(l.p3);
+    buildArcTable();
+    travelDuration = THREE.MathUtils.clamp(total / TRAVEL_SPEED, TRAVEL_MIN, TRAVEL_MAX);
+    travelDuration = Math.max(travelDuration, total / TRAVEL_LONG_SPEED); // very long hops take longer
+    if (easeC2) {
+        // Tunnel flights: time from the weighted length (rush zones count less, spirals more)
+        // (+ the ease time, so the cruise pace is TUNNEL_SPEED on every tunnel flight)
+        travelDuration = THREE.MathUtils.clamp(travelWeightedLen / TUNNEL_SPEED + TUNNEL_EASE_TIME, TRAVEL_MIN, TUNNEL_TRAVEL_MAX);
+    }
+    corkscrew = withCorkscrew;
+    if (warp) {
+        warp.g = legEndShare(warp.leg);
+        warp.t = easeInverse(warp.g) * travelDuration;
+    }
+
+    // Comet glows in the destination's palette
+    trail.attractorIdx = dest.paletteIdx ?? 0;
+
+    stopIndex = destIdx;
+    worldPos.copy(cometPos); // the camera hand-off starts from the real head, not the stop center
+    cam.setMode(cam.Mode.FOLLOW, controls);
+    // Pre-compose the destination so the camera is already framed on arrival.
+    // The wanted distance eases from the current one (updateTravel), so a
+    // big change (a small rock -> a wide project) starts without a jolt.
+    followFrom = camera.position.distanceTo(controls.target);
+    followTo = withCorkscrew ? Math.max(fitFor(dest), CORK_FOLLOW_DIST) : fitFor(dest);
+    arrivePos.copy(dest.center).addScaledVector(dest.normal, -fitFor(dest)); // = beginFaceAlign's target
+    cam.setArrival(dest.center, arrivePos, 0);
+    // Blend into the VIEW pose only when the flight arrives from the front:
+    // from behind, a straight blend would swing the camera through the stop
+    // (the face-align glide in VIEW goes round the side instead)
+    arriveBlend = travelTangent(0.999, _vA).dot(dest.normal) > ARRIVE_MIN_DOT;
+    cam.setFollowDistance(followFrom);
+    // A fly-by is framed centred: the panel shift comes back after it
+    shiftBack = !flyby;
+    cam.setScreenShift(hasPanel(dest) && !flyby);
+    enterPhase(Phase.TRAVEL);
+}
+
+// Path share where leg k ends (the warp jump point)
+function legEndShare(k) {
+    let g = 0;
+    for (const e of travelArc) if (e.leg === k) g = e.s;
+    return g;
+}
+// x with travelEase(x) = g (bisection; travelEase is monotonic)
+function easeInverse(g) {
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (travelEase(m) < g) lo = m; else hi = m; }
+    return (lo + hi) / 2;
+}
+
+// Departure leg onto the centreline at s, arriving along the tunnel
+// tangent (C1 join with the centreline leg that follows)
+function joinLeg(s) {
+    const p3 = tunnel.centreWorld(s, new THREE.Vector3());
+    // Leave mostly towards the join point, with a hint of the live heading
+    // (loop or stroke) and no random arc: the camera, which faces the
+    // stop, barely has to turn, and the comet trail bends only a little
+    _vB.subVectors(p3, cometPos).normalize().addScaledVector(cometDir, JOIN_HEADING_MIX).normalize();
+    const leg = buildLeg(cometPos, _vB, p3, true, 0.35);
+    leg.p2.copy(p3).addScaledVector(tunnel.tangentWorld(s, _vA), -0.35 * leg.p0.distanceTo(p3));
+    return leg;
+}
+function centreLeg(s0, s1, endPos = null) {
+    const leg = { tunnel: true, s0, s1, p0: tunnel.centreWorld(s0, new THREE.Vector3()), p3: tunnel.centreWorld(s1, new THREE.Vector3()) };
+    if (endPos) { leg.endOffset = endPos.clone().sub(leg.p3); leg.p3.copy(endPos); }
+    return leg;
+}
+
+// Centreline from sA to sB; with a fly-by in between, a helix leg round it
+function pushCentre(sA, sB, endPos = null) {
+    const fb = flybys.find(f => f.s - FLYBY_SPAN > sA + 2 && f.s + FLYBY_SPAN < sB - 2);
+    if (!fb) { travelLegs.push(centreLeg(sA, sB, endPos)); return; }
+    flyby = fb;
+    const s0 = fb.s - FLYBY_SPAN, s1 = fb.s + FLYBY_SPAN;
+    travelLegs.push(centreLeg(sA, s0));
+    travelLegs.push({ helix: true, s0, s1, R: fb.radius + FLYBY_PAD, phase: -Math.PI / 2, offset: fb.offset,
+        p0: tunnel.centreWorld(s0, new THREE.Vector3()), p3: tunnel.centreWorld(s1, new THREE.Vector3()) });
+    travelLegs.push(centreLeg(s1, sB, endPos));
+}
+
+// Flights that touch the tunnel: warp in (open space -> tunnel), hops
+// inside it, warp out (tunnel -> open space).
+function buildTunnelLegs(from, dest, inTunnel, toTunnel) {
+    if (!inTunnel) {
+        travelLegs.push(joinLeg(0));
+        pushCentre(0, dest.tunnelS, _targetPos);
+        warp = { kind: 'in', leg: 0 };
+    } else if (toTunnel) {
+        const sJ = from.tunnelS + TUNNEL_DEPART;
+        travelLegs.push(joinLeg(sJ));
+        pushCentre(sJ, dest.tunnelS, _targetPos);
+    } else {
+        const sJ = from.tunnelS + TUNNEL_DEPART;
+        const exit = tunnel.centreWorld(tunnelExitS, new THREE.Vector3());
+        travelLegs.push(joinLeg(sJ), centreLeg(sJ, tunnelExitS),
+            buildLeg(exit, tunnel.tangentWorld(tunnelExitS, new THREE.Vector3()), _targetPos, true, 0.6));
+        warp = { kind: 'out', leg: 1 };
+    }
+}
+
+// Open space: swing past a scenery galaxy when one sits near the flight line
+function buildOpenLegs() {
+    const via = pickViaScenery(cometPos, _targetPos);
     if (via) {
         // Near edge of the galaxy, not its center: the closest point on the
         // flight line, pushed back out to the rim on that side
@@ -427,36 +762,10 @@ function setupTravel(destIdx, withCorkscrew) {
         const leg1 = buildFirstLeg(viaPos);
         // Depart the via along leg1's arrival tangent — smooth join
         _vec3.subVectors(leg1.p3, leg1.p2).normalize();
-        travelLegs.push(leg1, buildLeg(viaPos, _vec3, _targetPos));
+        travelLegs.push(leg1, buildLeg(viaPos, _vec3, _targetPos, true));
     } else {
         travelLegs.push(buildFirstLeg(_targetPos));
     }
-
-    // Time + leg fractions proportional to chord length
-    let total = 0;
-    const lens = travelLegs.map(l => {
-        const len = l.p0.distanceTo(l.p3);
-        total += len;
-        return len;
-    });
-    travelFracs = [];
-    let acc = 0;
-    for (const len of lens) {
-        acc += len / total;
-        travelFracs.push(acc);
-    }
-    travelDuration = THREE.MathUtils.clamp(total / TRAVEL_SPEED, TRAVEL_MIN, TRAVEL_MAX);
-    corkscrew = withCorkscrew;
-
-    // Comet glows in the destination's palette
-    trail.attractorIdx = dest.paletteIdx ?? 0;
-
-    stopIndex = destIdx;
-    cam.setMode(cam.Mode.FOLLOW, controls);
-    // Pre-compose the destination so the camera is already framed on arrival
-    cam.setFollowDistance(withCorkscrew ? Math.max(fitFor(dest), CORK_FOLLOW_DIST) : fitFor(dest));
-    cam.setScreenShift(dest.type === StopType.ROCK);
-    enterPhase(Phase.TRAVEL);
 }
 
 // Spiral offset around the curve tangent — radius ramps in and out so
@@ -476,10 +785,10 @@ function applyCorkscrew(t, point) {
 // ── Update ─────────────────────────────────────────────────────────
 export function update(dt) {
     if (isPaused()) return;
+    if (frozen) { render(); return; }
     totalTime += dt;
     addJourneyTime(dt);
     intro.update(dt, totalTime);
-    updateScenery(dt);
 
     switch (phase) {
         case Phase.INTRO:          updateIntro(dt); break;
@@ -488,6 +797,12 @@ export function update(dt) {
         case Phase.VIEW:           updateView(dt); break;
     }
 
+    // Tunnel window and nearby visualizations follow the viewer
+    const here = stops[stopIndex];
+    headS = phase === Phase.VIEW && here?.tunnelS != null ? here.tunnelS : tunnel.sOf(cometPos);
+    tunnel.setView(headS);
+    updateWorld(dt, headS);
+
     phaseTime += dt;
 
     if (trail && trail.inScene) {
@@ -495,7 +810,7 @@ export function update(dt) {
         updateTrailGlow(trail, totalTime);
     }
 
-    cam.update(dt, controls, camera, worldPos, cometDir);
+    cam.update(dt, controls, camera, worldPos, headingOverride ?? cometDir);
     if (!skipRender) render();
 }
 
@@ -550,14 +865,57 @@ function updateRocketExit(dt) {
 
 // Ease-in/ease-out along the flight: the comet starts from rest, builds
 // speed, then settles into the stop — smoothstep on the path parameter.
-function travelEase(x) { return x * x * (3 - 2 * x); }
+// Tunnel flights use smootherstep: it also starts and ends with zero
+// acceleration, so the hops from the wide project stops start without a jolt.
+// Tunnel flights cruise instead: speed ramps up (smoothstep-shaped) over
+// the first TUNNEL_EASE_TIME, stays flat, ramps down at the end. Their
+// speed profile comes from the path weights (buildArcTable): fast in the
+// rush zones, slow round a fly-by.
+function travelEase(x) {
+    if (easeC2) {
+        const a = Math.min(TUNNEL_EASE_TIME / travelDuration, 0.4), V = 1 / (1 - a);
+        const P = y => y * y * y - y * y * y * y / 2;     // integral of smoothstep
+        if (x < a) return V * a * P(x / a);
+        if (x > 1 - a) return 1 - V * a * P((1 - x) / a);
+        return V * (x - a / 2);
+    }
+    return easeC2 ? x * x * x * (x * (6 * x - 15) + 10) : x * x * (3 - 2 * x);
+}
+
+// Point the camera follows: the path averaged over ±CAM_PATH_WINDOW s
+// (triangle weights), so tight bends do not whip the camera sideways.
+// The window eases to zero at both ends (smoothstep, no kink), so the
+// flight starts and ends exactly on the path.
+function cameraAnchor(time, out) {
+    const edge = Math.max(0, Math.min(time, travelDuration - time));
+    const w = CAM_PATH_WINDOW * travelEase(Math.min(edge / (2 * CAM_PATH_WINDOW), 1));
+    out.set(0, 0, 0);
+    let sum = 0;
+    for (let k = 0; k < CAM_PATH_SAMPLES; k++) {
+        const s = 2 * (k + 1) / (CAM_PATH_SAMPLES + 1) - 1; // inside -1..1
+        const wt = 1 - Math.abs(s);
+        travelPoint(travelEase(THREE.MathUtils.clamp((time + s * w) / travelDuration, 0, 1)), _vB);
+        out.addScaledVector(_vB, wt);
+        sum += wt;
+    }
+    return out.divideScalar(sum);
+}
 
 // ── TRAVEL (Bezier arc to the next stop) ───────────────────────────
 function updateTravel(dt) {
     // Eased path parameter so motion accelerates and decelerates instead
     // of jumping to constant speed the instant the comet departs.
-    const t = travelEase(Math.min(phaseTime / travelDuration, 1));
-    const prevT = travelEase(Math.max(0, (phaseTime - dt) / travelDuration));
+    // phaseTime is the start of this frame; draw up to its end
+    const t = travelEase(Math.min((phaseTime + dt) / travelDuration, 1));
+    const prevT = travelEase(Math.min(phaseTime / travelDuration, 1));
+    const w = warp ? updateWarp(phaseTime + dt, t) : 0;
+    const sHead = easeC2 ? travelS(t) : 0;
+    const k = flyby ? flybyFraming(sHead) : 0;
+    // Rush: a gentle sense of speed at the fast zones (ring pulses, streaks, FOV)
+    const rush = easeC2 ? tunnel.fastness(sHead) : 0;
+    const dist = followFrom + (followTo - followFrom) * THREE.MathUtils.smoothstep(t, 0, FOLLOW_EASE);
+    cam.setFollowDistance(dist + (FLYBY_CAM_DIST - dist) * k);
+    trail.pointIntensity = 1 + WARP_COMET * w + FLYBY_GLOW * k; // the spiral glows
 
     for (let i = 1; i <= TRAVEL_POINTS_PER_FRAME; i++) {
         const subT = prevT + (t - prevT) * (i / TRAVEL_POINTS_PER_FRAME);
@@ -571,17 +929,105 @@ function updateTravel(dt) {
     }
     trail.pointIntensity = 1.0;
 
-    // Camera follows the smooth base path, not the spiral
-    travelPoint(t, worldPos);
+    // Camera follows the base path (not the spiral), smoothed over time
+    travelPoint(t, cometPos); // the head's true position, for the next leg
+    cameraAnchor(phaseTime + dt, worldPos);
     travelTangent(t, cometDir);
-    cometPos.copy(worldPos); // keep the head position current for the next leg
+    if (easeC2) {
+        tunnel.updateStreaks(dt, cometPos, cometDir, Math.max(w, RUSH_STREAKS * rush));
+        tunnel.setRush(Math.max(w, RUSH_RINGS * rush));
+        camera.fov = baseFov + WARP_FOV * w + RUSH_FOV * rush;
+        camera.updateProjectionMatrix();
+    }
+    // Arrival: blend into the VIEW pose over the last ARRIVE_BLEND of the time
+    const x = Math.min((phaseTime + dt) / travelDuration, 1);
+    const dest = stops[stopIndex];
+    if (!arriveBlend) {
+        cam.setArrival(null, null, 0);
+    } else if (easeC2 && dest.tunnelS != null) {
+        // in the tunnel: over the last ARRIVE_TIME s (the flights are long; the rush is over by then)
+        cam.setArrival(null, null, THREE.MathUtils.smootherstep(phaseTime + dt, travelDuration - ARRIVE_TIME, travelDuration));
+    } else {
+        cam.setArrival(null, null, THREE.MathUtils.smootherstep(x, 1 - ARRIVE_BLEND, 1));
+    }
+    // Fly-by: the camera frames the viz, looking down the tunnel. Its
+    // anchor hangs back along the axis by up to FLYBY_CAM_LAG (a C2 bump in
+    // the comet's s, so it slows on the way in and catches up on the way
+    // out, a slow dolly-in during the spiral), and slides sideways onto the
+    // viz axis. Smooth functions of the comet's s: no parking, no jumps.
+    headingOverride = null;
+    if (flyby && Math.abs(sHead - flyby.s) < FLYBY_CAM_L + 4) {
+        const u = (sHead - flyby.s - FLYBY_CAM_LAG_AT) / FLYBY_CAM_L;
+        const lag = Math.abs(u) < 1 ? FLYBY_CAM_LAG * (1 - u * u) ** 3 : 0;
+        // Near the spiral the anchor rides the centreline (not the spiralling
+        // path); it takes over from the path anchor where the two agree
+        tunnel.centreWorld(sHead - lag, _vA).addScaledVector(flyby.offset, k);
+        const ride = 1 - THREE.MathUtils.smootherstep(Math.abs(sHead - flyby.s), FLYBY_SPAN + 6, FLYBY_SPAN + 14);
+        tunnel.centreWorld(sHead, _vB);
+        worldPos.add(_vB.subVectors(_vA, _vB));    // path anchor + (C(s - lag) + offset k - C(s))
+        worldPos.lerp(_vA, ride);
+        if (k > 0) headingOverride = _camDir.copy(cometDir).lerp(flyby.T, k).normalize();
+    }
+    if (!shiftBack && sHead > flyby.s + FLYBY_SPAN) {   // as the camera swings back, so the panel layout is set before the arrival
+        shiftBack = true;
+        cam.setScreenShift(hasPanel(stops[stopIndex]));
+    }
 
-    if (t >= 1) enterView();
+    if (t >= 1) {
+        enterView();
+        stepFaceAlign(dt); // the camera keeps moving on the hand-off frame
+    }
+}
+
+// Fly-by framing weight 0..1 over the comet's arc parameter s (a function
+// of its place, so dt-free); smootherstep: the pull towards the viz starts
+// without a jolt
+function flybyFraming(s) {
+    const u = (s - flyby.s) / FLYBY_CAM_L;
+    return Math.abs(u) < 1 ? (1 - u * u) ** 3 : 0;
+}
+
+// ── Warp ───────────────────────────────────────────────────────────
+// Strength w: 0 -> 1 over WARP_RISE s before the jump, back to 0 over
+// WARP_FALL s after it. The tunnel fades in (or out) right at the jump.
+function warpStrength(dtJump) {
+    return dtJump < 0
+        ? THREE.MathUtils.smoothstep(dtJump, -WARP_RISE, 0)
+        : 1 - THREE.MathUtils.smoothstep(dtJump, 0, WARP_FALL);
+}
+function updateWarp(time, g) {
+    const w = warpStrength(time - warp.t);
+    // inside-ness: entry fades in before the throat, exit fades out after the mouth
+    const inside = warp.kind === 'in'
+        ? THREE.MathUtils.smootherstep(time, warp.t - WARP_FADE_PRE, warp.t + WARP_FADE_POST)
+        : 1 - THREE.MathUtils.smootherstep(time, warp.t - WARP_FADE_POST, warp.t + WARP_FADE_PRE);
+    tunnel.setFade(inside);
+    setInside(inside);
+    tunnel.setVortex(time);
+    setBloomBoost(w);           // FOV, rush and streaks: updateTravel
+    return w;
+}
+function endWarp() {
+    warp = null;
+    camera.fov = baseFov;
+    camera.updateProjectionMatrix();
+    setBloomBoost(0);
+    tunnel.setRush(0);
+    tunnel.setVortex(0);
+    tunnel.updateStreaks(0, cometPos, cometDir, 0);
 }
 
 // ── VIEW (camera orbits the stop; comet rides or loops) ────────────
 function enterView() {
     const stop = stops[stopIndex];
+    if (warp) endWarp();
+    cam.setArrival(null, null, 0);
+    if (easeC2) {                    // rush effects off
+        camera.fov = baseFov; camera.updateProjectionMatrix();
+        tunnel.setRush(0); tunnel.updateStreaks(0, cometPos, cometDir, 0);
+    }
+    headingOverride = null;
+    flyby = null;
 
     cam.setMode(cam.Mode.ORBIT, controls);
     cam.setOrbitCenter(stop.center.x, stop.center.y, stop.center.z);
@@ -656,6 +1102,7 @@ function helixPos(stop, u, out) {
 // Lazy Lissajous loop around a planar stop, sized to its bounds.
 function loopPos(stop, u, out) {
     if (stop.type === StopType.TEXT) return helixPos(stop, u, out);
+    if (stop.type === StopType.PROJECT) return frameLoopPos(stop, u, out);
     const w = Math.max(stop.halfW * 1.25, 0.4);
     const h = Math.max(stop.halfH * 1.6, 0.3);
     out.copy(stop.center)
@@ -663,6 +1110,35 @@ function loopPos(stop, u, out) {
         .addScaledVector(stop.up, h * Math.sin(1.3 * u))
         .addScaledVector(stop.normal, 0.35 * Math.sin(0.9 * u));
     return out;
+}
+
+// Project stops: the comet circles the viz frame (a rounded rectangle
+// walked at constant speed), so it never crosses the animation.
+function frameLoopPos(stop, u, out) {
+    const W = stop.halfW + PROJECT_LOOP_PAD, H = stop.blockHalfH + PROJECT_LOOP_PAD, r = 0.45;
+    const sx = 2 * (W - r), sy = 2 * (H - r), arc = Math.PI * r / 2;
+    const seg = [sy, arc, sx, arc, sy, arc, sx, arc];
+    const per = 2 * sx + 2 * sy + 4 * arc;
+    let d = ((u * PROJECT_LOOP_SPEED) % per + per) % per;
+    let i = 0;
+    while (i < 7 && d > seg[i]) { d -= seg[i]; i++; }
+    const cx = W - r, cy = H - r;
+    let x, y;
+    // From the bottom of the left side, clockwise (up first)
+    switch (i) {
+        case 0: x = -W; y = -cy + d; break;
+        case 1: { const a = Math.PI - d / r; x = -cx + Math.cos(a) * r; y = cy + Math.sin(a) * r; break; }
+        case 2: x = -cx + d; y = H; break;
+        case 3: { const a = Math.PI / 2 - d / r; x = cx + Math.cos(a) * r; y = cy + Math.sin(a) * r; break; }
+        case 4: x = W; y = cy - d; break;
+        case 5: { const a = -d / r; x = cx + Math.cos(a) * r; y = -cy + Math.sin(a) * r; break; }
+        case 6: x = cx - d; y = -H; break;
+        default: { const a = -Math.PI / 2 - d / r; x = -cx + Math.cos(a) * r; y = -cy + Math.sin(a) * r; }
+    }
+    return out.copy(stop.center)
+        .addScaledVector(stop.right, x)
+        .addScaledVector(stop.up, y + stop.blockMid)
+        .addScaledVector(stop.normal, 0.2 * Math.sin(0.8 * u));
 }
 
 // The orbit the comet actually rides: the Lissajous plus a settle offset
@@ -695,7 +1171,7 @@ function updateView(dt) {
     // Face the stop during the first moments, then hand the camera
     // back so the user can zoom/rotate freely
     const isText = stop.type === StopType.TEXT;
-    if (stepFaceAlign(dt) && stop.type === StopType.ROCK) controls.autoRotateSpeed = 0.3;
+    if (stepFaceAlign(dt) && stop.type === StopType.ROCK) controls.autoRotateSpeed = 0.3; // projects stay face-on
     if (tracing) {
         tracePlanar(stop, dt, isText ? TEXT_TRACE_DURATION : TRACE_DURATION); // draw the trajectory once, then loop
         if (isText) lightStop(stop, traceCursor);

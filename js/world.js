@@ -5,12 +5,17 @@
 // frame one. Five strange attractors hang beside the flight legs as
 // dim, slowly spinning scenery ("galaxies"). The comet (orchestrator)
 // flies between the stops and swings past a galaxy on the way.
+// After the last rock the journey warps into the projects tunnel
+// (tunnel.js): the project stops sit on its centreline, each with a live
+// visualization (projectViz.js); smaller fly-by projects hang on the wall.
 
 import * as THREE from 'three';
 import { ATTRACTORS, rk4Step, isMobile, getPaletteColor } from './attractors.js';
 import { generateTextLines, generateRockWithLabel } from './strokeFont.js';
+import * as tunnel from './tunnel.js';
+import { buildProjectViz, FLYBY_TEXT_BOTTOM } from './projectViz.js';
 
-export const StopType = { TEXT: 0, ROCK: 1, LANDING: 2 };
+export const StopType = { TEXT: 0, ROCK: 1, LANDING: 2, PROJECT: 3 };
 
 // ── Content ────────────────────────────────────────────────────────
 export const CONTACT_EMAIL = 'ilya.safronos@gmail.com';
@@ -19,17 +24,33 @@ const LANDING_LINES = ['GET IN TOUCH', CONTACT_EMAIL];
 const MILESTONES = [
     { label: 'RVKG', sizeFactor: 0.9, seed: 42, panel: {
         title: 'Riga State Classical Gymnasium',
-        subtitle: 'Rīgas Valsts klasiskā ģimnāzija · Riga',
-        items: [{ text: 'Secondary education in Riga.' }]
+        subtitle: 'Programming and Mathematics track · Riga',
+        items: [
+            { text: 'Specialised track in programming and mathematics (today named "Programming + AI").' },
+            { text: 'Took part in the Latvian state mathematics olympiads.' },
+            { text: 'Completed the Small Mathematics University (Mazā matemātikas universitāte) at the University of Latvia.' },
+            { text: 'School projects in Programming I and II; one became the Offline Graphing Calculator (2023).' }
+        ]
     }},
     { label: 'RTU', sizeFactor: 0.7, seed: 73, panel: {
         title: 'Riga Technical University',
-        subtitle: 'BSc Financial Engineering',
-        dates: '2024 – present',
+        subtitle: 'Professional Bachelor, Financial Engineering',
+        dates: '2024 – 2028 (expected)',
         items: [
-            { text: 'Coursework: data structures & algorithms, computer networks, databases/SQL, Java, C++.' },
-            { text: 'MI Talantu programma (AI talent programme), C++ and Python · Nov 2024 – Jan 2025.' }
+            { text: 'Qualification: senior data analysis specialist. Maths, statistics and programming applied to finance.' },
+            { text: 'Coursework: mathematical analysis and algebra, probability and statistics, econometrics, time-series analysis, stochastic analysis, Monte Carlo methods, portfolio analysis, actuarial mathematics, data structures and algorithms, databases/SQL, computer networks, programming (Java, C++).' }
         ]
+    }},
+    { label: 'AI TALENT', sizeFactor: 0.65, seed: 58, panel: {
+        title: 'AI Talent Program',
+        subtitle: 'Ponder · Mākslīgā intelekta talantu programma',
+        dates: 'Nov 2024 – Jan 2025',
+        items: [
+            { text: 'Selective program for young people strong in IT and maths. Entry by logic test and interview.' },
+            { text: 'Intensive training in C++, Python, maths and AI development, with mentors from the industry.' },
+            { text: 'It led to my R&D Engineer role at Giraffe360.' }
+        ],
+        more: { href: 'https://www.ponder.lv/mi-programma', label: 'ponder.lv' }
     }},
     { label: 'GIRAFFE360', sizeFactor: 0.55, seed: 17, panel: {
         title: 'Giraffe360',
@@ -44,15 +65,70 @@ const MILESTONES = [
         ],
         more: { href: 'resume.html', label: 'full resume' }
     }},
-    { label: 'PROJECTS', sizeFactor: 0.6, seed: 91, panel: {
-        title: 'Selected projects',
-        subtitle: 'github.com/ilyaeis',
-        dates: '2022 – 2026',
+    { label: 'BALANCER', sizeFactor: 0.6, seed: 105, panel: {
+        title: 'load-balancing-experiments',
+        subtitle: 'RTU networks project · Python',
+        dates: '2026',
         items: [
-            { text: 'load-balancing-experiments — DNS/anycast, queueing sim, consistent hashing (Python)', href: 'https://github.com/ilyaeis/load-balancing-experiments' },
-            { text: 'flow — offline workout tracker I use daily (Flutter, private)' },
-            { text: 'projects_with_NEAT — neuroevolution agents learning games (Python)', href: 'https://github.com/ilyaeis/projects_with_NEAT' },
-            { text: 'sort_visualization — 16 sorting algorithms animated (C++, SFML)', href: 'https://github.com/ilyaeis/sort_visualization' }
+            { text: 'DNS round robin and anycast, measured from Riga.' },
+            { text: 'Queueing simulation of load-balancing policies, including power of two choices.' },
+            { text: 'Consistent, rendezvous and Maglev hashing; a mini load balancer with health checks.' }
+        ],
+        more: { href: 'https://github.com/ilyaeis/load-balancing-experiments', label: 'github' }
+    }},
+    { label: 'FLOW', sizeFactor: 0.55, seed: 23, panel: {
+        title: 'Flow — workout tracker app',
+        subtitle: 'Offline workout tracker · Dart/Flutter · private',
+        dates: '2026',
+        items: [
+            { text: 'Log sets with live timers.' },
+            { text: 'Volume, load (ACWR), records and body measurements; custom formulas.' },
+            { text: 'JSON, CSV and PDF export; CI with golden-image tests.' },
+            { text: 'In daily use.' },
+            { text: 'Skills: mobile app development (Flutter/Dart), data modelling, testing and CI.' }
+        ]
+    }},
+    { label: 'MONTE CARLO', sizeFactor: 0.65, seed: 112, panel: {
+        title: 'Monte Carlo Methods in Finance',
+        subtitle: 'Python · NumPy · SciPy · pandas · arch',
+        dates: '2026',
+        items: [
+            { text: 'Priced options by simulation and checked them against Black-Scholes; variance reduction cut the variance by up to 1,900x.' },
+            { text: 'Fitted GARCH volatility to S&P 500 returns and backtested three 99% VaR models over 12 years (Kupiec test).' },
+            { text: 'Efficient frontier from 30,000 random portfolios and CAPM betas. A study project from my RTU Financial Engineering courses.' }
+        ],
+        more: { href: 'https://github.com/ilyaeis/monte-carlo-finance', label: 'github' }
+    }},
+    { label: 'NEAT', sizeFactor: 0.65, seed: 64, panel: {
+        title: 'projects_with_NEAT',
+        subtitle: 'Neuroevolution · Python',
+        dates: '2025',
+        items: [
+            { text: 'NEAT agents learn Flappy Bird and Pong.' },
+            { text: 'A documented attempt at multi-snake survival.' }
+        ],
+        more: { href: 'https://github.com/ilyaeis/projects_with_NEAT', label: 'github' }
+    }},
+    { label: 'CALCULATOR', sizeFactor: 0.7, seed: 37, panel: {
+        title: 'Offline Graphing Calculator',
+        subtitle: 'RBS programming competition · 4th place',
+        dates: '2023',
+        items: [
+            { text: 'A graphing calculator that plots functions and does maths with no internet connection.' },
+            { text: 'Built with Iļja Volinskis at Riga State Classical Gymnasium.' },
+            { text: '4th place in the Riga Business School (RTU) programming competition for secondary school students: 27 entries, 10 finalists, final on 10 June 2023.' },
+            { text: 'Skills: algorithms for parsing and plotting maths, teamwork, presenting to a jury.' }
+        ],
+        more: { href: 'https://rbs.lv/blog/2023/06/12/event-search-app-wins-programming-competition-for-high-school-students/', label: 'competition results' }
+    }},
+    { label: 'SORTING', sizeFactor: 0.6, seed: 91, panel: {
+        title: 'Sorting visualizer (sort_visualization)',
+        subtitle: 'C++ · SFML',
+        dates: '2022',
+        items: [
+            { text: '16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control.' },
+            { text: 'Source: sort_visualization on GitHub.', href: 'https://github.com/ilyaeis/sort_visualization' },
+            { text: 'Skills: C++, algorithms and data structures, graphics (SFML). Every line written by hand, before AI tools.' }
         ],
         more: { href: 'https://github.com/ilyaeis', label: 'all repositories' }
     }}
@@ -75,19 +151,45 @@ const SCENERY_STANDOFF = 0.35;           // center sits this × leg length besid
 const SCENERY_STANDOFF_MIN = 5.0;
 const SCENERY_SPIN = 0.04;               // rad/s about local Y
 // leg i = flight into stops[i]; leg 0 is the intro corkscrew into the text,
-// leg 1 (text -> rock 1) has the first galaxy
-const SCENERY_LEGS = [1, 2, 3, 4, 5];
+// leg 1 (text -> rock 1) has the first galaxy. Attractor k % ATTRACTORS.length is reused
+// when there are more legs than attractors.
+// No galaxies on the warp into the tunnel (5) or inside it (6, 7).
+const SCENERY_LEGS = [1, 2, 3, 4, 8];
+
+// Projects tunnel (tunnel.js): entry point E = GIRAFFE360 + e1 × TUNNEL_HOP.
+// Along s: the warp throat at 0, a rush, the first fly-by at TUNNEL_RUSH,
+// then project stop, fly-by, stop ... each FLYBY_GAP apart, then the exit.
+// The middle of every gap is a fast zone (the comet rushes, the tunnel
+// straightens there).
+const TUNNEL_HOP = [30, 34];
+const TUNNEL_RUSH = 120;                 // s of the first fly-by (~2 s of rush after the warp in)
+const FLYBY_GAP = 125;                   // s between a fly-by and the next project stop (and stop -> fly-by)
+const TUNNEL_EXIT_AFTER = 140;           // the tunnel ends this far after the last stop (a rush before the warp out)
+const FAST_ZONE_RAMP = 48;               // s: speed / straightness ramps at each end of a fast zone
+const FAST_ZONE_MARGIN = [4, 10, 24];    // fast zones end this far from the throat / a stop or fly-by / the exit (slow there: spiral, framing, arrival, mouth)
+const TUNNEL_PITCH = 0.3;                // |y| of the tunnel axis (keeps stops upright)
+const TUNNEL_CLEAR = 15;                 // other stops stay this far from the tunnel axis
+const EXIT_SPREAD = 0.6;                 // the stop after the tunnel sits within ~±30° of the exit tangent
+// Project stop: the comet frames the viz (rounded rectangle), then writes the label under it
+const PROJECT_FRAME_MARGIN = 0.1;        // world units around the viz bounds
+const PROJECT_FRAME_RADIUS = 0.16;       // corner radius
+const PROJECT_LABEL_GAP = 0.14;          // frame bottom → label top
+const PROJECT_DENSITY = 200;             // 2D stroke points per unit (trace speed is per point)
+// Fly-bys: smaller projects on the tunnel centreline between the stops;
+// the comet spirals round each one (orchestrator)
+const FLYBY_SCALE = 0.8;
+const FLYBY_SIDE = 2.1;                  // viz centre this far beside the axis (left, right, left): the camera passes it, not through it
 
 // Random scatter — each stop hops far from the previous one in a
 // random 3D direction (lightly biased outward so the journey keeps
 // drifting away from the intro), never closer than MIN_SEPARATION to
 // another. The meteor rocks are one scene: they cluster tightly.
-const MIN_HOP = 30;
-const MAX_HOP = 50;
-const ROCK_HOP_MIN = 10;                 // rock → rock (same scene)
-const ROCK_HOP_MAX = 14;
-const MIN_SEPARATION = 16;
-const ROCK_SEPARATION = 7;               // rocks may sit near each other
+const MIN_HOP = 34;
+const MAX_HOP = 42;
+const ROCK_HOP_MIN = 32;                 // rock → rock (same scene)
+const ROCK_HOP_MAX = 40;
+const MIN_SEPARATION = 26;
+const ROCK_SEPARATION = 22;              // rocks may sit near each other
 
 const TEXT_DIM_ALPHA = 0.25;            // the text block starts dim; lit as the comet traces it (1.0 = always lit)
 const PLACE_TRIES = 12;
@@ -98,28 +200,78 @@ export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 
 // Visit order. Planar stops carry their own paletteIdx (into the
 // ATTRACTORS table) so every scene glows in a different color — the
-// four milestone rocks are ONE scene and share a single palette.
+// first four milestone rocks are ONE scene and share a single palette.
 // The text block is one stop; the comet traces it, spirals around it and
 // flies on without a tap (orchestrator).
 const ROUTE = [
-    { type: StopType.TEXT,    paletteIdx: 0 },
-    { type: StopType.ROCK,    milestone: 0, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 1, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 2, paletteIdx: 1 },
-    { type: StopType.ROCK,    milestone: 3, paletteIdx: 1 },
-    { type: StopType.LANDING, paletteIdx: 4 },
+    { id: 'traits',     universe: 'intro',      type: StopType.TEXT,    paletteIdx: 0,
+      title: 'Traits', summary: 'Creative. Adaptive. Curious.' },
+    { id: 'rvkg',       universe: 'milestones', type: StopType.ROCK,    milestone: 0, paletteIdx: 1,
+      summary: 'Programming and mathematics track; state mathematics olympiads.' },
+    { id: 'rtu',        universe: 'milestones', type: StopType.ROCK,    milestone: 1, paletteIdx: 1,
+      summary: 'Professional Bachelor in Financial Engineering.' },
+    { id: 'ai-talent',  universe: 'milestones', type: StopType.ROCK,    milestone: 2, paletteIdx: 1,
+      summary: 'Ponder AI talent program.' },
+    { id: 'giraffe360', universe: 'milestones', type: StopType.ROCK,    milestone: 3, paletteIdx: 1,
+      summary: 'R&D engineer working on 3D Gaussian splatting reconstruction.' },
+    { id: 'flow',       universe: 'projects',   type: StopType.PROJECT, milestone: 5, paletteIdx: 2,
+      summary: 'Offline workout tracker app (Dart/Flutter).' },
+    { id: 'calculator', universe: 'projects',   type: StopType.PROJECT, milestone: 8, paletteIdx: 2,
+      summary: 'Offline graphing calculator; 4th place in a programming competition.' },
+    { id: 'sorting',    universe: 'projects',   type: StopType.PROJECT, milestone: 9, paletteIdx: 2,
+      summary: 'Sorting algorithm visualizer (C++/SFML).' },
+    { id: 'contact',    universe: 'contact',    type: StopType.LANDING, paletteIdx: 4,
+      title: 'Contact', summary: 'Get in touch by email, LinkedIn or GitHub.' },
 ];
+// Universes are names, not indexes. A new universe is a new entry here
+// plus ROUTE entries that use its id.
+export const UNIVERSES = [
+    { id: 'intro',      title: 'Intro' },
+    { id: 'milestones', title: 'Milestones' },
+    { id: 'projects',   title: 'Projects' },
+    { id: 'contact',    title: 'Contact' },
+];
+// Fly-by projects (no stop, no panel): `before` = the project stop they hang in front of;
+// title and skills line say what each one is and shows
+const FLYBYS = [
+    { id: 'balancer', milestone: 4, before: 0, title: 'LOAD BALANCING LAB', skills: 'NETWORKING · DISTRIBUTED SYSTEMS · PYTHON' },
+    { id: 'monte-carlo', milestone: 6, before: 1, title: 'MONTE CARLO FINANCE', skills: 'RISK MODELLING · STATISTICS · PYTHON' },
+    { id: 'neat', milestone: 7, before: 2, title: 'NEUROEVOLUTION AI', skills: 'MACHINE LEARNING · GAME AI · PYTHON' },
+];
+
+// Static catalog of every stop and fly-by (no WebGL needed): the agent API
+// reads it before the world is built. `index` = position in stops[].
+// Fly-bys are listed but not navigable (`near` = the stop they hang before).
+const TYPE_NAMES = { [StopType.TEXT]: 'text', [StopType.ROCK]: 'rock', [StopType.PROJECT]: 'project', [StopType.LANDING]: 'landing' };
+export const catalog = [
+    ...ROUTE.map((d, index) => ({
+        id: d.id, universe: d.universe, type: TYPE_NAMES[d.type], index,
+        title: d.title ?? MILESTONES[d.milestone].panel.title,
+        summary: d.summary,
+        panel: d.milestone !== undefined ? MILESTONES[d.milestone].panel : null,
+        navigable: true
+    })),
+    ...FLYBYS.map(fb => {
+        const near = ROUTE.filter(d => d.type === StopType.PROJECT)[fb.before].id;
+        const panel = MILESTONES[fb.milestone].panel;
+        return { id: fb.id, universe: 'projects', type: 'flyby', index: -1, title: panel.title,
+                 summary: fb.skills, panel, navigable: false, near };
+    })
+];
+export function stopById(id) { return catalog.find(e => e.id === id) ?? null; }
+
 
 // ── Stop shader ────────────────────────────────────────────────────
 // Baked HDR colors + per-point alpha; one shared material for all stops
 const STOP_VERTEX = `
     attribute vec3 color;
     attribute float aAlpha;
+    uniform float uVis;
     varying vec3 vColor;
     varying float vAlpha;
     void main() {
         vColor = color;
-        vAlpha = aAlpha;
+        vAlpha = aAlpha * uVis;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
 `;
@@ -133,11 +285,13 @@ const STOP_FRAGMENT = `
     }
 `;
 
-let stopMaterial = null;
-
-function getStopMaterial() {
-    if (!stopMaterial) {
-        stopMaterial = new THREE.ShaderMaterial({
+// Two shared materials: the outside world (rocks, text, landing, galaxies)
+// and the tunnel's project labels. Their uVis cross-fade during the warp.
+const stopMaterials = {};
+function getStopMaterial(kind = 'outside') {
+    if (!stopMaterials[kind]) {
+        stopMaterials[kind] = new THREE.ShaderMaterial({
+            uniforms: { uVis: { value: kind === 'outside' ? 1 : 0 } },
             vertexShader: STOP_VERTEX,
             fragmentShader: STOP_FRAGMENT,
             transparent: true,
@@ -145,12 +299,14 @@ function getStopMaterial() {
             depthWrite: false
         });
     }
-    return stopMaterial;
+    return stopMaterials[kind];
 }
 
 // ── State ──────────────────────────────────────────────────────────
 export let stops = [];
 export let scenery = [];
+export let flybys = [];                  // { label, s, viz }
+export let tunnelExitS = 0;              // s where the tunnel ends (the warp out)
 let mailPlane = null;
 export function getMailPlane() { return mailPlane; }
 
@@ -183,11 +339,11 @@ function randomHopDir(out) {
     return out.normalize();
 }
 
-function placeNextCenter(prev, placed, hopMin, hopMax, separation) {
+function placeNextCenter(prev, placed, hopMin, hopMax, separation, reject = null) {
     let candidate = null;
     for (let i = 0; i < PLACE_TRIES; i++) {
         candidate = prev.clone().addScaledVector(randomHopDir(_dir), rand(hopMin, hopMax));
-        if (placed.every(p => p.distanceTo(candidate) >= separation)) break;
+        if (placed.every(p => p.distanceTo(candidate) >= separation) && !reject?.(candidate)) break;
     }
     return candidate;
 }
@@ -206,13 +362,56 @@ function buildStopLine(positions, colors, alphas, segments = false) {
         : new THREE.Line(geo, getStopMaterial());
 }
 
-// ── Planar stop (text / rock / landing) ────────────────────────────
+// ── Project stop strokes ───────────────────────────────────────────
+// 2D points (TEXT_SCALE units): a rounded rectangle round the viz, then
+// a faint travel to the label under it, then the label. Only the label
+// is static geometry; the frame exists only in the comet's trace.
+// Returns { points, labelStart }.
+function projectPoints(label, halfW, halfH) {
+    const k = 1 / TEXT_SCALE;
+    const hw = (halfW + PROJECT_FRAME_MARGIN) * k, hh = (halfH + PROJECT_FRAME_MARGIN) * k;
+    const r = PROJECT_FRAME_RADIUS * k;
+    const pts = [];
+    // From the bottom-left corner, clockwise (up the left side first)
+    const corners = [[-hw + r, hh - r, Math.PI], [hw - r, hh - r, Math.PI / 2], [hw - r, -hh + r, 0], [-hw + r, -hh + r, -Math.PI / 2]];
+    const step = 1 / PROJECT_DENSITY;
+    let prev = null;
+    const push = (x, y, c) => {
+        if (prev) {
+            const n = Math.max(1, Math.ceil(Math.hypot(x - prev.x, y - prev.y) / step));
+            for (let i = 1; i <= n; i++) pts.push({ x: prev.x + (x - prev.x) * i / n, y: prev.y + (y - prev.y) * i / n, c });
+        } else pts.push({ x, y, c });
+        prev = { x, y };
+    };
+    // The comet arrives at the centre of the viz, then draws out to the frame
+    push(0, 0, 0);
+    push(-hw, -hh + r, 0);
+    for (const [cx, cy, a0] of corners) {
+        for (let i = 0; i <= 8; i++) {
+            const a = a0 - (Math.PI / 2) * i / 8;
+            push(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1);
+        }
+    }
+    push(-hw, -hh + r, 1);
+    const { points: text } = generateTextLines([label], PROJECT_DENSITY);
+    let maxY = -Infinity;
+    for (const p of text) maxY = Math.max(maxY, p.y);
+    const dy = -hh - PROJECT_LABEL_GAP * k - maxY;
+    push(text[0].x, text[0].y + dy, 0);              // faint pen travel to the label
+    const labelStart = pts.length;
+    for (const p of text) pts.push({ x: p.x, y: p.y + dy, c: p.c });
+    return { points: pts, labelStart };
+}
+
+// ── Planar stop (text / rock / landing / project) ──────────────────
 function buildPlanarStop(def, center, right, up, palette) {
     const scale = def.type === StopType.ROCK ? ROCK_SCALE : TEXT_SCALE;
-    let points;
+    let points, staticFrom = 0;
     if (def.type === StopType.ROCK) {
         const ms = MILESTONES[def.milestone];
         ({ points } = generateRockWithLabel(ms.sizeFactor, ms.seed, ms.label, null));
+    } else if (def.type === StopType.PROJECT) {
+        ({ points, labelStart: staticFrom } = projectPoints(MILESTONES[def.milestone].label, def.vizHalfW, def.vizHalfH));
     } else {
         ({ points } = generateTextLines(
             def.type === StopType.LANDING ? LANDING_LINES : TEXT_LINES));
@@ -246,7 +445,7 @@ function buildPlanarStop(def, center, right, up, palette) {
         segAlpha.push(def.type === StopType.TEXT ? TEXT_DIM_ALPHA : 1.0);
         segIdx.push(i);
     }
-    for (let i = 0; i < n - 1; i++) {
+    for (let i = staticFrom; i < n - 1; i++) {
         if (points[i].c === 1 && points[i + 1].c === 1) {
             pushVertex(i);
             pushVertex(i + 1);
@@ -281,7 +480,7 @@ function buildScenery(scene) {
     const dir = new THREE.Vector3();
     const mid = new THREE.Vector3();
 
-    for (let k = 0; k < ATTRACTORS.length; k++) {
+    for (let k = 0; k < SCENERY_LEGS.length; k++) {
         const leg = SCENERY_LEGS[k];
         const a = stops[leg - 1].center, b = stops[leg].center;
         const L = a.distanceTo(b);
@@ -306,10 +505,11 @@ function buildScenery(scene) {
             let d = Infinity;
             for (const st of stops) d = Math.min(d, cand.distanceTo(st.center));
             for (const sc of scenery) d = Math.min(d, cand.distanceTo(sc.center));
+            d = Math.min(d, tunnel.axisDistance(cand, tunnelExitS) - tunnel.TUNNEL_RADIUS - radius - 4); // off the tunnel
             if (d > bestD) { bestD = d; center = cand.clone(); }
         }
 
-        const attr = ATTRACTORS[k];
+        const attr = ATTRACTORS[k % ATTRACTORS.length];
         let s = [...attr.initialCondition];
         const step = () => {
             s = rk4Step(attr.derivatives, s[0], s[1], s[2], attr.dt, attr.params);
@@ -343,9 +543,38 @@ function buildScenery(scene) {
     }
 }
 
-export function updateScenery(dt) {
+// Per frame: galaxies spin, the tunnel moves, and the project
+// visualizations near the comet (arc parameter headS) animate.
+const VIZ_RANGE = [-12, 60];             // s window (behind, ahead) where a viz updates
+const VIZ_FADE = [16, 32];               // |s - headS|: a viz fades out from here to here (the next ones emerge from the dark)
+let insideFade = 0;                      // 0 = outside the tunnel, 1 = inside (cross-fade in the warp)
+export function updateWorld(dt, headS) {
     for (const s of scenery) s.line.rotation.y += SCENERY_SPIN * dt;
+    tunnel.update(dt);
+    for (const st of stops) if (st.viz) updateViz(st.viz, st.tunnelS, headS, dt);
+    for (const f of flybys) updateViz(f.viz, f.s, headS, dt);
 }
+function updateViz(viz, s, headS, dt) {
+    if (near(s, headS)) viz.update(dt);
+    const v = (1 - THREE.MathUtils.smoothstep(Math.abs(s - headS), VIZ_FADE[0], VIZ_FADE[1])) * insideFade;
+    viz.setVisibility(v, v > 0.002);
+}
+// Inside the tunnel the outside world (galaxies, rocks, landing) is
+// hidden: the walls are see-through lines, and far glows would sit on
+// top of the visualizations. The projects (stops and fly-bys) exist only
+// inside. f = 0 outside .. 1 inside: the warp cross-fades the two worlds.
+export function setInsideFade(f) {
+    insideFade = f;
+    getStopMaterial('outside').uniforms.uVis.value = 1 - f;
+    getStopMaterial('inside').uniforms.uVis.value = f;
+    for (const s of scenery) s.line.visible = f < 0.998;
+    for (const st of stops) {
+        st.line.visible = st.type === StopType.PROJECT ? f > 0.002 : f < 0.998;
+        if (st.viz) st.viz.group.visible = f > 0.002;
+    }
+    for (const fb of flybys) fb.viz.group.visible = f > 0.002;
+}
+function near(s, headS) { return s - headS > VIZ_RANGE[0] && s - headS < VIZ_RANGE[1]; }
 
 // Brighten a dim stop up to stroke point `uptoIdx` (vertices are in
 // point order, so this is a short forward walk from the last lit vertex)
@@ -393,20 +622,87 @@ function buildMailPlane(stop) {
     return mailPlane;
 }
 
+// ── Projects tunnel placement ──────────────────────────────────────
+// The axis leaves GIRAFFE360 in a random hop direction (pitch-limited);
+// every stop placed so far must stay TUNNEL_CLEAR from the axis. Among
+// the clear candidates, the one most ahead of the view at GIRAFFE360
+// (`viewDir`) wins, so the camera need not swing round at the departure.
+function placeTunnel(from, viewDir, placed, length) {
+    let best = null, bestScore = -Infinity;
+    const e1 = new THREE.Vector3(), E = new THREE.Vector3();
+    for (let i = 0; i < PLACE_TRIES * 2; i++) {
+        randomHopDir(e1);
+        e1.y = THREE.MathUtils.clamp(e1.y, -TUNNEL_PITCH, TUNNEL_PITCH);
+        e1.normalize();
+        E.copy(from).addScaledVector(e1, rand(TUNNEL_HOP[0], TUNNEL_HOP[1]));
+        const turn = i % 2 ? 1 : -1;     // try both turn directions of the arc
+        tunnel.setFrame(E, e1, turn, length);
+        let d = Infinity;
+        for (const p of placed) d = Math.min(d, tunnel.axisDistance(p, length));
+        const score = d >= TUNNEL_CLEAR ? 10 + e1.dot(viewDir) : d / TUNNEL_CLEAR;
+        if (score > bestScore) { bestScore = score; best = { E: E.clone(), e1: e1.clone(), turn }; }
+    }
+    tunnel.setFrame(best.E, best.e1, best.turn, length);
+}
+
+// First stop after the tunnel: a hop on from the exit, roughly along the
+// exit tangent (no hairpin right after the warp out), clear of the tube
+function placeAfterTunnel(placed) {
+    const X = tunnel.centreWorld(tunnelExitS, new THREE.Vector3());
+    const T = tunnel.tangentWorld(tunnelExitS, new THREE.Vector3());
+    let best = null, bestD = -Infinity;
+    for (let i = 0; i < PLACE_TRIES * 2; i++) {
+        _dir.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(EXIT_SPREAD).add(T);
+        _dir.y = THREE.MathUtils.clamp(_dir.y, -MAX_PITCH, MAX_PITCH);
+        const c = X.clone().addScaledVector(_dir.normalize(), rand(MIN_HOP, MAX_HOP));
+        let d = tunnel.axisDistance(c, tunnelExitS) - TUNNEL_CLEAR;
+        for (const p of placed) d = Math.min(d, p.distanceTo(c) - MIN_SEPARATION);
+        if (d > bestD) { bestD = d; best = c; }
+        if (d >= 0) break;
+    }
+    return { center: best, prev: X };
+}
+
 // ── Build ──────────────────────────────────────────────────────────
 export function buildWorld(scene) {
     stops = [];
+    flybys = [];
     const placed = [new THREE.Vector3(0, 0, 0)]; // intro counts for separation
     let prev = placed[0];
     let prevDef = null;
+    let projectK = 0;
+    const nProjects = ROUTE.filter(d => d.type === StopType.PROJECT).length;
+    const projectS = k => TUNNEL_RUSH + FLYBY_GAP + 2 * k * FLYBY_GAP;
+    tunnelExitS = projectS(nProjects - 1) + TUNNEL_EXIT_AFTER;
+    // Fast zones: the middle of every stretch between throat, fly-bys, stops and exit
+    const anchors = [0, TUNNEL_RUSH];
+    for (let k = 0; k < nProjects; k++) anchors.push(projectS(k), projectS(k) + (k < nProjects - 1 ? FLYBY_GAP : TUNNEL_EXIT_AFTER));
+    const zones = [];
+    const margin = i => i === 0 ? FAST_ZONE_MARGIN[0] : i === anchors.length - 1 ? FAST_ZONE_MARGIN[2] : FAST_ZONE_MARGIN[1];
+    for (let i = 0; i < anchors.length - 1; i++) {
+        zones.push({ a: anchors[i] + margin(i), b: anchors[i + 1] - margin(i + 1) });
+    }
+    tunnel.setZones(zones, FAST_ZONE_RAMP);
+    const _r = new THREE.Vector3(), _u = new THREE.Vector3();
 
     for (const def of ROUTE) {
         // Rock → rock stays tight (the meteors are one scene);
         // everything else scatters far apart
         const tight = def.type === StopType.ROCK && prevDef?.type === StopType.ROCK;
-        const center = tight
-            ? placeNextCenter(prev, placed, ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION)
-            : placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION);
+        let center, tunnelS = null;
+        if (def.type === StopType.PROJECT) {
+            if (projectK === 0) placeTunnel(prev, stops[stops.length - 1].normal, placed, tunnelExitS);
+            tunnelS = projectS(projectK++);
+            center = tunnel.centreWorld(tunnelS, new THREE.Vector3());
+            // Face along the tunnel: `prev` is a point just behind on the centreline
+            prev = tunnel.centreWorld(tunnelS - 1, new THREE.Vector3());
+        } else if (prevDef?.type === StopType.PROJECT) {
+            ({ center, prev } = placeAfterTunnel(placed));
+        } else {
+            center = tight
+                ? placeNextCenter(prev, placed, ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION)
+                : placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION);
+        }
         placed.push(center);
         prevDef = def;
 
@@ -419,24 +715,63 @@ export function buildWorld(scene) {
 
         const paletteIdx = def.paletteIdx ?? 0;
         const palette = ATTRACTORS[paletteIdx].palette;
+        let viz = null;
+        if (def.type === StopType.PROJECT) {
+            viz = buildProjectViz(MILESTONES[def.milestone].label);
+            def.vizHalfW = viz.halfW; def.vizHalfH = viz.halfH;
+            viz.group.position.copy(center);
+            viz.group.quaternion.setFromRotationMatrix(
+                new THREE.Matrix4().makeBasis(right, up, _vec3.copy(normal).negate()));
+            scene.add(viz.group);
+        }
         const built = buildPlanarStop(def, center, right, up, palette);
 
         const stop = {
+            id: def.id,
+            universe: def.universe,
             type: def.type,
             paletteIdx,
-            panel: def.type === StopType.ROCK ? MILESTONES[def.milestone].panel : undefined,
+            panel: def.milestone !== undefined ? MILESTONES[def.milestone].panel : undefined,
+            tunnelS,
+            viz,
             center,
             right,
             up,
             normal,
             ...built
         };
+        if (def.type === StopType.PROJECT) stop.line.material = getStopMaterial('inside');
         scene.add(stop.line);
         stops.push(stop);
         prev = center;
     }
 
+    // Fly-bys: just beside the centreline, facing the approaching comet.
+    // The comet spirals round an axis along the tunnel through the centre
+    // of viz + text. `offset` = that centre minus the centreline point,
+    // `radius` = half-diagonal of viz + text (world units).
+    const sOfStop = stops.filter(st => st.type === StopType.PROJECT).map(st => st.tunnelS);
+    for (const fb of FLYBYS) {
+        const s = fb.before === 0 ? TUNNEL_RUSH : (sOfStop[fb.before - 1] + sOfStop[fb.before]) / 2;
+        const label = MILESTONES[fb.milestone].label;
+        const viz = buildProjectViz(label, { title: fb.title, skills: fb.skills });
+        const c = tunnel.centreWorld(s, new THREE.Vector3());
+        const T = tunnel.tangentWorld(s, new THREE.Vector3());
+        tunnel.frameWorld(s, _r, _u);
+        const top = viz.halfH, bottom = FLYBY_TEXT_BOTTOM;  // local y range
+        const mid = (top + bottom) / 2 * FLYBY_SCALE;
+        const offset = _r.clone().multiplyScalar(flybys.length % 2 ? FLYBY_SIDE : -FLYBY_SIDE);
+        viz.group.position.copy(c).add(offset).addScaledVector(_u, -mid);
+        viz.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(_r, _u, T.clone().negate()));
+        viz.group.scale.setScalar(FLYBY_SCALE);
+        scene.add(viz.group);
+        const radius = Math.hypot(viz.halfW, (top - bottom) / 2) * FLYBY_SCALE;
+        flybys.push({ label, s, viz, radius, T, offset, center: c.clone().add(offset) });
+    }
+
+    tunnel.build(scene);
     buildScenery(scene);
+    setInsideFade(0);
 
     const landing = stops[stops.length - 1];
     scene.add(buildMailPlane(landing));

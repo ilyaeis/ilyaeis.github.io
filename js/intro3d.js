@@ -76,7 +76,7 @@ function buildText(font) {
 
     function makeLine(str, size, mat, y) {
         const geo = new TextGeometry(str, {
-            font, size, height: size * 0.3,
+            font, size, depth: size * 0.3,
             curveSegments: 6,
             bevelEnabled: true, bevelThickness: size * 0.02,
             bevelSize: size * 0.015, bevelSegments: 2
@@ -255,6 +255,9 @@ export function setRocketCharging() {
     const { hw } = viewExtents(INTRO_VIEW_DIST);
     dashDist = (hw / INTRO_SCALE) * 0.4;
 }
+
+// Hidden inside the projects tunnel (the walls are see-through)
+export function setIntroVisible(v) { if (introAnchor) introAnchor.visible = v; }
 
 export function hideRocket() {
     rocketMode = 'gone';
