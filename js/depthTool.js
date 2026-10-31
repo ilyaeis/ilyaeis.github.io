@@ -4,13 +4,14 @@
 // view centre) recolours the splats by their distance to the camera (a
 // Spark worldModifier, attached on first use). Measure: two clicks on the
 // splat (raycast on click only) give a line, two dots and "≈ x.xx m".
-// While a tool is on, body.room-tool-on tells main.js not to advance the
-// journey; Esc turns the tools off.
+// While a tool is on, input.js gives it the taps (main.js does not advance
+// the journey); Esc turns the tools off.
 
 import * as THREE from 'three';
 import { scene, camera, isMobile } from './attractors.js';
-import { apartment, M_PER_UNIT, StopType } from './world.js';
-import { roomMesh, objectMeshes, ROOM_BRIGHTNESS } from './room.js';
+import { StopType } from './world.js';
+import { apartment, M_PER_UNIT, roomMesh, objectMeshes, ROOM_BRIGHTNESS } from './room.js';
+import { setToolOn } from './input.js';
 
 // ── Tuning ─────────────────────────────────────────────────────────
 const LENS_TAN = 0.18;               // cone half-angle tangent
@@ -155,7 +156,7 @@ function placeLabel() {
 // ── State ──────────────────────────────────────────────────────────
 function refresh() {
     const active = depthOn || measureOn;
-    document.body.classList.toggle('room-tool-on', active);
+    setToolOn(active);
     bDepth.setAttribute('aria-pressed', depthOn);
     bMeasure.setAttribute('aria-pressed', measureOn);
     bDepth.disabled = bMeasure.disabled = !ready;

@@ -9,6 +9,10 @@
 import * as THREE from 'three';
 import { scene, renderer, camera, bloomPass, isMobile, setStarVisibility } from './attractors.js';
 import { stops, apartment, getInsideFade, setRoomFade, StopType } from './world.js';
+
+// The apartment API for the add-ons (walk.js, depthTool.js): its frame
+// (position, quaternion, scale), room <-> world points and metres per unit
+export { apartment, roomToWorld, worldToRoom, M_PER_UNIT } from './world.js';
 import { setIntroRoomHidden } from './intro3d.js';
 
 // ── Tuning ─────────────────────────────────────────────────────────

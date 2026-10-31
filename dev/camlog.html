@@ -45,6 +45,7 @@ import * as THREE from 'three';
 import { init as initScene, camera, controls } from './js/attractors.js';
 import * as orch from './js/orchestrator.js';
 import * as cam from './js/camera.js';
+import * as portal from './js/portal.js';
 
 const q = new URLSearchParams(location.search);
 const dtMode = q.get('dt') || '60';
@@ -77,10 +78,10 @@ while (t < Math.min(MAX_TIME, endAt)) {
     // Portal step (dim=S): enter at the first portal stop (no tap there
     // until it is done), stay S s in the dimension, then come back out
     const atPortal = !portalDone && s.portal;
-    if (atPortal && s.phase === orch.Phase.VIEW) orch.enterPortal();   // waits for the view delay
+    if (atPortal && s.phase === orch.Phase.VIEW) portal.enterPortal();   // waits for the view delay
     if (atPortal && s.phase === orch.Phase.DIMENSION) {
         if (dimAt < 0) dimAt = t;
-        if (t - dimAt >= portalStay) { orch.exitPortal(); portalDone = true; }
+        if (t - dimAt >= portalStay) { portal.exitPortal(); portalDone = true; }
     }
     // Auto-tap: the intro after 1 s, and every VIEW frame after `hold`.
     // The orchestrator keeps the tap until the stop's VIEW_TAP_DELAY.

@@ -455,7 +455,7 @@ body.panel-open .tap-prompt {
     .room-tools { top: calc(3.2rem + env(safe-area-inset-top)); }
 }
 /* the journey waits while a tool is on */
-body.room-tool-on .tap-prompt { visibility: hidden; }
+body[data-input="tool"] .tap-prompt { visibility: hidden; }
 
 .room-tools-label {
     position: fixed;

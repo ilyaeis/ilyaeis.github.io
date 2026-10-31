@@ -16,7 +16,9 @@
 
 import * as THREE from 'three';
 import { scene, camera, ATTRACTORS, getPaletteColor } from './attractors.js';
-import { stops, StopType, apartment, roomToWorld, worldToRoom, planePointToWorld } from './world.js';
+import { stops, StopType, planePointToWorld } from './world.js';
+import { apartment, roomToWorld, worldToRoom } from './room.js';
+import { registerWalker, enterExplore, exitExplore } from './explore.js';
 
 const DEG = Math.PI / 180;
 
@@ -64,7 +66,6 @@ let bits, sightBits, nx, nz, cell, x0, z0, clear, CL_MIN = 1;
 let M = 1 / 3.63;                      // one metre in room units (from the grid)
 let SPEED, COLLIDE_R, LOOKAHEAD, ARRIVE_R;
 let mode = 'off';                      // off | wait (grid loading) | in | walk | out
-let handlers = { enter: null, exit: null };
 let onDone = null;
 let immediate = false;
 const pos = new THREE.Vector2(), vel = new THREE.Vector2(), acc = new THREE.Vector2();
@@ -485,19 +486,16 @@ window.addEventListener('journey:stop', e => {
     if (mode !== 'off') return;
     setExploreButtons(d.phase === 'enter' ? { universe: d.universe, type: d.type } : null);
 });
-exploreBtns.forEach(b => b.addEventListener('click', () => handlers.enter?.()));
-backBtn?.addEventListener('click', () => handlers.exit?.());
+exploreBtns.forEach(b => b.addEventListener('click', () => enterExplore()));
+backBtn?.addEventListener('click', () => exitExplore());
 collectBtn?.addEventListener('click', collect);
 
-// ── API (orchestrator) ─────────────────────────────────────────────
-// The orchestrator's entry points for the buttons
-export function init({ enter, exit }) { handlers = { enter, exit }; }
-
+// ── API (explore.js) ───────────────────────────────────────────────
 // Is walking possible here (an apartment stop or the landing)?
-export function canWalk(stop) { return stop?.universe === 'rnd' || stop?.type === StopType.LANDING; }
+function canWalk(stop) { return stop?.universe === 'rnd' || stop?.type === StopType.LANDING; }
 
 // Start walking from the current camera pose. opts.immediate: no ease (dev).
-export function enterWalk(opts = {}) {
+function enterWalk(opts = {}) {
     immediate = !!opts.immediate;
     mode = 'wait';
     setExploreButtons(null);
@@ -520,12 +518,12 @@ export function enterWalk(opts = {}) {
         look.yawV = look.pitchV = 0;
         group.visible = true;
         startEase('in', fromPos.distanceTo(roomToWorld(pos.x, G.eye, pos.y, _p)), 0);
-    }).catch(() => { mode = 'off'; if (hudEl) hudEl.hidden = true; handlers.exit?.(); });
+    }).catch(() => { mode = 'off'; if (hudEl) hudEl.hidden = true; exitExplore(); });
 }
 
 // Ease back to the journey VIEW pose; done() runs when it is reached
 // (instant: at the next update)
-export function exitWalk(viewPos, viewTarget, viewFov, done, instant = false) {
+function exitWalk(viewPos, viewTarget, viewFov, done, instant = false) {
     selected = null; panel(null); showCollect(null);
     if (hudEl) hudEl.hidden = true;
     endPath();
@@ -560,7 +558,7 @@ function finish() {
 }
 
 // Per frame (Phase.EXPLORE). Sets the camera pose.
-export function update(dt) {
+function update(dt) {
     if (mode === 'off' || mode === 'wait') return;
     if (mode === 'walk') {
         if (dt > 0) step(dt);
@@ -621,6 +619,8 @@ export function onDrag(dx, dy) {
 
 // The keys held down (lower case): WASD / arrows walk, Q/E and left/right turn
 export function setKeys(set) { keys = set; }
+
+registerWalker({ canWalk, enterWalk, exitWalk, update });
 
 // ── Dev (checks and screenshots): window.__walk ────────────────────
 window.__walk = {

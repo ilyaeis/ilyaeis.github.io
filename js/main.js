@@ -10,13 +10,11 @@ import {
     init as initOrchestrator,
     update as updateOrchestrator,
     onTap,
-    isExploring,
     getMailPlane,
-    getPortalHit,
-    enterPortal,
-    setPortalHover,
     CONTACT_EMAIL
 } from './orchestrator.js';
+import { getPortalHit, enterPortal, setPortalHover } from './portal.js';
+import { inputOwner } from './input.js';
 import {
     getIconObject,
     getGithubIconObject,
@@ -55,21 +53,20 @@ import * as walk from './walk.js';
     // mode buttons and HUD (walk.js)
     const OVERLAYS = '.site-nav, .stop-panel, .dimension, .room-tools, .walk-ui';
 
-    // Input priority: an open overlay (the project app) > walk mode > a room
-    // tool (depthTool.js: its taps belong to the tool) > the journey
-    const overlayOpen = () => document.body.classList.contains('dimension-open');
-    const toolOn = () => document.body.classList.contains('room-tool-on');
+    // Who gets the input: inputOwner() (input.js) is 'journey', 'portal'
+    // (a project app: no input), 'walk' (walk.js) or 'tool' (depthTool.js)
 
     // Coalesce hover hit-tests to one raycast per frame — pointermove
-    // can fire far more often than the display refreshes
+    // can fire far more often than the display refreshes. Only the journey
+    // has hover targets: any other owner clears the cursor and the rim hover.
     let hoverEvent = null;
     document.body.addEventListener('pointermove', (e) => {
-        if (isExploring()) return;
         if (!hoverEvent) {
             requestAnimationFrame(() => {
-                const portal = hitsPortal(hoverEvent);   // the rim sorts itself while hovered
+                const journey = inputOwner() === 'journey';
+                const portal = journey && hitsPortal(hoverEvent);   // the rim sorts itself while hovered
                 setPortalHover(portal);
-                document.body.style.cursor =
+                document.body.style.cursor = journey &&
                     (portal || hitsIcon(hoverEvent) || hitsGithub(hoverEvent) || hitsMail(hoverEvent)) ? 'pointer' : '';
                 hoverEvent = null;
             });
@@ -82,16 +79,15 @@ import * as walk from './walk.js';
     const TAP_THRESHOLD = 10; // pixels
 
     document.body.addEventListener('pointerdown', (e) => {
-        if (e.target.closest(OVERLAYS) || overlayOpen()) return;
-        if (isExploring()) {
-            if (pointerDownPos) return;   // walk mode: one finger looks, a second one is ignored
-        } else if (toolOn()) return;
+        const owner = inputOwner();
+        if (e.target.closest(OVERLAYS) || owner === 'portal' || owner === 'tool') return;
+        if (owner === 'walk' && pointerDownPos) return;   // walk mode: one finger looks, a second one is ignored
         pointerDownPos = { id: e.pointerId, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, drag: false };
     });
 
     // Walk mode (walk.js): a drag looks around, a tap walks or picks an object
     document.body.addEventListener('pointermove', (e) => {
-        if (!pointerDownPos || pointerDownPos.id !== e.pointerId || !isExploring()) return;
+        if (!pointerDownPos || pointerDownPos.id !== e.pointerId || inputOwner() !== 'walk') return;
         const p = pointerDownPos;
         if (!p.drag && Math.hypot(e.clientX - p.x, e.clientY - p.y) >= TAP_THRESHOLD) p.drag = true;
         if (p.drag) walk.onDrag(e.clientX - p.lx, e.clientY - p.ly);
@@ -102,10 +98,11 @@ import * as walk from './walk.js';
         const p = pointerDownPos;
         if (!p || p.id !== e.pointerId) return;
         pointerDownPos = null;   // also when released over an overlay, so walk mode never sticks
-        if (e.target.closest(OVERLAYS) || overlayOpen()) return;
-        if (isExploring()) {
+        if (e.target.closest(OVERLAYS)) return;
+        const owner = inputOwner();
+        if (owner === 'walk') {
             if (!p.drag) walk.onTap(e.clientX, e.clientY);
-        } else if (!toolOn() && Math.hypot(e.clientX - p.x, e.clientY - p.y) < TAP_THRESHOLD) {
+        } else if (owner === 'journey' && Math.hypot(e.clientX - p.x, e.clientY - p.y) < TAP_THRESHOLD) {
             if (hitsIcon(e)) window.open(LINKEDIN_URL, '_blank');
             else if (hitsGithub(e)) window.open(GITHUB_URL, '_blank');
             else if (hitsMail(e)) window.location.href = 'mailto:' + CONTACT_EMAIL;
@@ -127,8 +124,9 @@ import * as walk from './walk.js';
     });
     window.addEventListener('blur', () => { walkKeys.clear(); walk.setKeys(new Set()); });
     document.addEventListener('keydown', (e) => {
-        if (overlayOpen() || e.target.closest('.dimension')) return;
-        if (isExploring()) {
+        const owner = inputOwner();
+        if (owner === 'portal' || e.target.closest?.('.dimension')) return;
+        if (owner === 'walk') {
             const k = e.key.toLowerCase();
             if (WALK_KEYS.includes(k) && !e.target.closest('input,textarea') && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
@@ -136,7 +134,7 @@ import * as walk from './walk.js';
             } else if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button')) e.preventDefault();
             return;
         }
-        if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button') && !toolOn()) {
+        if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button') && owner === 'journey') {
             e.preventDefault();
             onTap();
         }

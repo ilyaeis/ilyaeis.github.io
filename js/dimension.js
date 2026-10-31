@@ -72,7 +72,6 @@ if (el) {
             el.appendChild(frame);
         }
         el.hidden = false;
-        document.body.classList.add('dimension-open');
         open = true;
         history.pushState({ dimension: d.id }, '');   // browser Back closes the overlay
     }
@@ -85,7 +84,6 @@ if (el) {
         if (!open) return;
         open = false;
         el.classList.remove('visible');
-        document.body.classList.remove('dimension-open');
         window.dispatchEvent(new CustomEvent('journey:portal-exit', { detail: { id: current?.id } }));
         // After the fade: hide, and unload the app (it stops; the cache makes the next visit fast)
         hideTimer = setTimeout(() => {
