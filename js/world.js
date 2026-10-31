@@ -13,19 +13,18 @@
 
 import * as THREE from 'three';
 import { ATTRACTORS, rk4Step, isMobile, getPaletteColor, camera, controls } from './attractors.js';
-import { generateTextLines, generateRockWithLabel } from './strokeFont.js';
+import { generateTextLines } from './strokeFont.js';
 import * as tunnel from './tunnel.js';
 import { buildProjectViz, FLYBY_TEXT_BOTTOM } from './projectViz.js';
 import { createGraph, fitGraph } from './eduGraph.js';
 
-export const StopType = { TEXT: 0, ROCK: 1, LANDING: 2, PROJECT: 3, OBJECT: 4, GRAPH: 5 };
+export const StopType = { LANDING: 2, PROJECT: 3, OBJECT: 4, GRAPH: 5 };   // (0 and 1 were the old trait text and rocks)
 
 // ── Content ────────────────────────────────────────────────────────
 export const CONTACT_EMAIL = 'ilya.safronos@gmail.com';
-const TEXT_LINES = ['CREATIVE.', 'ADAPTIVE.', 'CURIOUS.'];
 const LANDING_LINES = ['GET IN TOUCH', CONTACT_EMAIL];
 const MILESTONES = [
-    { label: 'RVKG', sizeFactor: 0.9, seed: 42, panel: {
+    { label: 'RVKG', panel: {
         title: 'Riga State Classical Gymnasium',
         subtitle: 'Programming and Mathematics track · Riga',
         items: [
@@ -34,7 +33,7 @@ const MILESTONES = [
         ],
         more: { href: 'resume.html#rvkg', label: 'details in the resume' }
     }},
-    { label: 'RTU', sizeFactor: 0.7, seed: 73, panel: {
+    { label: 'RTU', panel: {
         title: 'Riga Technical University',
         subtitle: 'Professional Bachelor, Financial Engineering',
         dates: '2024 – 2028 (expected)',
@@ -44,7 +43,7 @@ const MILESTONES = [
         ],
         more: { href: 'resume.html#rtu', label: 'details in the resume' }
     }},
-    { label: 'AI TALENT', sizeFactor: 0.65, seed: 58, panel: {
+    { label: 'AI TALENT', panel: {
         title: 'AI Talent Program',
         subtitle: 'Ponder · selective, entry by test and interview',
         dates: 'Nov 2024 – Jan 2025',
@@ -54,7 +53,7 @@ const MILESTONES = [
         ],
         more: { href: 'https://www.ponder.lv/mi-programma', label: 'ponder.lv' }
     }},
-    { label: 'GIRAFFE360', sizeFactor: 0.55, seed: 17, panel: {
+    { label: 'GIRAFFE360', panel: {
         title: 'Giraffe360',
         subtitle: 'R&D Engineer · 3D reconstruction and computer vision',
         dates: '2025 – present',
@@ -64,7 +63,7 @@ const MILESTONES = [
         ],
         more: { href: 'resume.html#giraffe360', label: 'details in the resume' }
     }},
-    { label: 'BALANCER', sizeFactor: 0.6, seed: 105, panel: {
+    { label: 'BALANCER', panel: {
         title: 'load-balancing-experiments',
         subtitle: 'RTU networks project · Python',
         dates: '2026',
@@ -75,7 +74,7 @@ const MILESTONES = [
         ],
         more: { href: 'https://github.com/ilyaeis/load-balancing-experiments', label: 'github' }
     }},
-    { label: 'FLOW', sizeFactor: 0.55, seed: 23, panel: {
+    { label: 'FLOW', panel: {
         title: 'Flow — workout tracker app',
         subtitle: 'Offline workout tracker · Dart/Flutter · private',
         dates: '2026',
@@ -85,7 +84,7 @@ const MILESTONES = [
         ],
         more: { href: 'resume.html#flow', label: 'details in the resume' }
     }},
-    { label: 'MONTE CARLO', sizeFactor: 0.65, seed: 112, panel: {
+    { label: 'MONTE CARLO', panel: {
         title: 'Monte Carlo Methods in Finance',
         subtitle: 'Python · NumPy · SciPy · pandas · arch',
         dates: '2026',
@@ -96,7 +95,7 @@ const MILESTONES = [
         ],
         more: { href: 'https://github.com/ilyaeis/monte-carlo-finance', label: 'github' }
     }},
-    { label: 'NEAT', sizeFactor: 0.65, seed: 64, panel: {
+    { label: 'NEAT', panel: {
         title: 'projects_with_NEAT',
         subtitle: 'Neuroevolution · Python',
         dates: '2025',
@@ -106,7 +105,7 @@ const MILESTONES = [
         ],
         more: { href: 'https://github.com/ilyaeis/projects_with_NEAT', label: 'github' }
     }},
-    { label: 'CALCULATOR', sizeFactor: 0.7, seed: 37, panel: {
+    { label: 'CALCULATOR', panel: {
         title: 'Offline Graphing Calculator',
         subtitle: 'RBS programming competition · 4th place',
         dates: '2023',
@@ -116,7 +115,7 @@ const MILESTONES = [
         ],
         more: { href: 'https://rbs.lv/blog/2023/06/12/event-search-app-wins-programming-competition-for-high-school-students/', label: 'competition results' }
     }},
-    { label: 'SORTING', sizeFactor: 0.6, seed: 91, panel: {
+    { label: 'SORTING', panel: {
         title: 'Sorting visualizer (sort_visualization)',
         subtitle: 'C++ · SFML',
         dates: '2022',
@@ -191,7 +190,6 @@ const MILESTONES = [
 
 // ── Tuning ─────────────────────────────────────────────────────────
 const TEXT_SCALE = 0.22;          // world units per 2D unit (text/landing)
-const ROCK_SCALE = 0.4;           // world units per 2D unit (rocks)
 const STROKE_INTENSITY = 1.5;            // bold letter strokes (HDR → bloom)
 const LINK_INTENSITY = 0.35;             // faint pen-travel strokes
 
@@ -207,12 +205,9 @@ const SCENERY_STANDOFF_MIN = 5.0;
 const SCENERY_SPIN = 0.04;               // rad/s about local Y
 const SCENERY_TRIES = 24;                // random angles round the leg; the one farthest from the stops' views wins
 const PANEL_FIT = [0.5, 0.55];           // a stop's view share beside its panel (orchestrator ROCK_FIT_SIDE / ROCK_FIT_BOTTOM): the farthest VIEW camera
-// leg i = flight into stops[i]; leg 0 is the intro corkscrew into the text,
-// leg 1 (text -> rock 1) has the first galaxy. Attractor k % ATTRACTORS.length is reused
-// when there are more legs than attractors.
-// One galaxy on each leg into a rock and on the dive into the apartment
-// (into its first object). None indoors, on the warp into the tunnel or
-// inside it, or on the roof dive.
+// leg i = flight into stops[i]. One galaxy on the leg into the graph (out
+// of the flat); none indoors, on the warp into the tunnel or inside it, or
+// on the roof dive. Attractor k % ATTRACTORS.length.
 const SCENERY_LEGS = [];   // filled from ROUTE below
 
 // Projects tunnel (tunnel.js): entry point E = apartment window + e1 × TUNNEL_HOP.
@@ -239,22 +234,15 @@ const PROJECT_DENSITY = 200;             // 2D stroke points per unit (trace spe
 const FLYBY_SCALE = 0.8;
 const FLYBY_SIDE = 2.1;                  // viz centre this far beside the axis (left, right, left): the camera passes it, not through it
 
-// Random scatter — each stop hops far from the previous one in a
-// random 3D direction (lightly biased outward so the journey keeps
-// drifting away from the intro), never closer than MIN_SEPARATION to
-// another. The meteor rocks are one scene: they cluster tightly.
+// The graph hops far from the apartment in a random 3D direction (lightly
+// biased outward), never closer than MIN_SEPARATION to it.
 const MIN_HOP = 34;
 const MAX_HOP = 42;
-const ROCK_HOP_MIN = 32;                 // rock → rock (same scene)
-const ROCK_HOP_MAX = 40;
 const MIN_SEPARATION = 26;
-const ROCK_SEPARATION = 22;              // rocks may sit near each other
-
-const TEXT_DIM_ALPHA = 0.25;            // the text block starts dim; lit as the comet traces it (1.0 = always lit)
 
 // ── Apartment (universe 'rnd' and the landing) ─────────────────────
 // A Gaussian splat of a real apartment (room.js renders it), placed once as
-// a rigid frame after GIRAFFE360. Room units (the .sog frame): +Y up, 1 unit
+// a rigid frame, first (the site starts in it). Room units (the .sog frame): +Y up, 1 unit
 // = 3.63 m, floor y = -0.413, ceiling cut at y = 0.30, bay windows on -Z.
 // Scale s: the landing text fits (the orchestrator fit) at LANDING_CAM_Z -
 // LANDING_TEXT.z room units, so s = fit / 0.65 (about 4.6 world units per
@@ -267,67 +255,41 @@ const ROOM_FLOOR = -0.413;
 export const M_PER_UNIT = 3.45;
 const ROOM_BOX = { min: [-2.64, -0.47, -0.84], max: [0.91, 0.30, 2.08] }; // all rooms (fade, clearance)
 const ROOM_WINDOW = [0, -0.02, -0.78];   // bay window centre (the frame: the window faces winDir; the tunnel leaves here)
-// The comet enters and leaves over the window wall, just above the cut
-// ceiling: from outside it sees the apartment as a dollhouse, then dives in
+// The comet leaves over the window wall, just above the cut ceiling
 // (flying through the window splats would blur the whole view for a moment)
 const WALL_TOP = [0.35, 0.48, -0.80];    // via over the window wall (x: ± this, on the side of where the comet goes)
-const WALL_IN = [0, -0.5, 1];            // crossing it inwards: descending into the living room
 const WALL_OUT = [0, 0.35, -1];          // ... outwards: rising a little
 const ROOM_ROOF = [0.1, 0.75, 0.5];      // above the cut ceiling: the dive into the landing
-const WINDOW_STANDOFF = 16;              // world units outside the window wall: the entry lines up here (the dollhouse view)
 const LANDING_TEXT = [0, -0.11, -0.4];   // contact text centre, in front of the windows
 const LANDING_CAM_Z = 0.25;              // landing VIEW camera z (inside, sofa side); sets the scale
-const ENTRY_TOP = [0, 0.42, 0.1];        // the entry dive crosses the cut ceiling ENTRY_BACK before this point
-const ENTRY_BACK = 0.6;                  // room units
-const ENTRY_DIVE = 0.4;                  // descent per unit of horizontal travel
 const APARTMENT_TRIES = 40;
 const LANDING_EXIT_DIST = [30, 45];      // tunnel exit -> landing camera (logged if outside)
-const DOOR_LEAD = 0.12;                   // room units: the comet lines up with a doorway this far before (and after) it
-// Doorways (room units, door centre at the comet's height). axis: the
-// comet crosses along it; the sign in OBJECT_SPOTS.doors picks the way.
-// Checked against the splat (density along the paths): the hall door to the
-// bedroom opens into a short passage along the bed head, so the comet turns
-// south at its end (BED_IN, a single via) and stays above the bed.
-const DOORS = {
-    LH: { p: [-1.05, -0.14, 0.57], axis: [1, 0, 0] },     // living / hall
-    CH: { p: [-1.10, -0.06, 0.975], axis: [1, 0, 0] },    // hall / bedroom passage
-    BED_IN: { p: [-0.78, -0.06, 1.20], axis: [0.2, 0, 1], lead: 0 },  // passage / bedroom
-    BC: { p: [0.34, -0.14, 1.37], axis: [1, 0, 0] },     // bedroom / corridor
-    LC: { p: [0.50, -0.14, 0.90], axis: [0, 0, 1] },     // corridor / living
-    // living room lane round the sofa (the LH door opens just behind it):
-    // west of the sofa, then between the coffee table and the armchair
-    LW1: { p: [-0.62, -0.12, 0.30], axis: [0.55, 0, -0.84], lead: 0 },
-    LW2: { p: [-0.30, -0.12, -0.12], axis: [0.96, 0, -0.29], lead: 0 },
-};
 // Object stops: base on the floor at (x, z). The VIEW camera looks from
 // `cam` (room units; only its direction counts, the distance is the fit,
 // capped at fitMax room units so a portrait fit stays inside the walls).
-// `doors`: the doorways from the previous object, with the crossing sign.
 const OBJECT_SCALE = 0.25;        // object height ≈ 0.25 room units ≈ 0.9 m
 // Optional: `y` = base height (default: the floor), `scale` (default OBJECT_SCALE),
 // `light` (× the object brightness in room.js: lamps near or not), `haloTilt` (deg).
-// The tour: living room -> hall (in by LH, out by CH) -> bedroom -> corridor
-// -> living room. Each VIEW camera looks within ~90° of the way the comet
-// leaves next, so no flight has to turn the camera round.
+// `walkM`: the walk's guide distance (m) for this object (walk.js objectGoal).
 const OBJECT_SPOTS = {
     // living room: on the coffee table (top y -0.296), 17 cm tall. Viewed from
     // the east-north-east (the free strip by the desk), so the view looks the
     // way the comet dives in. A view across the dive (it was from the south)
     // makes the comet hook up to 130° in the last metre: the arrival blend
     // then whipped the camera (250 deg/s)
-    cherry: { x: -0.06, z: 0.13, y: -0.296, scale: 0.045, cam: [0.17, -0.12, 0.30], fitMax: 0.5, doors: [] },
+    cherry: { x: -0.06, z: 0.13, y: -0.296, scale: 0.045, cam: [0.17, -0.12, 0.30], fitMax: 0.5 },
     // kitchen-diner: on the dining table (cloth y -0.20), 35 cm tall
-    vase:   { x: -1.92, z: 1.12, y: -0.20, scale: 0.095, cam: [-1.88, -0.10, 0.82], fitMax: 0.5, doors: [['LW1', -1], ['LH', -1]], light: 0.85 },
+    vase:   { x: -1.92, z: 1.12, y: -0.20, scale: 0.095, cam: [-1.88, -0.10, 0.82], fitMax: 0.5, light: 0.85 },
     // living room: on the desk by the east wall, next to the printer box, 30 cm long
-    gpu:    { x: 0.72, z: 0.20, y: -0.18, scale: 0.067, cam: [0.35, -0.12, 0.20], fitMax: 0.5, doors: [['LH', 1], ['LW1', 1], ['LW2', 1]] },
+    gpu:    { x: 0.72, z: 0.20, y: -0.18, scale: 0.067, cam: [0.35, -0.12, 0.20], fitMax: 0.5 },
     // kitchen-diner: pulled out at the corner of the dining table, 91 cm tall
-    chair:  { x: -1.66, z: 0.97, cam: [-1.30, -0.12, 0.72], fitMax: 0.6, doors: [['LW2', -1], ['LW1', -1], ['LH', -1]], light: 0.75 },
+    chair:  { x: -1.66, z: 0.97, cam: [-1.30, -0.12, 0.72], fitMax: 0.6, light: 0.75 },
     // hall: hung on the wall above the sofa (wall z = 0.124 x + 0.439, so the
     // camera looks along the wall normal), panel 1.15-1.85 m above the floor, 1 m wide
     // (walkM: the walk stands this far back, so the ring fits a phone screen too)
-    board:  { x: -2.04, z: 0.245, y: -0.163, scale: 0.24, cam: [-2.114, -0.012, 0.840], fitMax: 0.66, doors: [], haloTilt: 90, light: 1.15, walkM: 2.3 },
+    board:  { x: -2.04, z: 0.245, y: -0.163, scale: 0.24, cam: [-2.114, -0.012, 0.840], fitMax: 0.66, haloTilt: 90, light: 1.15, walkM: 2.3 },
     // living room: on the floor with the toys by the bay window, 30 cm tall
-    robot:  { x: 0.42, z: -0.18, scale: 0.083, cam: [0.25, -0.25, 0.12], fitMax: 0.5, doors: [['LH', 1], ['LW1', 1], ['LW2', 1]] },
+    robot:  { x: 0.42, z: -0.18, scale: 0.083, cam: [0.25, -0.25, 0.12], fitMax: 0.5 },
 };
 // Object bounds (local units, objects.js): half width, height, and the
 // height where the content starts (`bottom`: the board's panel)
@@ -398,7 +360,7 @@ const ROUTE = [
 // Old ids that still land somewhere (?go, the agent API)
 const ALIASES = { traits: 'rvkg' };
 ROUTE.forEach((d, i) => {
-    if (d.type === StopType.ROCK || d.type === StopType.GRAPH) SCENERY_LEGS.push(i);
+    if (d.type === StopType.GRAPH) SCENERY_LEGS.push(i);
 });
 // Universes are names, not indexes. A new universe is a new entry here
 // plus ROUTE entries that use its id.
@@ -420,7 +382,7 @@ const FLYBYS = [
 // Static catalog of every stop and fly-by (no WebGL needed): the agent API
 // reads it before the world is built. `index` = position in stops[].
 // Fly-bys are listed but not navigable (`near` = the stop they hang before).
-const TYPE_NAMES = { [StopType.TEXT]: 'text', [StopType.ROCK]: 'rock', [StopType.PROJECT]: 'project',
+const TYPE_NAMES = { [StopType.PROJECT]: 'project',
                      [StopType.LANDING]: 'landing', [StopType.OBJECT]: 'object' };
 // The graph is listed by its frames: { type 'graph-frame', index (the stop), frame 1..4 }
 export const catalog = [
@@ -509,7 +471,6 @@ export const apartment = {
     quaternion: new THREE.Quaternion(),
     scale: 1,
     winDir: new THREE.Vector3(0, 0, -1),     // world direction out of the bay window (room -Z)
-    entryDir: new THREE.Vector3(-1, 0, 0),   // room axes: horizontal heading of the entry dive
     box: ROOM_BOX,
     floor: ROOM_FLOOR,
     objects: []                              // { name, x, z, yaw } (room units, yaw about +Y)
@@ -583,10 +544,10 @@ function randomHopDir(out) {
 // turn over all its corners (the smallest largest turn). A stop faces its
 // hop, so a corner is a turn at a departure; a sharp one makes the comet
 // loop back past the camera (speed dips, a whipping view).
-// tight[k]: stop k hops from a rock (the tight rock scene).
-function placeAfterApartment(prev, placed, tight, fwd) {
+// n: the number of stops in the chain.
+function placeAfterApartment(prev, placed, n, fwd) {
     const T0 = tunnel.centreWorld(0, new THREE.Vector3()), e1 = tunnel.tangentWorld(0, new THREE.Vector3());
-    const chain = tight.map(() => new THREE.Vector3()), dir = new THREE.Vector3(), d0 = new THREE.Vector3();
+    const chain = Array.from({ length: n }, () => new THREE.Vector3()), dir = new THREE.Vector3(), d0 = new THREE.Vector3();
     const toThroat = new THREE.Vector3(), flat = new THREE.Vector3();
     let best = null, bestScore = -Infinity;
     for (let i = 0; i < AFTER_TRIES; i++) {
@@ -594,8 +555,7 @@ function placeAfterApartment(prev, placed, tight, fwd) {
         d0.copy(fwd);
         for (let k = 0; k < chain.length; k++) {
             randomHopDir(dir);
-            const [hop0, hop1] = tight[k] ? [ROCK_HOP_MIN, ROCK_HOP_MAX] : [MIN_HOP, MAX_HOP];
-            chain[k].copy(p).addScaledVector(dir, rand(hop0, hop1));
+            chain[k].copy(p).addScaledVector(dir, rand(MIN_HOP, MAX_HOP));
             const a = d0.angleTo(dir);
             maxTurn = Math.max(maxTurn, a); sumTurn += a;
             d0.copy(dir); p = chain[k];
@@ -611,7 +571,7 @@ function placeAfterApartment(prev, placed, tight, fwd) {
         if (turnScore <= bestScore) continue;            // a clear chain could not beat the best: skip the clearance
         let clear = Infinity;
         chain.forEach((c, k) => {
-            const sep = tight[k] ? ROCK_SEPARATION : MIN_SEPARATION;
+            const sep = MIN_SEPARATION;
             clear = Math.min(clear, tunnel.axisDistance(c, tunnelExitS) / TUNNEL_CLEAR,
                              (c.distanceTo(apartmentCentre) - apartmentRadius) / sep);
             for (const q of placed) clear = Math.min(clear, c.distanceTo(q) / sep);
@@ -620,7 +580,7 @@ function placeAfterApartment(prev, placed, tight, fwd) {
         const score = clear >= 1 ? turnScore : clear;
         if (score > bestScore) { bestScore = score; best = chain.map(c => c.clone()); }
     }
-    if (bestScore < 1) console.warn('rocks after the apartment: not fully clear', bestScore.toFixed(2));
+    if (bestScore < 1) console.warn('the graph: not fully clear', bestScore.toFixed(2));
     return best;
 }
 
@@ -679,18 +639,14 @@ function projectPoints(label, halfW, halfH) {
     return { points: pts, labelStart };
 }
 
-// ── Planar stop (text / rock / landing / project) ──────────────────
+// ── Planar stop (landing / project) ──────────────────
 function buildPlanarStop(def, center, right, up, palette) {
-    const scale = def.type === StopType.ROCK ? ROCK_SCALE : def.type === StopType.LANDING ? landingScale : TEXT_SCALE;
+    const scale = def.type === StopType.LANDING ? landingScale : TEXT_SCALE;
     let points, staticFrom = 0;
-    if (def.type === StopType.ROCK) {
-        const ms = MILESTONES[def.milestone];
-        ({ points } = generateRockWithLabel(ms.sizeFactor, ms.seed, ms.label, null));
-    } else if (def.type === StopType.PROJECT) {
+    if (def.type === StopType.PROJECT) {
         ({ points, labelStart: staticFrom } = projectPoints(MILESTONES[def.milestone].label, def.vizHalfW, def.vizHalfH));
     } else {
-        ({ points } = generateTextLines(
-            def.type === StopType.LANDING ? LANDING_LINES : TEXT_LINES));
+        ({ points } = generateTextLines(LANDING_LINES));
     }
 
     const n = points.length;
@@ -718,7 +674,7 @@ function buildPlanarStop(def, center, right, up, palette) {
         segPos.push(_vec3.x, _vec3.y, _vec3.z);
         const col = getPaletteColor(palette, n > 1 ? i / (n - 1) : 0);
         segCol.push(col.r * STROKE_INTENSITY, col.g * STROKE_INTENSITY, col.b * STROKE_INTENSITY);
-        segAlpha.push(def.type === StopType.TEXT ? TEXT_DIM_ALPHA : 1.0);
+        segAlpha.push(1.0);
         segIdx.push(i);
     }
     for (let i = staticFrom; i < n - 1; i++) {
@@ -1097,25 +1053,12 @@ function buildObjectStop(def, palette) {
     };
 }
 
-// ── Indoor routes ──────────────────────────────────────────────────
+// ── Routes out of and into the flat ───────────────────────────────
 // Via points of a flight (world space): [{ p, dir? }]. With `dir` the comet
-// crosses the point exactly along it (doorways, the window). The
+// crosses the point exactly along it (the window wall, the roof). The
 // orchestrator chains them (buildViaLegs).
 function via(p, dir = null) {
     return { p: roomToWorld(...p), dir: dir ? roomDirToWorld(...dir) : null };
-}
-// A doorway is three vias in a line along its axis (DOOR_LEAD before, at,
-// after it), so the comet (and the camera rail on its path) crosses it straight
-function doorVias(name, sign) {
-    const d = DOORS[name], a = d.axis.map(v => v * sign), lead = d.lead ?? DOOR_LEAD;
-    return (lead ? [-lead, 0, lead] : [0]).map(k => via(d.p.map((v, i) => v + a[i] * k), a));
-}
-function windowVias() {
-    // dive in over the cut ceiling, heading the way the comet comes from GIRAFFE360
-    const h = apartment.entryDir;
-    const P = via([ENTRY_TOP[0] - h.x * ENTRY_BACK, ENTRY_TOP[1], ENTRY_TOP[2] - h.z * ENTRY_BACK], [h.x, -ENTRY_DIVE, h.z]);
-    // the line-up point is free (no direction): the flight bends onto the dive gradually
-    return [{ p: P.p.clone().addScaledVector(P.dir, -WINDOW_STANDOFF), dir: null }, P];
 }
 // Out over the window wall, already turned towards `to` (the loop back to
 // the first stop after the flat). The crossing slides along the wall top to
@@ -1149,19 +1092,12 @@ export function flatExitVias(p, to) {
 }
 export function viasFor(from, dest) {
     const fromIn = from?.type === StopType.OBJECT || from?.type === StopType.LANDING;
-    if (dest.type === StopType.OBJECT) {
-        if (from?.type !== StopType.OBJECT) return windowVias();           // from outside: in through the window
-        return OBJECT_SPOTS[dest.objectName].doors.flatMap(([n, sg]) => doorVias(n, sg));
-    }
     if (dest.type === StopType.LANDING) {
         // over the roof, then a dive through the cut ceiling (down and towards the windows)
         return [{ p: roomToWorld(...ROOM_ROOF), dir: roomDirToWorld(0, -1, -1) }];
     }
-    if (fromIn) return exitTowards(dest.center);                            // out over the window wall: to the first education rock, and the landing loop back
+    if (fromIn) return exitTowards(dest.center);                            // out over the window wall: the landing loop back to the graph
     return [];
-}
-export function isIndoorFlight(from, dest) {
-    return from?.type === StopType.OBJECT && dest?.type === StopType.OBJECT;
 }
 
 // ── Build ──────────────────────────────────────────────────────────
@@ -1222,7 +1158,7 @@ export function buildWorld(scene) {
             prev = center.clone().sub(apartment.winDir);
         } else if (def.type === StopType.GRAPH) {
             // out over the window wall, then on to the tunnel throat (a chain of one)
-            center = placeAfterApartment(prev, placed, [false], apartment.winDir)[0];
+            center = placeAfterApartment(prev, placed, 1, apartment.winDir)[0];
             const stop = buildGraphStop(def, center, prev);
             scene.add(stop.graph.group);
             stops.push(stop);

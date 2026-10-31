@@ -84,7 +84,7 @@ async function goTo(id, { mode = 'fly' } = {}) {
     const fly = mode === 'fly' && e.index >= 1 && (e.frame ?? 1) === 1;   // a later graph frame: a jump (grown)
     if (fly) {
         const arrived = nextEnter(e.id);
-        if (e.index === s.stopIndex + 1 && s.phase === Phase.VIEW) setupTravel(e.index, false);
+        if (e.index === s.stopIndex + 1 && s.phase === Phase.VIEW) setupTravel(e.index);
         else flyTo(e.index);          // (the first graph frame: the lift out of the flat, also from the walk)
         await arrived;
     } else {
