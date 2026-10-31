@@ -273,7 +273,7 @@ const ROOM_WINDOW = [0, -0.02, -0.78];   // bay window centre (the frame: the wi
 // The comet enters and leaves over the window wall, just above the cut
 // ceiling: from outside it sees the apartment as a dollhouse, then dives in
 // (flying through the window splats would blur the whole view for a moment)
-const WALL_TOP = [0.35, 0.48, -0.80];    // via over the window wall (east of the tall plant)
+const WALL_TOP = [0.35, 0.48, -0.80];    // via over the window wall (x: ± this, on the side of where the comet goes)
 const WALL_IN = [0, -0.5, 1];            // crossing it inwards: descending into the living room
 const WALL_OUT = [0, 0.35, -1];          // ... outwards: rising a little
 const ROOM_ROOF = [0.1, 0.75, 0.5];      // above the cut ceiling: the dive into the landing
@@ -356,7 +356,6 @@ const HALO_INTENSITY = 0.8;              // colour × this (the text strokes use
 const HALO_FADE_TIME = 0.5;              // s: a ring fades in (out) as its stop becomes (stops being) the focus
 const OBJECT_PAD = 0.15;                 // × height: framing room above and below the object
 const OBJECT_FRAME = 1.12;               // × the halo / object half width: framing room beside it (the fit)
-const PLACE_TRIES = 12;
 // The rocks after the apartment (education): placed once the apartment and
 // the tunnel exist, clear of both, as one chain that turns smoothly back to
 // the tunnel throat (placeAfterApartment)
@@ -619,15 +618,6 @@ function placeAfterApartment(prev, placed, tight, fwd) {
     }
     if (bestScore < 1) console.warn('rocks after the apartment: not fully clear', bestScore.toFixed(2));
     return best;
-}
-
-function placeNextCenter(prev, placed, hopMin, hopMax, separation, reject = null) {
-    let candidate = null;
-    for (let i = 0; i < PLACE_TRIES; i++) {
-        candidate = prev.clone().addScaledVector(randomHopDir(_dir), rand(hopMin, hopMax));
-        if (placed.every(p => p.distanceTo(candidate) >= separation) && !reject?.(candidate)) break;
-    }
-    return candidate;
 }
 
 // ── Line builder ───────────────────────────────────────────────────
@@ -943,28 +933,27 @@ function buildMailPlane(stop) {
 }
 
 // ── Apartment and tunnel placement ─────────────────────────────────
-// One rigid frame: the bay window sits a hop from GIRAFFE360 (direction d)
-// and faces WINDOW_YAW off the way back (so the comet swings round to line
-// up with it). The tunnel leaves the window along e1 (winDir, dipping
+// The site starts in the flat: the apartment is placed first, with the
+// landing text spot (LANDING_TEXT, where the intro name floats in front of
+// the bay windows) at the world origin, the window facing `journeyDir`
+// (flattened). The tunnel leaves the window along e1 (winDir, dipping
 // EXIT_DIVE) and turns by tunnel.TUNNEL_TURN (almost a full circle), so the
-// exit comes home behind the apartment, above it, heading towards it: the
-// warp out ends with a short dive over the roof. Score: the rocks stay
-// MIN_SEPARATION from the apartment and TUNNEL_CLEAR from the tunnel axis;
-// the apartment stays TUNNEL_CLEAR from the axis except its last
-// TUNNEL_EXIT_FREE units; among the clear candidates the one most ahead of
-// the GIRAFFE360 view (`viewDir`) wins, as for the old tunnel placement.
+// exit comes home behind the apartment: the warp out ends with a short dive
+// over the roof. Of the tries (turn sign, hop) the one that keeps the
+// apartment TUNNEL_CLEAR from the axis (except the last TUNNEL_EXIT_FREE
+// units) and brings the exit nearest the middle of LANDING_EXIT_DIST wins.
 let apartmentCentre = new THREE.Vector3(), apartmentRadius = 0;
-function setApartmentFrame(W, winDir, s) {
+const _Y = new THREE.Vector3(0, 1, 0);
+function setApartmentFrame(winDir, s) {
     apartment.scale = s;
     apartment.winDir.copy(winDir);
     // room axes in world: z = -winDir, y = up, x = y × z
-    const z = winDir.clone().negate(), y = new THREE.Vector3(0, 1, 0);
-    const x = new THREE.Vector3().crossVectors(y, z);
-    apartment.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
-    // the window point lands on W
+    const z = winDir.clone().negate();
+    const x = new THREE.Vector3().crossVectors(_Y, z);
+    apartment.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, _Y, z));
+    // the landing text spot lands on the origin
     apartment.position.set(0, 0, 0);
-    const w = roomToWorld(...ROOM_WINDOW);
-    apartment.position.copy(W).sub(w);
+    apartment.position.sub(roomToWorld(...LANDING_TEXT));
     const b = ROOM_BOX;
     roomToWorld((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2, apartmentCentre);
     apartmentRadius = 0.5 * s * Math.hypot(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]);
@@ -974,42 +963,59 @@ function apartmentCorners() {
     for (const x of [b.min[0], b.max[0]]) for (const y of [b.min[1], b.max[1]]) for (const z of [b.min[2], b.max[2]]) out.push(roomToWorld(x, y, z));
     return out;
 }
-function placeApartmentAndTunnel(from, viewDir, placed, length, s) {
+function placeApartmentAndTunnel(length, s) {
+    setApartmentFrame(journeyDir.clone().setY(0).normalize(), s);
+    const W = roomToWorld(...ROOM_WINDOW);
+    const e1 = apartment.winDir.clone().setY(-EXIT_DIVE).normalize();
+    const landingCam = roomToWorld(0, LANDING_TEXT[1], LANDING_CAM_Z);
+    const corners = apartmentCorners();
+    const T0 = new THREE.Vector3(), mid = (LANDING_EXIT_DIST[0] + LANDING_EXIT_DIST[1]) / 2;
     let best = null, bestScore = -Infinity;
-    const d = new THREE.Vector3(), W = new THREE.Vector3(), winDir = new THREE.Vector3(), e1 = new THREE.Vector3();
-    const T0 = new THREE.Vector3();
     for (let i = 0; i < APARTMENT_TRIES; i++) {
-        randomHopDir(d);
-        d.y = rand(APARTMENT_DROP[0], APARTMENT_DROP[1]);   // below GIRAFFE360: the comet sees the dollhouse from above and dives in
-        d.normalize();
-        W.copy(from).addScaledVector(d, rand(APARTMENT_HOP[0], APARTMENT_HOP[1]));
-        // window facing: the way back (-d, flattened), turned by 90° ± spread
-        const yaw = THREE.MathUtils.degToRad(90 + rand(-WINDOW_YAW_SPREAD, WINDOW_YAW_SPREAD));
-        winDir.set(-d.x, 0, -d.z).normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        setApartmentFrame(W, winDir, s);
-        e1.copy(winDir).setY(-EXIT_DIVE).normalize();
-        T0.copy(W).addScaledVector(e1, rand(TUNNEL_HOP[0], TUNNEL_HOP[1]));
         const turn = i % 2 ? 1 : -1;
+        T0.copy(W).addScaledVector(e1, rand(TUNNEL_HOP[0], TUNNEL_HOP[1]));
         tunnel.setFrame(T0, e1, turn, length);
         let clear = Infinity;
-        const corners = apartmentCorners();
-        for (const p of placed) {
-            clear = Math.min(clear, tunnel.axisDistance(p, length) / TUNNEL_CLEAR);
-            for (const c of corners) clear = Math.min(clear, p.distanceTo(c) / MIN_SEPARATION);
-        }
         for (const c of corners) clear = Math.min(clear, tunnel.axisDistance(c, length - TUNNEL_EXIT_FREE) / TUNNEL_CLEAR);
-        const score = clear >= 1 ? 10 + d.dot(viewDir) : clear;
-        if (score > bestScore) {
-            bestScore = score;
-            best = { W: W.clone(), winDir: winDir.clone(), T0: T0.clone(), e1: e1.clone(), turn };
-        }
+        const exitD = tunnel.centreWorld(length, new THREE.Vector3()).distanceTo(landingCam);
+        const score = clear >= 1 ? 10 - Math.abs(exitD - mid) / mid : clear;
+        if (score > bestScore) { bestScore = score; best = { T0: T0.clone(), turn }; }
     }
-    setApartmentFrame(best.W, best.winDir, s);
-    tunnel.setFrame(best.T0, best.e1, best.turn, length);
+    tunnel.setFrame(best.T0, e1, best.turn, length);
+    if (bestScore < 1) console.warn('tunnel placement: the apartment is not fully clear', bestScore.toFixed(2));
+}
+
+// The stops before the apartment in route order (the traits, the Giraffe360
+// rock): placed after it, clear of it and of the tunnel axis. GIRAFFE360 sits
+// a hop from the window, 90° ± WINDOW_YAW_SPREAD off its facing and a little
+// higher (APARTMENT_DROP), so the dive in over the cut ceiling heads west,
+// straight at the first object (as the old layout, built from GIRAFFE360
+// out). The traits sit a hop before it, its helix exit (-right) towards it.
+function placeLead(placed) {
+    const W = roomToWorld(...ROOM_WINDOW), d = new THREE.Vector3(), G = new THREE.Vector3(), T = new THREE.Vector3();
+    const corners = apartmentCorners();
+    const clearOf = (p, sep) => Math.min(tunnel.axisDistance(p, tunnelExitS) / TUNNEL_CLEAR,
+        ...corners.map(c => p.distanceTo(c) / sep), ...placed.map(q => p.distanceTo(q) / sep));
+    let best = null, bestScore = -Infinity;
+    for (let i = 0; i < AFTER_TRIES && bestScore < 1; i++) {
+        // d: the way back from the window to GIRAFFE360; the window faces flat(d) turned by 90° ± spread
+        const yaw = THREE.MathUtils.degToRad(90 + rand(-WINDOW_YAW_SPREAD, WINDOW_YAW_SPREAD));
+        d.copy(apartment.winDir).applyAxisAngle(_Y, -yaw).setY(-rand(APARTMENT_DROP[0], APARTMENT_DROP[1])).normalize();
+        G.copy(W).addScaledVector(d, rand(APARTMENT_HOP[0], APARTMENT_HOP[1]));
+        T.copy(G).addScaledVector(randomHopDir(d), rand(MIN_HOP, MAX_HOP));
+        // the traits face away from the apartment (normal), their helix leaves along -right
+        const n = T.clone().sub(apartmentCentre).normalize();
+        const right = new THREE.Vector3().crossVectors(n, _Y).normalize();
+        const exitDot = G.clone().sub(T).normalize().dot(right.negate());
+        const score = Math.min(clearOf(G, MIN_SEPARATION), clearOf(T, MIN_SEPARATION), T.distanceTo(G) / MIN_SEPARATION,
+                               exitDot >= TEXT_EXIT_MIN_DOT ? 1 : 0.5);
+        if (score > bestScore) { bestScore = score; best = { G: G.clone(), T: T.clone() }; }
+    }
+    if (bestScore < 1) console.warn('lead stops: not fully clear', bestScore.toFixed(2));
     // the entry dive: the flight direction from GIRAFFE360, flattened, in room axes
-    const h = worldToRoom(best.W.clone().add(best.W.clone().sub(from))).sub(worldToRoom(best.W.clone()));
+    const h = worldToRoom(W.clone().add(W.clone().sub(best.G))).sub(worldToRoom(W.clone()));
     apartment.entryDir.set(h.x, 0, h.z).normalize();
-    if (bestScore < 10) console.warn('apartment placement: not fully clear', bestScore.toFixed(2));
+    return best;
 }
 
 // ── Object stops (in the apartment) ────────────────────────────────
@@ -1090,12 +1096,33 @@ function windowVias() {
     // the line-up point is free (no direction): the flight bends onto the dive gradually
     return [{ p: P.p.clone().addScaledVector(P.dir, -WINDOW_STANDOFF), dir: null }, P];
 }
-// Out over the window wall, already turned towards `to` (the loop back to the first rock)
+// Out over the window wall, already turned towards `to` (the loop back to
+// the first stop after the flat). The crossing slides along the wall top to
+// the side `to` lies on (WALL_TOP.x × -1..1): no hard turn after it.
 function exitTowards(to) {
     const W = via(WALL_TOP, WALL_OUT);
+    const hr = worldToRoom(to.clone()).sub(worldToRoom(W.p.clone())).setY(0).normalize();
+    W.p.copy(roomToWorld(WALL_TOP[0] * THREE.MathUtils.clamp(2 * hr.x, -1, 1), WALL_TOP[1], WALL_TOP[2]));
     const h = to.clone().sub(W.p).setY(0).normalize();
     W.dir.copy(h).setY(-WALL_OUT[1] / WALL_OUT[2]).normalize();
     return [W];
+}
+// Leaving the flat from anywhere inside it (the walk, or the intro spot):
+// up through the cut ceiling (a via above the start, a little towards the
+// window wall), then out over the window wall towards `to`. A start near
+// the window wall needs no lift: the wall via climbs anyway.
+const FLAT_LIFT = 0.42;                  // room units: the lift via height (over the cut ceiling, 0.30)
+const FLAT_LIFT_TOWARDS = 0.3;           // ... this far towards the wall via
+const FLAT_LIFT_MIN = 0.6;               // no lift via within this horizontal distance of the wall via
+export function flatExitVias(p, to) {
+    const out = exitTowards(to);
+    const r = worldToRoom(p.clone()), w = worldToRoom(out[0].p.clone());
+    const dx = w.x - r.x, dz = w.z - r.z, h = Math.hypot(dx, dz);
+    if (h > FLAT_LIFT_MIN) {
+        const k = FLAT_LIFT_TOWARDS / h;
+        out.unshift({ p: roomToWorld(r.x + dx * k, FLAT_LIFT, r.z + dz * k), dir: null });
+    }
+    return out;
 }
 export function viasFor(from, dest) {
     const fromIn = from?.type === StopType.OBJECT || from?.type === StopType.LANDING;
@@ -1118,8 +1145,6 @@ export function isIndoorFlight(from, dest) {
 export function buildWorld(scene) {
     stops = [];
     flybys = [];
-    const placed = [new THREE.Vector3(0, 0, 0)]; // intro counts for separation
-    let prev = placed[0];
     let prevDef = null;
     let projectK = 0;
     const nProjects = ROUTE.filter(d => d.type === StopType.PROJECT).length;
@@ -1145,20 +1170,20 @@ export function buildWorld(scene) {
     landingScale = TEXT_SCALE * Math.min(1, controls.maxDistance / fitUnclamped(lx * TEXT_SCALE, ly * TEXT_SCALE));
     const roomScale = fitDistance(lx * landingScale, ly * landingScale) / (LANDING_CAM_Z - LANDING_TEXT[2]);
     apartment.objects = [];
+    // The apartment first (the site starts in it), then the tunnel from its
+    // window, then the stops before it in route order
+    placeApartmentAndTunnel(tunnelExitS, roomScale);
+    const placed = [apartmentCentre.clone()];
+    const lead = placeLead(placed);
+    placed.push(lead.T, lead.G);
+    let prev = lead.T.clone().sub(lead.T.clone().sub(apartmentCentre).normalize());   // the traits face away from the flat
     let afterApartment = false;   // rocks after it are placed clear of it and the tunnel
     let afterChain = [];          // ... as one chain (placeAfterApartment)
 
     for (const def of ROUTE) {
-        // Rock → rock stays tight (the meteors are one scene);
-        // everything else scatters far apart
-        const tight = def.type === StopType.ROCK && prevDef?.type === StopType.ROCK;
         let center, tunnelS = null;
         if (def.type === StopType.OBJECT) {
-            if (prevDef?.type !== StopType.OBJECT) {
-                placeApartmentAndTunnel(prev, stops[stops.length - 1].normal, placed, tunnelExitS, roomScale);
-                placed.push(apartmentCentre.clone());
-                afterApartment = true;
-            }
+            afterApartment = true;
             const palette = ATTRACTORS[def.paletteIdx ?? 0].palette;
             const stop = { id: def.id, universe: def.universe, type: def.type, paletteIdx: def.paletteIdx ?? 0,
                            panel: MILESTONES[def.milestone].panel, tunnelS: null, viz: null, objectName: def.object,
@@ -1186,17 +1211,9 @@ export function buildWorld(scene) {
                 afterChain = placeAfterApartment(prev, placed, tightK, apartment.winDir);
             }
             center = afterChain.shift();
-        } else if (prevDef?.type === StopType.TEXT) {
-            // The comet leaves the traits helix sideways, along -right
-            // (orchestrator helixPos): no hop behind that, or the first leg
-            // makes a hairpin (a cusp: the camera speed dips, acceleration spikes)
-            const exit = stops[stops.length - 1].right.clone().negate(), h = new THREE.Vector3();
-            center = placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION,
-                c => h.subVectors(c, prev).normalize().dot(exit) < TEXT_EXIT_MIN_DOT);
         } else {
-            center = tight
-                ? placeNextCenter(prev, placed, ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION)
-                : placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION);
+            // before the apartment (placeLead): the traits, then GIRAFFE360
+            center = (def.type === StopType.TEXT ? lead.T : lead.G).clone();
         }
         placed.push(center);
         prevDef = def;

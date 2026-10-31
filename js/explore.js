@@ -12,9 +12,15 @@ import { setHaloFocus } from './world.js';
 
 let J = null;          // the orchestrator interface
 let walker = null;     // walk.js: { canWalk, enterWalk, exitWalk, update }
+let flat = null;       // room.js: { ready(), whenReady(), hold(on) }
 
 export function init(journey) { J = journey; }
 export function registerWalker(w) { walker = w; }
+// The site starts in the flat: room.js registers it, and the first tap in
+// the intro waits for it (pages without room.js, dev/camlog.html, do not wait)
+export function registerFlat(f) { flat = f; }
+export function flatReady() { return !flat || flat.ready(); }
+export function holdForFlat(on) { flat?.hold(on); }
 
 // 'journey:explore' { phase: 'enter' | 'leave' }: the room tools live in walk mode
 function emitExplore(phase) { window.dispatchEvent(new CustomEvent('journey:explore', { detail: { phase } })); }

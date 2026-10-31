@@ -1,8 +1,9 @@
 // ── 3D Intro ───────────────────────────────────────────────────────
 // The landing page lives inside the WebGL scene: extruded 3D name,
 // tagline and LinkedIn + GitHub icons, plus a 3D rocket that is already flying
-// loops when the page loads. Everything is parented to the camera
-// (HUD-style) so it stays on screen while keeping real depth.
+// loops when the page loads. They float in the flat, in front of the bay
+// windows (the landing text spot, the world origin), facing the camera.
+// On the first tap the rocket morphs into the comet and the rest fades out.
 
 import * as THREE from 'three';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
@@ -19,10 +20,16 @@ const TAGLINE_SIZE = 0.045;
 const ICON_SIZE = 0.085;
 
 // Intro text/icon/rocket live in WORLD space at the orbit center, so
-// dragging the view rotates them together with the starfield
-const INTRO_SCALE = 0.6;        // compensates for the closer orbit distance
+// dragging the view rotates them together with the room
+const INTRO_SCALE_PER_DIST = 0.5; // anchor scale per unit of camera distance (0.6 at the old 1.2 orbit)
 const INTRO_FIT = 0.88;         // the widest text line spans at most this share of the view width (phones: the anchor scales down)
-const INTRO_VIEW_DIST = 1.2;    // initial camera orbit radius
+let INTRO_SCALE = 0.6;          // set in init from the camera distance
+let INTRO_VIEW_DIST = 1.2;      // camera distance to the anchor (init)
+// The rocket loops near the text plane: meshes draw over the splat whatever
+// their depth, so a loop deep into the room would cover what is in front of it
+const ROCKET_LOOP = 0.5;        // × the old loop size
+const ROCKET_DEPTH = 0.08;      // anchor units of in-and-out motion (was 0.35)
+const NAME_FADE = 0.7;          // share of the rocket morph over which the name and icons fade out
 const TEXT_INTRO_Y = 0.02;
 const ICON_INTRO_Y = -0.33;
 const ICON_X = 0.075;           // horizontal offset of each icon from center
@@ -45,6 +52,7 @@ const rocketMats = [];
 
 // Modes
 let rocketMode = 'idle';    // idle | charging | gone
+let introGone = false;      // after the morph (or a jump): the whole intro is hidden
 
 let time = 0;
 let chargeT = 0;            // rocket charge timer
@@ -181,6 +189,9 @@ function buildRocket() {
 // ── Init ───────────────────────────────────────────────────────────
 export function init(scene, cam) {
     camera = cam;
+    INTRO_VIEW_DIST = cam.position.length();      // the anchor sits at the origin
+    INTRO_SCALE = INTRO_SCALE_PER_DIST * INTRO_VIEW_DIST;
+    introScale = INTRO_SCALE;
     scene.add(camera); // required for camera children to render
 
     // HUD lighting — parented to the camera so shading stays stable
@@ -223,11 +234,11 @@ function rocketIdlePos(t, out) {
     const ax = hw / introScale;
     const ay = hh / introScale;
     // portrait (phones): the text spans the width, so the loops stay in the band above it
-    const [amp, mid] = hw < hh ? [0.17, 0.6] : [0.42, 0.18];
+    const [amp, mid] = hw < hh ? [0.17, 0.6] : [0.42, 0.45];
     out.set(
-        ax * 0.55 * Math.sin(t * 0.55),
-        ay * (amp * Math.sin(t * 1.1 + 1.2) + mid),
-        0.35 * Math.sin(t * 0.8 + 0.5)
+        ax * 0.55 * ROCKET_LOOP * Math.sin(t * 0.55),
+        ay * (amp * ROCKET_LOOP * Math.sin(t * 1.1 + 1.2) + mid),
+        ROCKET_DEPTH * Math.sin(t * 0.8 + 0.5)
     );
     return out;
 }
@@ -262,15 +273,12 @@ export function setRocketCharging() {
     dashDist = (hw / introScale) * 0.4;
 }
 
-// Hidden inside the projects tunnel (the walls are see-through)
-// Two switches: the warp (orchestrator) and the apartment (room.js: hidden indoors)
-let introOn = true, introRoomHidden = false;
-export function setIntroVisible(v) { introOn = v; if (introAnchor) introAnchor.visible = introOn && !introRoomHidden; }
-export function setIntroRoomHidden(h) { introRoomHidden = h; if (introAnchor) introAnchor.visible = introOn && !introRoomHidden; }
-
-export function hideRocket() {
+// The whole intro goes once the rocket has morphed into the comet (or on a
+// jump): it sits at the landing text spot
+export function hideIntro() {
     rocketMode = 'gone';
-    if (rocket) rocket.visible = false;
+    introGone = true;
+    if (introAnchor) introAnchor.visible = false;
 }
 
 export function getRocketTipWorld(out) {
@@ -286,11 +294,11 @@ export function getRocketDirWorld(out) {
 }
 
 export function getIconObject() {
-    return linkedinGroup;
+    return introGone ? null : linkedinGroup;
 }
 
 export function getGithubIconObject() {
-    return githubGroup;
+    return introGone ? null : githubGroup;
 }
 
 // Scale the anchor so the widest line fits the view width (narrow phones);
@@ -310,11 +318,16 @@ export function update(dt, totalTime) {
     // Fade everything in once built
     const fadeIn = Math.min(appearT / 0.8, 1);
 
+    if (introGone) return;
+    // The morph: the name and icons fade out as the rocket stretches
+    const fadeOut = rocketMode === 'charging'
+        ? 1 - THREE.MathUtils.smoothstep(chargeT / (CHARGE_DURATION * NAME_FADE), 0, 1) : 1;
+
     // Text: float gently
     if (textGroup) {
         textGroup.rotation.y = 0.14 * Math.sin(time * 0.5);
         textGroup.rotation.x = 0.05 * Math.sin(time * 0.7 + 1.0);
-        setOpacity(textMats, fadeIn);
+        setOpacity(textMats, fadeIn * fadeOut);
     }
 
     // Icons: bob and sway
@@ -323,7 +336,7 @@ export function update(dt, totalTime) {
         g.position.y = ICON_INTRO_Y + 0.012 * Math.sin(time * 1.3);
         g.rotation.y = 0.25 * Math.sin(time * 0.9);
     }
-    setOpacity(iconMats, fadeIn);
+    setOpacity(iconMats, fadeIn * fadeOut);
 
     // Rocket
     if (rocket && rocketMode !== 'gone') {

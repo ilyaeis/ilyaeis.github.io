@@ -10,6 +10,7 @@ import {
     init as initOrchestrator,
     update as updateOrchestrator,
     onTap,
+    skipTheWalk,
     getMailPlane,
     CONTACT_EMAIL
 } from './orchestrator.js';
@@ -22,8 +23,6 @@ import {
     GITHUB_URL
 } from './intro3d.js';
 import * as walk from './walk.js';
-import { prefetchRoom, roomReady, whenRoomReady, setRoomHold } from './room.js';
-import { catalog, stopById } from './world.js';
 
 (function () {
     'use strict';
@@ -144,28 +143,13 @@ import { catalog, stopById } from './world.js';
         }
     });
 
-    // "skip to work" (orchestrator sets its ?go link): fly there without a
-    // reload. The apartment (about 15 MB) starts loading as soon as the link
-    // is hovered, focused or pressed. If it is not in yet on the click, the
-    // comet waits at the stop before (the Giraffe360 rock, its panel to
-    // read, and the loading line) and flies on once it is; a tap there goes
-    // on at once (the loading line shows in the flat until it is in).
-    const skipLink = document.querySelector('.intro-skip');
-    for (const ev of ['pointerenter', 'focus', 'pointerdown']) skipLink?.addEventListener(ev, prefetchRoom);
-    skipLink?.addEventListener('click', (e) => {
-        const id = new URL(e.currentTarget.href).searchParams.get('go');
-        const before = catalog.find(c => c.navigable && c.index === (stopById(id)?.index ?? 0) - 1);
-        if (!window.journey || !id) return;
+    // "skip the walk" (the orchestrator sets its ?go link to the first stop
+    // after the flat): in the page, the rocket morphs and the comet flies
+    // out of the flat at once (no wait for the room)
+    document.querySelector('.intro-skip')?.addEventListener('click', (e) => {
+        if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
         e.preventDefault();
-        prefetchRoom();
-        if (roomReady() || !before) { window.journey.goTo(id, { mode: 'fly' }); return; }
-        window.journey.goTo(before.id, { mode: 'jump' });
-        setRoomHold(true);
-        whenRoomReady().then(() => {
-            setRoomHold(false);
-            const now = window.journey.current();
-            if (now.stop === before.id && now.phase === 'view') window.journey.goTo(id, { mode: 'fly' });
-        });
+        skipTheWalk();
     });
 
     // Prevent any residual scrolling / bounce on mobile (nav links stay tappable)

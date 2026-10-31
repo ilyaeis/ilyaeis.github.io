@@ -20,7 +20,7 @@ import * as explore from './explore.js';
 import { setPhaseOwner } from './input.js';
 import {
     buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
-    getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL, fitDistance, viasFor, isIndoorFlight, apartment, setHaloFocus, snapHaloFocus
+    getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL, fitDistance, viasFor, flatExitVias, isIndoorFlight, apartment, setHaloFocus, snapHaloFocus
 } from './world.js';
 
 export { CONTACT_EMAIL };
@@ -69,6 +69,7 @@ let travelLegs = [];       // [{ p0, p1, p2, p3 }]
 let travelArc = [];        // arc-length table: [{ s, leg, lt }], s = 0..1 along the whole path
 let travelDuration = 0;
 let corkscrew = false;     // first flight spirals around its curve
+let fromFlat = false;      // this flight leaves the flat from where the camera (or the morph) is, not from a stop
 let warp = null;           // { kind: 'in' | 'out', g: path share of the jump, t: its time }
 let headS = -1e9;          // the viewer's arc parameter in the tunnel
 let followFrom = 2.5, followTo = 2.5; // chase distance: departure -> destination fit
@@ -320,13 +321,21 @@ const ROCKET_MORPH_DURATION = intro.CHARGE_DURATION;
 
 // DOM refs
 let tapPromptEl = null;
-let introLinksEl = null;   // "skip to work · resume" under the first prompt
+let introLinksEl = null;   // "skip the walk · resume" under the first prompt
+let skipWalk = false;      // the intro's "skip the walk": after the morph, leave the flat at once
 
 // ── Init ───────────────────────────────────────────────────────────
 export function init() {
     tapPromptEl = document.querySelector('.tap-prompt');
     trail = createTrailSystem(COMET_CAPACITY);
     buildWorld(scene); // the dim world exists from frame one
+    // The site starts in the flat: the intro camera is the landing VIEW pose
+    // (inside, facing the bay windows), the name floats at the landing text spot
+    const landing = stops.find(st => st.type === StopType.LANDING);
+    camera.position.copy(landing.center).addScaledVector(landing.normal, -fitFor(landing));
+    controls.target.copy(landing.center);
+    cam.setOrbitCenter(landing.center.x, landing.center.y, landing.center.z);
+    camera.lookAt(landing.center);
     intro.init(scene, camera);
     cam.init(controls);
     // The moment the user grabs the view, stop any in-progress camera
@@ -353,6 +362,7 @@ export function init() {
     portal.init(J, portalAuto);
     explore.init(J);
     const stopQ = Number(q.get('stop')), legQ = Number(q.get('leg'));
+    controls.autoRotateSpeed = 0;       // the intro stands still (jumpTo / enterView set their own)
     const goTarget = q.has('go') ? stopById(q.get('go')) : null;
     if (goTarget?.navigable) {          // ?go=<id>[&mode=fly|jump]
         const i = goTarget.index;
@@ -364,13 +374,15 @@ export function init() {
     else if (q.has('portal') && stops.some(st => st.portal)) jumpTo(stops.findIndex(st => st.portal));
     else {
         showTapPrompt();
-        // Skip to work: a real link (?go, by flight) to the first stop of the apartment
+        // Skip the walk: a real link (?go) to the first stop after the flat;
+        // main.js turns its click into skipTheWalk()
         introLinksEl = document.querySelector('.intro-links');
         const skip = introLinksEl?.querySelector('.intro-skip');
         if (skip) {
-            skip.href = '?go=' + stops.find(st => st.universe === 'rnd').id + '&mode=fly';
+            skip.href = '?go=' + stops[afterFlatIndex()].id;
             introLinksEl.hidden = false;
         }
+        emitIntro('enter');   // room.js loads the flat now
     }
     if (q.has('explore')) explore.enterExplore(true);   // dev: with ?go=<apartment stop or contact>
     const tQ = Number(q.get('t'));
@@ -395,6 +407,22 @@ function simulateUntil(done, maxSeconds) {
 }
 
 export function onTap() { tapPending = true; }
+// The intro's "skip the walk": the rocket morphs, then the comet leaves the flat
+export function skipTheWalk() {
+    if (phase !== Phase.INTRO) return;
+    skipWalk = true;
+    tapPending = true;
+}
+
+// 'journey:intro' { phase: 'enter' | 'leave' }: the intro shows (room.js loads the flat) or ends (the first tap)
+function emitIntro(phaseName) { window.dispatchEvent(new CustomEvent('journey:intro', { detail: { phase: phaseName } })); }
+
+// The first stop after the flat (the journey goes on there; the tour loops back to it)
+function afterFlatIndex() {
+    let i = stops.findIndex(st => st.universe === 'rnd');
+    while (stops[i]?.universe === 'rnd') i++;
+    return i;
+}
 
 // Dev only (dev/camlog.html): step without drawing, and read the state
 export function setSkipRender(v) { skipRender = v; }
@@ -420,7 +448,7 @@ function emitStop(phaseName, extra = null) {
 // Land the comet at stop n instantly (?stop, ?leg, ?go, journey.goTo jump).
 export function jumpTo(n) {
     explore.leaveNow();
-    intro.hideRocket(); hideTapPrompt();
+    intro.hideIntro(); hideTapPrompt();
     stopIndex = n;
     const stop = stops[n];
     setHaloFocus(stop); snapHaloFocus();
@@ -435,9 +463,8 @@ export function jumpTo(n) {
     enterView();
 }
 
-// The world outside the tunnel (and the intro objects) vs the tunnel's own content
-// f = 0 outside .. 1 inside; the far intro objects switch at the middle
-function setInside(f) { setInsideFade(f); intro.setIntroVisible(f < 0.5); }
+// The world outside the tunnel vs the tunnel's own content: f = 0 outside .. 1 inside
+function setInside(f) { setInsideFade(f); }
 
 // Stops with an HTML panel beside them (screen shift, fit)
 function hasPanel(stop) { return stop.type === StopType.ROCK || stop.type === StopType.PROJECT || stop.type === StopType.OBJECT; }
@@ -687,7 +714,7 @@ function buildHoverLeg(p0, p1, p3) {
 
 // First leg of a flight: hover stops swoop out of their loop motion.
 function buildFirstLeg(target) {
-    const fromStop = stopIndex >= 0 ? stops[stopIndex] : null;
+    const fromStop = stopIndex >= 0 && !fromFlat ? stops[stopIndex] : null;
     if (fromStop?.type === StopType.TEXT) return buildLeg(cometPos, cometDir, target); // leave along the helix tangent
     if (fromStop && !tracing) {
         loopPos(fromStop, loopT + HOVER_LOOKAHEAD, _future);
@@ -762,6 +789,17 @@ function stepFaceAlign(dt) {
     return false;
 }
 
+// ── Leave the flat ─────────────────────────────────────────────────
+// On with the journey from inside the flat: from the comet head after the
+// rocket morph. The comet climbs through the cut ceiling and out over the
+// window wall (flatExitVias) to the first stop after the flat.
+export function leaveFlat() {
+    const dest = afterFlatIndex();
+    stopIndex = -1;
+    fromFlat = true;
+    setupTravel(dest, false);
+}
+
 // ── Travel setup ───────────────────────────────────────────────────
 export function setupTravel(destIdx, withCorkscrew) {
     const dest = stops[destIdx];
@@ -776,7 +814,8 @@ export function setupTravel(destIdx, withCorkscrew) {
 
     // The flight starts from the comet's *actual* head — cometPos — not
     // the stop center, so the trail flows on instead of snapping back.
-    const from = stops[stopIndex];
+    // Leaving the flat (leaveFlat) there is no stop to leave from.
+    const from = fromFlat ? null : stops[stopIndex];
     const inTunnel = from?.tunnelS != null, toTunnel = dest.tunnelS != null;
     travelLegs = [];
     warp = null;
@@ -787,7 +826,7 @@ export function setupTravel(destIdx, withCorkscrew) {
     if (!inTunnel && toTunnel) tunnel.setUnwrapRef(0);   // the flight heads for the tunnel start (see tunnel.sOf)
     railStartPos.copy(camera.position); railStartLook.copy(controls.target);
     if (from) railFrom.copy(from.center);
-    const vias = viasFor(from, dest);
+    const vias = fromFlat ? flatExitVias(cometPos, dest.center) : viasFor(from, dest);
     const nDoors = indoor ? vias.length : 0;
     if (dest.type === StopType.OBJECT) {
         // the last via: face-on in front of the object, so the comet (and the
@@ -833,6 +872,7 @@ export function setupTravel(destIdx, withCorkscrew) {
         travelDuration = THREE.MathUtils.clamp(travelWeightedLen / TUNNEL_SPEED + TUNNEL_EASE_TIME, TRAVEL_MIN, TUNNEL_TRAVEL_MAX);
     }
     corkscrew = withCorkscrew;
+    fromFlat = false;
     if (warp) {
         warp.g = legEndShare(warp.leg);
         warp.t = easeInverse(warp.g) * travelDuration;
@@ -977,12 +1017,18 @@ function buildTunnelLegs(from, dest, inTunnel, toTunnel, vias) {
 // and returns { p, dir } there, for a leg that continues from it.
 function buildViaLegs(vias, target) {
     const fromStop = stops[stopIndex];
-    const fromRoom = fromStop?.type === StopType.OBJECT;   // the landing leaves as any hover stop
+    const fromRoom = fromFlat || fromStop?.type === StopType.OBJECT || fromStop?.type === StopType.LANDING;   // tangent to the loop, no random swing (indoors)
     const arc = indoor ? 0 : 1;
     let p = cometPos, dir = cometDir;
     vias.forEach((v, i) => {
         let leg;
-        if (i === 0 && fromRoom) leg = buildLeg(cometPos, cometDir, v.p, true, 0.25, 0);
+        if (i === 0 && fromFlat) {
+            // leaving the flat: the heading (the rocket nose, the walker's view) is
+            // arbitrary: leave mostly towards the first via, as joinLeg does
+            _vD.subVectors(v.p, cometPos).normalize().addScaledVector(cometDir, JOIN_HEADING_MIX).normalize();
+            leg = buildLeg(cometPos, _vD, v.p, true, 0.25, 0);
+        }
+        else if (i === 0 && fromRoom) leg = buildLeg(cometPos, cometDir, v.p, true, 0.25, 0);
         else if (i === 0) {
             // a hover departure, but no Thales bend at the via end: the comet is fast there
             leg = buildFirstLeg(v.p);
@@ -1003,7 +1049,7 @@ function buildViaLegs(vias, target) {
 // With vias (into the apartment, out of it) the galaxy may come first.
 function buildOpenLegs(vias = []) {
     const fromStop = stops[stopIndex];
-    const fromRoom = fromStop?.type === StopType.OBJECT || fromStop?.type === StopType.LANDING;
+    const fromRoom = fromFlat || fromStop?.type === StopType.OBJECT || fromStop?.type === StopType.LANDING;
     if (vias.length) {
         const g = fromRoom ? null : pickViaScenery(cometPos, vias[0].p);
         if (g) vias.unshift({ p: galaxyViaPoint(g, vias[0].p), dir: null });
@@ -1090,11 +1136,15 @@ export function update(dt) {
 // First tap: everything stays exactly where it is — only the rocket
 // reacts, accelerating from its current idle spot into the comet streak.
 function updateIntro(dt) {
-    if (tapPending) {
-        tapPending = false;
-        hideTapPrompt();
-        enterPhase(Phase.ROCKET_EXIT);
-    }
+    if (!tapPending) return;
+    hideTapPrompt();
+    // An early tap waits for the flat ("loading the flat · n %"), then goes on
+    // (the tap stays pending). Skipping the walk does not wait.
+    if (!skipWalk && !explore.flatReady()) { explore.holdForFlat(true); return; }
+    explore.holdForFlat(false);
+    tapPending = false;
+    emitIntro('leave');
+    enterPhase(Phase.ROCKET_EXIT);
 }
 
 // ── ROCKET_EXIT (the rocket accelerates in place, smears into the comet) ─
@@ -1106,7 +1156,7 @@ function updateRocketExit(dt) {
         // out of the accelerating rocket. As the rocket fades, the line is
         // what remains — then it flies off into the journey.
         trail.fade = 1;
-        trail.attractorIdx = stops[0].paletteIdx ?? 0;
+        trail.attractorIdx = stops[afterFlatIndex()].paletteIdx ?? 0;
         clearTrail(trail);
         addTrailToScene(trail);
         intro.getRocketTipWorld(_startPos);
@@ -1127,11 +1177,9 @@ function updateRocketExit(dt) {
     if (phaseTime >= ROCKET_MORPH_DURATION) {
         // Hand off: the comet continues from the tip along the same heading
         intro.getRocketDirWorld(cometDir);
-        intro.hideRocket();
+        intro.hideIntro();
         worldPos.copy(_vec3);
-
-        // First flight: corkscrew out to the trait text
-        setupTravel(0, true);
+        leaveFlat();
     }
 }
 
@@ -1558,7 +1606,7 @@ function updateView(dt) {
         tapPending = false;
         hideTapPrompt();
 
-        const next = stopIndex === stops.length - 1 ? 1 : stopIndex + 1; // after the landing, back to the first rock
+        const next = stopIndex === stops.length - 1 ? afterFlatIndex() : stopIndex + 1; // after the landing, back to the first stop after the flat
         setupTravel(next, false);
     }
 }

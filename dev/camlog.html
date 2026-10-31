@@ -107,9 +107,9 @@ while (t < Math.min(MAX_TIME, endAt)) {
         tunnel: o.tunnelFlight ? 1 : 0, hs: r(o.headS)
     });
 
-    // End 3 s after the tour loops back to the first rock
+    // End 3 s after the tour loops back (after the landing, to the first stop after the flat)
     if (o.phase === orch.Phase.VIEW && o.stopIndex !== lastStop) {
-        if (o.stopIndex === 1 && lastStop > 1) endAt = t + 3;
+        if (o.stopIndex < lastStop) endAt = t + 3;
         lastStop = o.stopIndex;
     }
 }
