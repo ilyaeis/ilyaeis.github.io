@@ -48,6 +48,7 @@ const MILESTONES = [
         items: [
             { text: 'Selective program for young people strong in IT and maths. Entry by logic test and interview.' },
             { text: 'Intensive training in C++, Python, maths and AI development, with mentors from the industry.' },
+            { text: 'Theory of AI: its history, neural network architectures (CNNs, transformers, GANs, VAEs), computer vision and reinforcement learning.' },
             { text: 'It led to my R&D Engineer role at Giraffe360.' }
         ],
         more: { href: 'https://www.ponder.lv/mi-programma', label: 'ponder.lv' }
