@@ -2,10 +2,11 @@
   "$schema": "https://raw.githubusercontent.com/jsonresume/jsonresume.org/master/packages/schema/schema.json",
   "basics": {
     "name": "Ilja Safronovs",
-    "label": "R&D Engineer, 3D reconstruction (Gaussian splatting)",
+    "label": "R&D Engineer — 3D reconstruction & computer vision · Giraffe360 · Riga, Latvia",
     "email": "ilya.safronos@gmail.com",
     "url": "https://ilyaeis.github.io/",
-    "summary": "R&D Engineer working on 3D reconstruction (Gaussian splatting, artifact fixing, meshes) at Giraffe360, and a Financial Engineering student at Riga Technical University. I build things to understand them.",
+    "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
+    "summary": "I work on 3D reconstruction and computer vision: Gaussian splatting pipelines, benchmarking systems that measure every change, and continuous research that turns the best new papers into production code. Financial Engineering student at RTU.",
     "location": { "city": "Riga", "countryCode": "LV" },
     "profiles": [
       { "network": "GitHub", "username": "ilyaeis", "url": "https://github.com/ilyaeis" },
@@ -21,14 +22,20 @@
       "startDate": "2025",
       "summary": "Giraffe360 makes cameras and software for real-estate virtual tours.",
       "highlights": [
-        "Develop a 3D Gaussian Splatting reconstruction pipeline that turns 360° camera captures into navigable 3D scenes (Python, PyTorch, CUDA).",
-        "Read new 3DGS research papers, then implemented the promising methods myself in the production pipeline and tested them against it (for example fused bilateral grids, selective Adam, densification strategies). This was hand-written work, before AI coding agents.",
-        "Built an LLM service (OpenAI API) that writes prompts and narration descriptions for virtual-tour videos: vision-capable models read panorama crops and floor-plan data, then a second pass refines the text. Added multi-language support and prompt tuning, with tests. Python worker on AWS that reads project data and images from S3.",
-        "Work on the \"fixer\" stage: diffusion-based models (Difix, then NVIDIA Fixer) that repair artifacts in rendered views of a reconstruction, used to refine the result.",
-        "Work on mesh generation from reconstructions, including combining meshes with Gaussian splats.",
-        "Started an MCP server for the team's task board, so AI agents can read and create tasks and log decisions (Node.js).",
-        "Training and evaluation runs on GPU with experiment tracking (ClearML), Docker deployments, GitLab CI.",
-        "Build multi-agent AI-coding workflows for large code audits and refactors."
+        "Solved blurry windows, outdoor views and mirrors in 3DGS video. — This was a long-standing quality problem. I found the root cause (wrong depth behind windows and walls), handled depth differently inside and outside the room, and added a training-time correction. 700+ controlled experiments back it. It runs in production and was publicly showcased by Giraffe360. (https://www.instagram.com/p/DZsNRB8o772/)",
+        "Shipped the looped drone video, from idea to production. — I proposed the feature, agreed its look with the designers, developed the camera-path algorithm and shipped it to production. A customer-requested feature, launched by Giraffe360 in Oct 2026. (https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)",
+        "Research to production: influence accumulation, plus Analytic-Splatting in gsplat. — Influence accumulation measures each Gaussian’s contribution to the image and relocates the least useful ones during training; it is in production. Analytic-Splatting (exact per-pixel Gaussian integration) is implemented in gsplat at CUDA level. It reduces aliasing and is used in a downsampling algorithm.",
+        "Built tools to measure 3DGS quality against known ground truth. — Validation tools and ground-truth datasets, to measure quality against known truth; an experiment runner for agent-driven research loops on local GPUs; ClearML GPU runs.",
+        "Led a small team building outdoor splats and orbital videos. — Led a small team that built exterior (outdoor) splats and orbital outdoor videos, now in production.",
+        "Mentored a junior engineer on a new depth algorithm. — The junior engineer built a new depth algorithm with me (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. Now the best method; the team uses it.",
+        "Led the pipeline restructuring and created a 3DGS monorepo. — Led the pipeline restructuring and created a monorepo for all 3DGS extensions and client apps: ~3000-line files split, duplication removed, defects fixed. Enabled the half-floor camera fix.",
+        "Built an embeddable Rust/wgpu splat viewer and a comparison tool. — Embeddable Rust/wgpu splat viewer (host control, PLY comparison); multi-view comparison tool.",
+        "Prototyped mirror planes and a fly-in dollhouse video intro. — Working prototypes: mirror planes with correct reflections; a fly-in “dollhouse” video intro.",
+        "Worked on mesh generation and point-count reduction for viewers. — Mesh generation from splats, combined with Gaussian splats; point-count reduction for viewers.",
+        "Made diffusion-based artifact fixing runnable on shared GPUs. — Diffusion-based artifact fixing (Difix, NVIDIA Fixer) made runnable on shared GPUs.",
+        "Three hackathon ideas recognized; the looped drone shipped. — 3 ideas recognized at an internal hackathon (top 20, 2 mentions); the looped drone became a shipped feature.",
+        "Built an MCP server for the team task board. — An MCP server so AI agents can read and write the team task board (Node.js).",
+        "Earlier: a small LLM service that wrote tour narration. — Jul–Oct 2025: a small LLM service that wrote tour narration (OpenAI API, AWS, S3)."
       ]
     }
   ],
@@ -145,9 +152,11 @@
     }
   ],
   "skills": [
+    { "name": "3D & vision", "keywords": ["Gaussian splatting", "3D reconstruction", "computer vision", "depth estimation", "anti-aliasing", "mesh generation", "diffusion-based artifact fixing", "PyTorch", "CUDA kernels"] },
+    { "name": "Research", "keywords": ["paper-to-production", "benchmarking and evaluation"] },
     { "name": "Languages", "keywords": ["Python", "C++", "Dart/Flutter", "JavaScript", "Java", "SQL"] },
-    { "name": "3D / ML", "keywords": ["3D Gaussian Splatting", "diffusion-based artifact fixing", "mesh generation", "PyTorch", "CUDA", "OpenAI API / LLM prompting", "neuroevolution (NEAT)", "three.js/WebGL"] },
-    { "name": "Tools", "keywords": ["Linux", "Docker", "AWS S3", "Git/GitLab CI", "ClearML", "Pygame", "Selenium", "pandas"] }
+    { "name": "Tools", "keywords": ["Linux", "Docker", "Git/GitLab CI", "ClearML", "AWS S3", "Pygame", "Selenium", "pandas"] },
+    { "name": "Other", "keywords": ["OpenAI API / LLM prompting", "neuroevolution (NEAT)", "three.js/WebGL"] }
   ],
   "languages": [
     { "language": "Latvian" },
