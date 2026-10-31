@@ -132,13 +132,13 @@ const MILESTONES = [
     }},
     // Giraffe360 R&D (universe 'rnd'): one splat object per area (objects.js), in route order
     { label: 'SPLATTING', panel: {
-        title: '3DGS reconstruction pipeline',
-        subtitle: 'Sparse panorama views · Python · PyTorch · CUDA',
+        title: '3DGS reconstruction from sparse panorama views',
+        subtitle: 'Our custom pipeline · in production June 2026 · PyTorch · CUDA',
         items: [
-            { text: 'Influence accumulation: my densification method, shipped Jan 2026, still the team’s best.' },
-            { text: 'Analytic-Splatting in gsplat at CUDA level (June 2026).' }
+            { text: 'Built the pipeline; splat quality rose a lot over the year.' },
+            { text: 'Replaced the first densification with my influence-accumulation method.' }
         ],
-        more: { href: 'resume.html#influence-accumulation', label: 'details in the resume' }
+        more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post: the result' }
     }},
     { label: 'WINDOWS', panel: {
         title: 'Windows, outdoor views and mirrors',
@@ -168,23 +168,25 @@ const MILESTONES = [
         more: { href: 'resume.html#splat-viewer', label: 'details in the resume' }
     }},
     { label: 'MCP SERVER', panel: {
-        title: 'MCP server, mentoring, ideas',
+        title: 'MCP server and ideas',
         subtitle: 'MCP server for the team task board · Node.js',
         items: [
             { text: 'Looped drone: my hackathon idea, launched by Giraffe360 in Oct 2026.',
               href: 'https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/' },
-            { text: 'Mentored a junior engineer on a new depth algorithm, now used team-wide.' }
+            { text: 'AI agents and tools read and write the board through it; colleagues use it.' }
         ],
         more: { href: 'resume.html#mcp-server', label: 'details in the resume' }
     }},
-    { label: 'TOUR NARRATION', panel: {
-        title: 'Tour narration (an early task)',
-        subtitle: 'OpenAI API · AWS · S3',
-        dates: 'Jul – Oct 2025',
+    // The depth room (bedroom2, js/depthRoom.js). Honest: the colours are this
+    // public scene's own depth, not the output of the method in the second item
+    { label: 'DEPTH', panel: {
+        title: 'Depth',
+        subtitle: 'This room is drawn as depth: colour = distance from your eye',
         items: [
-            { text: 'A small LLM service that wrote tour narration.' }
+            { text: "The colours are this public scene's own depth, not my method's output." },
+            { text: 'At Giraffe360 I mentored a junior on a new depth method. Mostly his work; the whole team uses it now.' }
         ],
-        more: { href: 'resume.html#tour-narration', label: 'details in the resume' }
+        more: { href: 'resume.html#depth-method', label: 'details in the resume' }
     }}
 ];
 
@@ -288,20 +290,31 @@ const OBJECT_SPOTS = {
     // camera looks along the wall normal), panel 1.15-1.85 m above the floor, 1 m wide
     // (walkM: the walk stands this far back, so the ring fits a phone screen too)
     board:  { x: -2.04, z: 0.245, y: -0.163, scale: 0.24, cam: [-2.114, -0.012, 0.840], fitMax: 0.66, haloTilt: 90, light: 1.15, walkM: 2.3 },
-    // living room: on the floor with the toys by the bay window, 30 cm tall
-    robot:  { x: 0.42, z: -0.18, scale: 0.083, cam: [0.25, -0.25, 0.12], fitMax: 0.5 },
+};
+// Room stops (the depth room): a whole room instead of an object. `box`: the
+// room in room units (x, z; y is free), the depth colours fade in over
+// `edge` (room units, ~18 cm) round it, so from the hall the room shows
+// through the door and crossing the doorway is the change. The halo ring
+// (radius `haloM` m) lies flat on the floor round `ring`; `goal`: where Next
+// object walks to (just inside the door), `look`: what it then faces (the
+// bed); `cam`: the journey VIEW spot (dev/camlog.html only).
+const ROOM_SPOTS = {
+    // bottom left, one door from the hall (HB): bed, lamp, radiator, shuttered window
+    bedroom2: { box: { min: [-2.6, -0.95], max: [-1.02, 0.15] }, edge: 0.05,
+                ring: [-1.80, -0.36], haloM: 0.6, goal: [-1.50, -0.08], look: [-2.0, -0.05, -0.5],
+                cam: [-1.30, 0.02, -0.02], fitMax: 0.5 },
 };
 // Object bounds (local units, objects.js): half width, height, and the
 // height where the content starts (`bottom`: the board's panel)
 const OBJECT_SIZE = {
-    cherry: { hw: 0.4, h: 1.04 }, robot: { hw: 0.4, h: 1.0 }, vase: { hw: 0.4, h: 1.02 },
+    cherry: { hw: 0.4, h: 1.04 }, vase: { hw: 0.4, h: 1.02 },
     chair: { hw: 0.25, h: 1.0 }, board: { hw: 0.58, h: 0.72, bottom: 0.27 }, gpu: { hw: 0.62, h: 0.64 },
 };
 // Halo ring round each object (Saturn style), radius in local units. The
 // ring plane leans HALO_TILT up from the view direction, so it reads as a
 // thin ellipse round the object's middle and never cuts through it. A
 // subtle accent: HALO_INTENSITY stays under the bloom threshold indoors.
-const HALO_R = { cherry: 0.6, robot: 0.5, vase: 0.52, chair: 0.5, board: 0.75, gpu: 0.72 };
+const HALO_R = { cherry: 0.6, vase: 0.52, chair: 0.5, board: 0.75, gpu: 0.72 };
 const HALO_TILT = THREE.MathUtils.degToRad(15);
 const HALO_POINTS = 120;
 const HALO_DIM_ALPHA = 0.2;              // dim until the comet traces it
@@ -327,7 +340,7 @@ const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 // flies on without a tap (orchestrator).
 const ROUTE = [
     { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 10, object: 'cherry', paletteIdx: 3,
-      summary: '3DGS reconstruction from sparse panorama views; influence accumulation, Analytic-Splatting, the pipeline restructuring.' },
+      summary: 'Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification, Analytic-Splatting, the pipeline restructuring.' },
     { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 11, object: 'vase', paletteIdx: 3,
       summary: 'Solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.' },
     { id: 'benchmarking',    universe: 'rnd', type: StopType.OBJECT, milestone: 12, object: 'gpu', paletteIdx: 3,
@@ -335,9 +348,10 @@ const ROUTE = [
     { id: 'mesh-generation', universe: 'rnd', type: StopType.OBJECT, milestone: 13, object: 'chair', paletteIdx: 3,
       summary: 'Mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.' },
     { id: 'task-board-mcp',  universe: 'rnd', type: StopType.OBJECT, milestone: 14, object: 'board', paletteIdx: 3,
-      summary: 'MCP server for the team task board; mentoring on a new depth algorithm; the looped drone video.' },
-    { id: 'tour-narration',  universe: 'rnd', type: StopType.OBJECT, milestone: 15, object: 'robot', paletteIdx: 3,
-      summary: 'Earlier (Jul - Oct 2025): a small LLM service that wrote tour narration.' },
+      summary: 'MCP server for the team task board; the looped drone video.' },
+    // a whole room (no splat object): walk in and it shows as depth (js/depthRoom.js)
+    { id: 'depth-room',      universe: 'rnd', type: StopType.OBJECT, milestone: 15, room: 'bedroom2', paletteIdx: 3,
+      summary: 'A bedroom drawn as depth (colour = distance from your eye); mentoring a junior on a new depth method, now used team-wide.' },
     // The timeline graph: one stop, four frames (a tap per frame). Each frame
     // has its own id, universe and panel; frame 1 also shows the trait words
     { id: 'graph', universe: 'education', type: StopType.GRAPH, paletteIdx: 1, frames: [
@@ -1053,6 +1067,60 @@ function buildObjectStop(def, palette) {
     };
 }
 
+// A room stop (ROOM_SPOTS): the same shape as an object stop, with the halo
+// ring flat on the floor (right, up horizontal) and `roomBox`, `walkGoal`,
+// `walkLook` for walk.js and depthRoom.js. No splat object.
+const ROOM_RING_LIFT = 0.006;            // room units over the floor (2 cm)
+function buildRoomStop(def, palette) {
+    const spot = ROOM_SPOTS[def.room];
+    const s = apartment.scale;
+    const center = roomToWorld(spot.ring[0], ROOM_FLOOR + ROOM_RING_LIFT, spot.ring[1]);
+    const camPos = roomToWorld(...spot.cam);
+    const normal = center.clone().sub(camPos).normalize();
+    const vertical = roomDirToWorld(0, 1, 0);
+    const right = new THREE.Vector3().crossVectors(normal, vertical).normalize();
+    const up = new THREE.Vector3().crossVectors(vertical, right).normalize();   // horizontal, away from the view
+    const R = spot.haloM / M_PER_UNIT * s;
+    const points = [];
+    for (let i = 0; i <= HALO_POINTS; i++) {
+        const a = 2 * Math.PI * i / HALO_POINTS;
+        points.push({ x: R * Math.cos(a), y: R * Math.sin(a), c: 1 });
+    }
+    const segPos = [], segCol = [], segAlpha = [], segIdx = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        for (const k of [i, i + 1]) {
+            planePointToWorld(_vec3, center, right, up, 1, points[k]);
+            segPos.push(_vec3.x, _vec3.y, _vec3.z);
+            const col = getPaletteColor(palette, k / (points.length - 1));
+            segCol.push(col.r * HALO_INTENSITY, col.g * HALO_INTENSITY, col.b * HALO_INTENSITY);
+            segAlpha.push(HALO_DIM_ALPHA);
+            segIdx.push(k);
+        }
+    }
+    const line = buildStopLine(new Float32Array(segPos), new Float32Array(segCol), new Float32Array(segAlpha), true);
+    ownMaterial(line);
+    const halfH = R * 0.6;
+    return {
+        center, right, up, normal,
+        line,
+        focusVis: 0,
+        points2d: points,
+        strokeIdx: new Int32Array(segIdx),
+        litVertex: 0,
+        scale: 1,
+        haloR: R,
+        topY: center.y,
+        halfW: R * OBJECT_FRAME,
+        halfH,
+        blockMid: 0,
+        blockHalfH: halfH,
+        fitMax: spot.fitMax * s,
+        roomBox: { min: spot.box.min, max: spot.box.max, edge: spot.edge },
+        walkGoal: spot.goal,                  // room units (x, z)
+        walkLook: roomToWorld(...spot.look)   // world
+    };
+}
+
 // ── Routes out of and into the flat ───────────────────────────────
 // Via points of a flight (world space): [{ p, dir? }]. With `dir` the comet
 // crosses the point exactly along it (the window wall, the roof). The
@@ -1139,8 +1207,8 @@ export function buildWorld(scene) {
         if (def.type === StopType.OBJECT) {
             const palette = ATTRACTORS[def.paletteIdx ?? 0].palette;
             const stop = { id: def.id, universe: def.universe, type: def.type, paletteIdx: def.paletteIdx ?? 0,
-                           panel: MILESTONES[def.milestone].panel, tunnelS: null, viz: null, objectName: def.object,
-                           ...buildObjectStop(def, palette) };
+                           panel: MILESTONES[def.milestone].panel, tunnelS: null, viz: null, objectName: def.object ?? null,
+                           ...(def.room ? buildRoomStop(def, palette) : buildObjectStop(def, palette)) };
             scene.add(stop.line);
             stops.push(stop);
             prevDef = def;

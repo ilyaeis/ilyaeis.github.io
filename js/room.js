@@ -1,5 +1,5 @@
 // The apartment: a Gaussian splat of a real flat (Zip-NeRF "london" scene,
-// CC BY 4.0, reconstructed with gsplat) with the six R&D splat objects
+// CC BY 4.0, reconstructed with gsplat) with the five R&D splat objects
 // (objects.js) inside. Self-initialising. The site starts in the flat: on
 // 'journey:intro' (the orchestrator shows the intro) it loads Spark, the
 // splat and the objects at once, and fades them in behind the name. Deep
@@ -47,7 +47,7 @@ const ROOM_BRIGHTNESS = 0.42;
 const OBJECT_LIGHT = [0.44, 0.37, 0.29];
 const BLOOM_THRESHOLD_IN_ROOM = 0.75; // the HDR strokes (halo, text, comet) bloom, the white objects do not
 const OBJECT_SPLATS = isMobile ? 5000 : 16000;   // per object: fewer read soft up close
-// The robot turns and the GPU fans spin only while they are in view and
+// The GPU fans spin only while they are in view and
 // this near the camera (room units). Any moving splat makes Spark rebuild
 // and re-sort the whole flat each frame, also when the camera stands still.
 const IDLE_NEAR = 0.55;                // (2 m: the walk-up views; not the intro or the landing view)
@@ -210,7 +210,7 @@ async function loadRoom() {
     }
 }
 
-// The six objects, one per frame: each takes up to 0.2 s of main thread on
+// The five objects, one per frame: each takes up to 0.2 s of main thread on
 // a phone, so the page stays smooth. They join the room's fade.
 async function buildObjects(g, { buildObject, mulberry32, contactShadow, FOOT }) {
     for (const [i, o] of apartment.objects.entries()) {
