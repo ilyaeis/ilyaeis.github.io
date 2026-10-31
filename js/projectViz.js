@@ -11,8 +11,8 @@ import * as THREE from 'three';
 import { isMobile, renderer } from './attractors.js';
 import { generateTextLines } from './strokeFont.js';
 
-export const HALF_W = 1.3;
-export const HALF_H = 1.0;
+const HALF_W = 1.3;
+const HALF_H = 1.0;
 
 // ── Palette ────────────────────────────────────────────────────────
 const C = {
@@ -471,7 +471,7 @@ function sortingViz(group) {
 // the app behind the portal. hit = an invisible ring mesh: main.js
 // raycasts it (via the orchestrator) for clicks and the cursor.
 const RIM_N = isMobile ? 240 : 500;
-export const RIM_R0 = 1.74;              // inner radius of the ticks (the bracket corners sit at 1.64)
+const RIM_R0 = 1.74;              // inner radius of the ticks (the bracket corners sit at 1.64)
 const RIM_LEN = [0.03, 0.17];            // tick length: min + value × span
 const RIM_SORT_TIME = 1.2;               // s for the hover sort
 const RIM_RESHUFFLE = 1.5;               // s after the hover ends: shuffle again

@@ -585,8 +585,6 @@ function update(dt) {
     updateHalos(dt);
 }
 
-export function isWalking() { return mode !== 'off'; }
-
 // ── Input (main.js) ────────────────────────────────────────────────
 // A tap: an object in sight (hit sphere) shows its panel and turns to it;
 // the floor walks there (A*, smoothed); anything else does nothing.

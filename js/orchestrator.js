@@ -401,12 +401,6 @@ export function setSkipRender(v) { skipRender = v; }
 export function getState() {
     return { phase, stopIndex, userDragging, phaseTime };
 }
-// Dev only: the current flight path, n samples (world units)
-export function devPath(n = 200) {
-    const out = [];
-    for (let i = 0; i <= n; i++) out.push(travelPoint(i / n, new THREE.Vector3()).toArray());
-    return out;
-}
 export function devState() {
     return { phase, phaseTime, stopIndex, stopType: stops[stopIndex]?.type ?? -1, worldPos, cometPos,
              tunnelFlight: phase === Phase.TRAVEL && easeC2, headS, portal: !!stops[stopIndex]?.portal };

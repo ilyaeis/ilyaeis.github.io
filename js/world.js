@@ -192,8 +192,8 @@ const MILESTONES = [
 ];
 
 // ── Tuning ─────────────────────────────────────────────────────────
-export const TEXT_SCALE = 0.22;          // world units per 2D unit (text/landing)
-export const ROCK_SCALE = 0.4;           // world units per 2D unit (rocks)
+const TEXT_SCALE = 0.22;          // world units per 2D unit (text/landing)
+const ROCK_SCALE = 0.4;           // world units per 2D unit (rocks)
 const STROKE_INTENSITY = 1.5;            // bold letter strokes (HDR → bloom)
 const LINK_INTENSITY = 0.35;             // faint pen-travel strokes
 
@@ -313,7 +313,7 @@ const DOORS = {
 // `cam` (room units; only its direction counts, the distance is the fit,
 // capped at fitMax room units so a portrait fit stays inside the walls).
 // `doors`: the doorways from the previous object, with the crossing sign.
-export const OBJECT_SCALE = 0.25;        // object height ≈ 0.25 room units ≈ 0.9 m
+const OBJECT_SCALE = 0.25;        // object height ≈ 0.25 room units ≈ 0.9 m
 // Optional: `y` = base height (default: the floor), `scale` (default OBJECT_SCALE),
 // `light` (× the object brightness in room.js: lamps near or not), `haloTilt` (deg).
 // The tour: living room -> hall (in by LH, out by CH) -> bedroom -> corridor
@@ -364,7 +364,7 @@ const AFTER_TRIES = 1500;
 const MAX_PITCH = 0.55;                  // |y| of hop direction — keeps text upright
 
 // Overall outward drift of the journey
-export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
+const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 
 // Visit order: the work first (the Giraffe360 rock, then the apartment of
 // its R&D objects), then the education rocks, the projects tunnel and the
@@ -520,7 +520,7 @@ export function roomToWorld(x, y, z, out = new THREE.Vector3()) {
     return out.set(x, y, z).applyQuaternion(apartment.quaternion)
         .multiplyScalar(apartment.scale).add(apartment.position);
 }
-export function roomDirToWorld(x, y, z, out = new THREE.Vector3()) {
+function roomDirToWorld(x, y, z, out = new THREE.Vector3()) {
     return out.set(x, y, z).applyQuaternion(apartment.quaternion).normalize();
 }
 // World point -> room units

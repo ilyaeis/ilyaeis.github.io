@@ -9,12 +9,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 // ── Constants ──────────────────────────────────────────────────────
-export const DECAY_RATE = 4.0;
+const DECAY_RATE = 4.0;
 
 // ── Mobile detection ───────────────────────────────────────────────
 export const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent)
     || (navigator.maxTouchPoints > 0 && window.innerWidth < 768);
-export const MAX_POINTS = isMobile ? 30000 : 60000;
+const MAX_POINTS = isMobile ? 30000 : 60000;
 const BLOOM_RES_SCALE = isMobile ? 0.25 : 0.5;
 const MAX_PIXEL_RATIO = isMobile ? 1.5 : 2;
 
@@ -155,10 +155,6 @@ export function rk4Step(derivFn, x, y, z, dt, params) {
     ];
 }
 
-export function cubicEaseInOut(t) {
-    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
 // ── Trail System ───────────────────────────────────────────────────
 // capacity bounds the ring buffer — a small capacity yields a short
 // comet (old points shift out as new ones arrive).
@@ -223,9 +219,8 @@ export function createTrailSystem(capacity = MAX_POINTS) {
 // ── Module State ───────────────────────────────────────────────────
 export let scene, camera, renderer, composer, controls, bloomPass;
 let paused = false;
-export let journeyTime = 0;
+let journeyTime = 0;
 
-export function setJourneyTime(t) { journeyTime = t; }
 export function addJourneyTime(dt) { journeyTime += dt; }
 
 // ── Color Helpers ──────────────────────────────────────────────────
@@ -400,13 +395,6 @@ export function addTrailToScene(trail) {
     if (!trail.inScene) {
         scene.add(trail.line);
         trail.inScene = true;
-    }
-}
-
-export function removeTrailFromScene(trail) {
-    if (trail.inScene) {
-        scene.remove(trail.line);
-        trail.inScene = false;
     }
 }
 

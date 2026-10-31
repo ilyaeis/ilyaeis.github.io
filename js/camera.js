@@ -111,7 +111,7 @@ function headingToDir() {
 // projection offset (camera.setViewOffset): orbit target and user
 // rotation still pivot on the stop center.
 // Keep PANEL_SIDE_QUERY identical to the media query in css/style.css.
-export const PANEL_SIDE_QUERY = '(min-width: 700px) and (orientation: landscape)';
+const PANEL_SIDE_QUERY = '(min-width: 700px) and (orientation: landscape)';
 const SHIFT_SIDE_X = 0.25;      // rock center at 25% of width
 const SHIFT_BOTTOM_Y = 0.18;    // rock center at ~32% of height
 const SHIFT_TIME = 0.8;         // s: smooth time; ramps during the flight

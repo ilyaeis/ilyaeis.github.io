@@ -35,7 +35,7 @@ const LOAD_FADE_IN = 1.2;            // s
 const INDOOR_FADE = [0.6, 0.05];     // outside distance where that fade starts .. is done
 // The bright room must not drown the glowing strokes. Dim the splat colors,
 // and raise the bloom threshold while the room shows (strokes are HDR > 1).
-export const ROOM_BRIGHTNESS = 0.42;
+const ROOM_BRIGHTNESS = 0.42;
 // The objects have baked white light; the room is lit by warm lamps and is
 // dimmed. Tint and dim the objects the same way, so they sit in the scene
 // (× each spot's `light` from world.js OBJECT_SPOTS: lamps near or not)
