@@ -7,7 +7,8 @@
 - [resume.md](https://ilyaeis.github.io/resume.md): full resume in Markdown
 - [resume.json](https://ilyaeis.github.io/resume.json): the same content in JSON Resume format
 - [resume.html](https://ilyaeis.github.io/resume.html): the HTML page
-- [resume.pdf](https://ilyaeis.github.io/resume.pdf): printable PDF
+- [resume.pdf](https://ilyaeis.github.io/resume.pdf): printable PDF (white)
+- [resume-dark.pdf](https://ilyaeis.github.io/resume-dark.pdf): the same PDF with a dark background
 
 ## Portfolio
 

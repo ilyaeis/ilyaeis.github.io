@@ -10,8 +10,8 @@ The same content exists in three places. Keep them in sync when journey content 
 - `js/world.js` (`TEXT_LINES`, `MILESTONES` incl. each `panel`, `LANDING_LINES`, `CONTACT_EMAIL`) — what the WebGL journey shows. Rock labels and panel text both come from `MILESTONES`.
 - `index.html` — the SEO mirror: meta/OG tags, JSON-LD, a `visually-hidden` content block, a `<noscript>` fallback.
 - `resume.html` (+ `css/resume.css`) — the plain-HTML resume, linked from the page. Closed `<details>` hold the extra detail; all text is in the HTML. Its JSON-LD (`ProfilePage`) shares the Person `@id` with `index.html`.
-- `resume.md`, `resume.json` (JSON Resume), `resume.pdf` — machine and print copies of the resume. `llms.txt` indexes them (update only if URLs change). Dates are year-only where the month is unknown; add months in `resume.html`, its JSON-LD, `resume.md`, `resume.json` and `js/world.js`.
-- Regenerate the PDF after any `resume.html` change: serve the site, then `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume.pdf "http://localhost:PORT/resume.html?expand=1"`. It must stay 2 pages.
+- `resume.md`, `resume.json` (JSON Resume), `resume.pdf`, `resume-dark.pdf` — machine and print copies of the resume. `llms.txt` indexes them (update only if URLs change). Dates are year-only where the month is unknown; add months in `resume.html`, its JSON-LD, `resume.md`, `resume.json` and `js/world.js`.
+- Regenerate both PDFs after any `resume.html` change: serve the site, then `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume.pdf "http://localhost:PORT/resume.html?expand=1"` and `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume-dark.pdf "http://localhost:PORT/resume.html?expand=1&print=dark"`. Each must stay 2 pages. The page offers the PDF that matches the visitor's colour scheme. Ctrl+P keeps the white print style.
 
 ## Commands
 
