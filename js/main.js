@@ -48,8 +48,9 @@ import {
     function hitsPortal(e) { return hitsObject(e, getPortalHit()); }
 
     // HTML over the canvas: its pointer events are not taps (a link click
-    // must not also advance the journey); .dimension = the open project app
-    const OVERLAYS = '.site-nav, .stop-panel, .dimension';
+    // must not also advance the journey); .dimension = the open project app,
+    // .room-tools = the apartment toolbar (depthTool.js)
+    const OVERLAYS = '.site-nav, .stop-panel, .dimension, .room-tools';
 
     // Coalesce hover hit-tests to one raycast per frame — pointermove
     // can fire far more often than the display refreshes
@@ -71,13 +72,16 @@ import {
     let pointerDownPos = null;
     const TAP_THRESHOLD = 10; // pixels
 
+    // While a room tool (depthTool.js) is on, taps belong to the tool
+    const toolOn = () => document.body.classList.contains('room-tool-on');
+
     document.body.addEventListener('pointerdown', (e) => {
-        if (e.target.closest(OVERLAYS)) return;
+        if (e.target.closest(OVERLAYS) || toolOn()) return;
         pointerDownPos = { x: e.clientX, y: e.clientY };
     });
 
     document.body.addEventListener('pointerup', (e) => {
-        if (e.target.closest(OVERLAYS)) return;
+        if (e.target.closest(OVERLAYS) || toolOn()) return;
         if (!pointerDownPos) return;
         const dx = e.clientX - pointerDownPos.x;
         const dy = e.clientY - pointerDownPos.y;
@@ -98,7 +102,7 @@ import {
     // Keyboard: Enter / Space advance the journey (links and buttons keep their own behavior)
     document.addEventListener('keydown', (e) => {
         if (document.body.classList.contains('dimension-open') || e.target.closest('.dimension')) return;
-        if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button')) {
+        if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button') && !toolOn()) {
             e.preventDefault();
             onTap();
         }

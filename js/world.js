@@ -259,6 +259,11 @@ const TEXT_DIM_ALPHA = 0.25;            // the text block starts dim; lit as the
 // LANDING_TEXT.z room units, so s = fit / 0.65 (about 4.6 world units per
 // room unit on desktop, more on portrait screens). Computed once at build.
 const ROOM_FLOOR = -0.413;
+// Metres per room unit, for the measure tool (depthTool.js). 3.63 assumes a
+// 1.5 m camera height; calibration on standard fixtures (worktop 900 mm,
+// door 1981 mm; zipnerf-room/scripts/calibrate_scale.py) gives × 0.95, ±3 %.
+// Approximately metric: show "≈", never claim more.
+export const M_PER_UNIT = 3.45;
 const ROOM_BOX = { min: [-2.64, -0.47, -0.84], max: [0.91, 0.30, 2.08] }; // all rooms (fade, clearance)
 const ROOM_WINDOW = [0, -0.02, -0.78];   // bay window centre (the frame: the window faces winDir; the tunnel leaves here)
 // The comet enters and leaves over the window wall, just above the cut
