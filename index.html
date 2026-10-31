@@ -64,13 +64,15 @@
            traits (Creative, Adaptive, Curious), lighting the words as it
            traces them, then swings past strange attractors drifting like
            galaxies, stops at my milestone rocks (each with a short
-           description; tap to continue), then warps into a glowing tunnel
+           description; tap to continue), then dives into a 3D Gaussian
+           splat of a real apartment (Zip-NeRF "london" scene, CC BY 4.0),
+           where six splat objects stand for my Giraffe360 R&amp;D work. It
+           leaves through the window and warps into a glowing tunnel
            where my projects run as live visualizations (sorting algorithms,
            a graphing calculator, a workout tracker; Monte Carlo price paths,
-           a load balancer and a NEAT network fly past), warps out and lands
-           at my contact details, floating
-           inside a 3D Gaussian splat of a real living room (Zip-NeRF "london"
-           scene, CC BY 4.0).</p>
+           a load balancer and a NEAT network fly past), warps out, dives
+           back through the apartment roof and lands at my contact details
+           in the living room.</p>
         <h2>Journey milestones</h2>
         <ul>
             <li>Riga State Classical Gymnasium (Rīgas Valsts klasiskā ģimnāzija), Programming and Mathematics track
@@ -80,11 +82,13 @@
                 Engineering (data analysis qualification), expected 2028</li>
             <li>2024 — AI Talent Program (Ponder, Mākslīgā intelekta talantu
                 programma): selective program with training in C++, Python,
-                maths and AI development; it led to the Giraffe360 role</li>
-            <li>2025 — Giraffe360, R&amp;D Engineer in Riga: 3D Gaussian
-                splatting reconstruction, diffusion-based artifact fixing
-                and mesh generation; earlier, an OpenAI-API service that
-                writes prompts and descriptions for tour videos</li>
+                maths and AI development; theory of AI: its history, neural
+                network architectures (CNNs, transformers, GANs, VAEs),
+                computer vision and reinforcement learning; it led to the
+                Giraffe360 role</li>
+            <li>2025 — Giraffe360, R&amp;D Engineer in Riga: 3D reconstruction
+                and computer vision (3DGS reconstruction from sparse panorama
+                views), benchmarking and continuous research</li>
             <li>2026 — load-balancing-experiments (RTU networks project, Python)</li>
             <li>2026 — flow, offline workout tracker (Dart, Flutter)</li>
             <li>2026 — monte-carlo-finance, Monte Carlo Methods in Finance: option pricing, GARCH volatility, VaR backtests (Python)</li>
@@ -93,6 +97,37 @@
                 School (RTU) programming competition for secondary school
                 students, built with Iļja Volinskis</li>
             <li>2022 — sort_visualization, sorting algorithm visualizer (C++, SFML)</li>
+        </ul>
+        <h2>R&amp;D at Giraffe360 (the apartment stops)</h2>
+        <ul>
+            <li>3DGS reconstruction pipeline: 3D Gaussian Splatting reconstruction
+                from sparse panorama views; influence accumulation, a densification
+                method I found, built, tested and shipped (Jan 2026), still the
+                team’s best; Analytic-Splatting in gsplat at CUDA level (June 2026);
+                led the pipeline restructuring and created a 3DGS monorepo, which
+                let me fix the long-open half-floor camera problem</li>
+            <li>Windows, outdoor views and mirrors: the root cause was a local depth
+                regularizer that, where a pixel’s accumulated opacity was not yet 1
+                at the wall, also pulled the Gaussians behind the wall or window
+                toward the wall depth. Fix: depth handled differently inside and
+                outside the room, plus a training-time correction; 140+ controlled
+                training runs, then 600+ more experiments; shipped on 1 June 2026
+                (<a href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post</a>).
+                Led the team that built exterior splats and orbital outdoor videos.</li>
+            <li>Benchmarking and evaluation: validation tools and ground-truth
+                datasets; an experiment runner for local GPUs driven by an AI agent;
+                diffusion-based artifact fixing (Difix, then NVIDIA Fixer) on shared GPUs</li>
+            <li>Meshes and viewers: mesh generation from splats; a point-count
+                reduction stage; an embeddable Rust/wgpu splat viewer; a multi-view
+                comparison tool</li>
+            <li>MCP server, mentoring, ideas: an MCP server for the team task board
+                (Node.js); mentored one junior engineer on a new depth algorithm
+                (mostly his work: minima matching plus OMNI-DC to densify LiDAR
+                depth), now used by the whole team; the looped drone video, my
+                hackathon idea (awarded a special mention), launched by Giraffe360
+                in Oct 2026 (<a href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">reel</a>)</li>
+            <li>Tour narration (Jul – Oct 2025): a small LLM service that wrote
+                tour narration (OpenAI API, AWS, S3)</li>
         </ul>
         <h2>Strange attractors in the background</h2>
         <ul>

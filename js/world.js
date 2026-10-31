@@ -53,6 +53,7 @@ const MILESTONES = [
         items: [
             { text: 'Selective program for young people strong in IT and maths. Entry by logic test and interview.' },
             { text: 'Intensive training in C++, Python, maths and AI development, with mentors from the industry.' },
+            { text: 'Theory of AI: its history, neural network architectures (CNNs, transformers, GANs, VAEs), computer vision and reinforcement learning.' },
             { text: 'It led to my R&D Engineer role at Giraffe360.' }
         ],
         more: { href: 'https://www.ponder.lv/mi-programma', label: 'ponder.lv' }
@@ -62,10 +63,10 @@ const MILESTONES = [
         subtitle: 'R&D Engineer · Riga',
         dates: '2025 – present',
         items: [
-            { text: '3D reconstruction and computer vision: 3D Gaussian Splatting reconstruction from sparse panorama views.' },
-            { text: 'Solved the blurry windows, outdoor views and mirrors problem; shipped to production.' },
-            { text: 'Benchmarking and continuous research: I implement new methods by hand and measure every change on GPU.' },
-            { text: 'The next stops are my work areas, inside a Gaussian splat of a real apartment.' }
+            { text: '3D reconstruction and computer vision: 3DGS reconstruction from sparse panorama views.' },
+            { text: 'Benchmarking that measures every change, and continuous research that turns new papers into production code.' },
+            { text: 'Solved blurry windows, outdoor views and mirrors; in production since June 2026.' },
+            { text: 'Next: six stops inside a Gaussian splat of a real apartment, one per work area.' }
         ],
         more: { href: 'resume.html', label: 'full resume' }
     }},
@@ -138,59 +139,61 @@ const MILESTONES = [
     }},
     // Giraffe360 R&D (universe 'rnd'): one splat object per area (objects.js), in route order
     { label: 'SPLATTING', panel: {
-        title: '3D Gaussian Splatting pipeline',
+        title: '3DGS reconstruction pipeline',
         subtitle: 'Giraffe360 R&D · Python · PyTorch · CUDA',
         items: [
-            { text: '3D Gaussian Splatting reconstruction from sparse panorama views: a pipeline that turns 360° captures of homes into navigable 3D scenes. I led its codebase restructuring and created a monorepo for the splat extensions and client apps.' },
-            { text: 'Research to production: influence accumulation measures how much each Gaussian adds to the image and moves the least useful ones during training. It runs in production.' },
-            { text: 'Analytic-Splatting in gsplat at CUDA level: exact per-pixel integration, less aliasing; used for downsampling.' },
-            { text: 'Looped drone video, from one of my hackathon ideas: I restructured the video pipeline so it is easy to configure, built the looped drone on it, agreed its look with the designers and shipped it. Giraffe360 launched it in October 2026 (launch post).',
-              href: 'https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/' }
+            { text: '3D Gaussian Splatting reconstruction from sparse panorama views: 360° captures of homes become navigable 3D scenes.' },
+            { text: 'Influence accumulation: I found the research, built, tested and shipped it (Jan 2026). It is still the team’s best densification method.' },
+            { text: 'Implemented Analytic-Splatting in gsplat at CUDA level (June 2026): exact per-pixel integration, less aliasing.' },
+            { text: 'Led the pipeline restructuring and created a 3DGS monorepo. The clearer code let me fix the long-open half-floor camera problem.' }
         ]
     }},
     { label: 'WINDOWS', panel: {
-        title: 'Windows, outdoor views & mirrors',
-        subtitle: 'Reconstruction from sparse panorama views · the main quality fix',
+        title: 'Windows, outdoor views and mirrors',
+        subtitle: 'The main long-standing quality problem · solved',
         items: [
-            { text: 'Solved the long-standing problem of blurry windows, outdoor views and mirrors. Root cause: a depth regularizer also pulled the Gaussians behind a window towards the wall, so outdoor views and reflections were flattened onto it.' },
-            { text: 'Led the team that built exterior (outdoor) splats and the orbital outdoor videos, now in production.' },
-            { text: 'The fix: depth handled differently inside and outside the room (no regularization past the wall), plus a correction during training. Shipped on 1 June 2026 after 700+ experiments. See the Giraffe360 post.', href: 'https://www.instagram.com/p/DZsNRB8o772/' },
-            { text: 'Also: diffusion-based artifact fixing (Difix, NVIDIA Fixer).' }
+            { text: 'Root cause: a local depth regularizer. Where a pixel’s accumulated opacity was not yet 1 at the wall, it also pulled the Gaussians behind the wall or window on that pixel toward the wall depth. Outdoor views and reflections went flat.' },
+            { text: 'Fix: depth handled differently inside and outside the room, plus a training-time correction for the artifacts.' },
+            { text: '140+ controlled training runs, then 600+ more experiments. Shipped as the default on 1 June 2026 (Giraffe360 post).',
+              href: 'https://www.instagram.com/p/DZsNRB8o772/' },
+            { text: 'Led the team that built exterior splats and orbital outdoor videos.' }
         ]
     }},
     { label: 'BENCHMARKING', panel: {
-        title: 'Benchmarking & evaluation',
-        subtitle: 'GPU training and evaluation · ClearML · Docker · GitLab CI',
+        title: 'Benchmarking and evaluation',
+        subtitle: 'GPU training · ClearML · Docker · GitLab CI',
         items: [
-            { text: 'Validation tools and ground-truth datasets, so quality is checked against known truth.' },
-            { text: 'An experiment runner for agent-driven research loops on local GPUs.' },
-            { text: '700+ controlled experiments, tracked in ClearML; Docker and GitLab CI.' }
+            { text: 'Validation tools and ground-truth datasets (July 2026): quality is checked against known truth, not only no-reference metrics.' },
+            { text: 'An experiment runner (March 2026): every teammate can run and track training experiments on a local GPU, driven by an AI agent.' },
+            { text: 'Made diffusion-based artifact fixing (Difix, then NVIDIA Fixer) run on shared GPUs, so the team could evaluate it.' }
         ]
     }},
     { label: 'MESHES AND VIEWERS', panel: {
         title: 'Meshes and viewers',
         subtitle: 'Mesh generation · Rust · wgpu',
         items: [
-            { text: 'Mesh generation from Gaussian splat reconstructions.' },
-            { text: 'A point-count reduction stage that keeps the major details, so web viewers run on every device.' },
-            { text: 'An embeddable Rust/wgpu splat viewer that the host app controls, and side-by-side comparison tools.' }
+            { text: 'Mesh generation from splats, combined with Gaussian splats.' },
+            { text: 'A point-count reduction stage that keeps the major details, so every client device can run some level of detail (prototype).' },
+            { text: 'An embeddable Rust/wgpu splat viewer that any app can control (May 2026).' },
+            { text: 'A multi-view comparison tool: reconstructions side by side, from any viewpoint.' }
         ]
     }},
     { label: 'MCP SERVER', panel: {
-        title: 'MCP server and teamwork',
+        title: 'MCP server, mentoring, ideas',
         subtitle: 'Node.js · Model Context Protocol',
         items: [
-            { text: 'An MCP server that lets AI agents read and write the team task board.' },
-            { text: 'Mentored a junior engineer on a new depth method (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. It is now the best method, and the whole team uses it.' },
-            { text: 'Three of my ideas were recognized at an internal hackathon.' }
+            { text: 'An MCP server (June 2026) so AI agents and tools can read and write the team task board.' },
+            { text: 'Our depth estimates were poor. I mentored one junior engineer, and together we built a new depth algorithm (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. The whole team uses it now.' },
+            { text: 'Looped drone video: my hackathon idea, awarded a special mention. A colleague’s drone code was hard to extend, so I restructured the video pipeline to be easy to configure, built the loop on it and agreed the look with designers. Giraffe360 launched it in Oct 2026.',
+              href: 'https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/' }
         ]
     }},
     { label: 'TOUR NARRATION', panel: {
         title: 'Tour narration (an early task)',
-        subtitle: 'OpenAI API · Python · AWS',
+        subtitle: 'OpenAI API · AWS · S3',
         dates: 'Jul – Oct 2025',
         items: [
-            { text: 'Earlier, Jul – Oct 2025: a small LLM service that wrote tour narration (OpenAI API, AWS).' }
+            { text: 'A small LLM service that wrote tour narration.' }
         ]
     }}
 ];
@@ -353,19 +356,19 @@ const ROUTE = [
     { id: 'ai-talent',  universe: 'milestones', type: StopType.ROCK,    milestone: 2, paletteIdx: 1,
       summary: 'Ponder AI talent program.' },
     { id: 'giraffe360', universe: 'milestones', type: StopType.ROCK,    milestone: 3, paletteIdx: 1,
-      summary: 'R&D engineer working on 3D Gaussian splatting reconstruction.' },
+      summary: 'R&D engineer in 3D reconstruction and computer vision: 3DGS from sparse panorama views, benchmarking, research.' },
     { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 10, object: 'cherry', paletteIdx: 3,
-      summary: '3D Gaussian splatting reconstruction pipeline; research methods moved into production.' },
+      summary: '3DGS reconstruction from sparse panorama views; influence accumulation, Analytic-Splatting, the pipeline restructuring.' },
     { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 11, object: 'vase', paletteIdx: 3,
-      summary: 'Solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.' },
+      summary: 'Solved blurry windows, outdoor views and mirrors (a depth regularizer root cause); exterior splats and orbital videos.' },
     { id: 'benchmarking',    universe: 'rnd', type: StopType.OBJECT, milestone: 12, object: 'gpu', paletteIdx: 3,
-      summary: 'Validation tools, ground-truth datasets and 700+ controlled GPU experiments.' },
+      summary: 'Validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.' },
     { id: 'mesh-generation', universe: 'rnd', type: StopType.OBJECT, milestone: 13, object: 'chair', paletteIdx: 3,
-      summary: 'Mesh generation, point-count reduction and an embeddable Rust/wgpu splat viewer.' },
+      summary: 'Mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.' },
     { id: 'task-board-mcp',  universe: 'rnd', type: StopType.OBJECT, milestone: 14, object: 'board', paletteIdx: 3,
-      summary: 'MCP server for the team task board (Node.js); mentoring; hackathon ideas.' },
+      summary: 'MCP server for the team task board; mentoring on a new depth algorithm; the looped drone video.' },
     { id: 'tour-narration',  universe: 'rnd', type: StopType.OBJECT, milestone: 15, object: 'robot', paletteIdx: 3,
-      summary: 'Earlier (Jul - Oct 2025): a small LLM service for tour narration.' },
+      summary: 'Earlier (Jul - Oct 2025): a small LLM service that wrote tour narration.' },
     { id: 'flow',       universe: 'projects',   type: StopType.PROJECT, milestone: 5, paletteIdx: 2,
       summary: 'Offline workout tracker app (Dart/Flutter).' },
     { id: 'calculator', universe: 'projects',   type: StopType.PROJECT, milestone: 8, paletteIdx: 2,
