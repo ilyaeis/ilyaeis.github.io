@@ -5,6 +5,7 @@
     "label": "R&D Engineer — 3D reconstruction & computer vision · Giraffe360 · Riga, Latvia",
     "email": "ilya.safronos@gmail.com",
     "url": "https://ilyaeis.github.io/",
+    "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
     "summary": "I work on 3D reconstruction and computer vision: Gaussian splatting pipelines, benchmarking systems that measure every change, and continuous research that turns the best new papers into production code. Financial Engineering student at RTU.",
     "location": { "city": "Riga", "countryCode": "LV" },
     "profiles": [

@@ -1,5 +1,7 @@
 # Ilja Safronovs
 
+![Iļja Safronovs](https://ilyaeis.github.io/assets/photo/headshot.jpg)
+
 R&D Engineer — 3D reconstruction & computer vision · Giraffe360 · Riga, Latvia
 
 ilya.safronos@gmail.com · [GitHub](https://github.com/ilyaeis) · [LinkedIn](https://www.linkedin.com/in/i%C4%BCja-safronovs-eis)

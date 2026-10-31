@@ -20,10 +20,11 @@
     <meta property="og:url" content="https://ilyaeis.github.io/resume.html">
     <meta property="og:title" content="Ilja Safronovs — Resume">
     <meta property="og:description" content="R&amp;D Engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking, continuous research.">
-    <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta name="twitter:card" content="summary_large_image">
+    <meta property="og:image" content="https://ilyaeis.github.io/assets/photo/headshot.jpg">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="https://ilyaeis.github.io/assets/photo/headshot.jpg">
 
     <!-- Dates are year-only where the month is unknown. They appear here, in the
          JSON-LD, resume.md, resume.json and js/world.js. Add months in all of them. -->
@@ -40,6 +41,7 @@
             "alternateName": "ilyaeis",
             "description": "R&D Engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking systems and continuous research. Financial Engineering student at Riga Technical University.",
             "url": "https://ilyaeis.github.io/",
+            "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
             "email": "ilya.safronos@gmail.com",
             "jobTitle": "R&D Engineer, 3D reconstruction & computer vision",
             "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
@@ -95,8 +97,16 @@
     </div>
 
     <header>
-        <h1>Ilja Safronovs</h1>
-        <p class="title">R&amp;D Engineer — 3D reconstruction &amp; computer vision <span class="sep">·</span> Giraffe360 <span class="sep">·</span> Riga, Latvia</p>
+        <div class="identity">
+            <button type="button" class="avatar" id="avatar" aria-label="Show another photo">
+                <img class="photo main" src="assets/photo/headshot.jpg" alt="Iļja Safronovs" width="96" height="96" loading="eager" decoding="async">
+                <img class="photo alt" src="assets/photo/headshot-alt.jpg" alt="" width="96" height="96" loading="eager" decoding="async">
+            </button>
+            <div class="who">
+                <h1>Ilja Safronovs</h1>
+                <p class="title">R&amp;D Engineer — 3D reconstruction &amp; computer vision <span class="sep">·</span> Giraffe360 <span class="sep">·</span> Riga, Latvia</p>
+            </div>
+        </div>
         <p class="contact">
             <a href="mailto:ilya.safronos@gmail.com">ilya.safronos@gmail.com</a>
             <a href="https://github.com/ilyaeis" rel="me"><span class="screen">GitHub</span><span class="print">github.com/ilyaeis</span></a>
@@ -315,6 +325,11 @@
     window.addEventListener('afterprint', function () {
         if (restore) details.forEach(function (d, i) { d.open = restore[i]; });
         restore = null;
+    });
+    // Avatar: click swaps between the two photos (CSS cross-fade).
+    var avatar = document.getElementById('avatar');
+    avatar.addEventListener('click', function () {
+        avatar.classList.toggle('alt');
     });
     // Two pre-built PDFs. The button points at the one that matches the
     // visitor's colour scheme; the small link offers the other.
