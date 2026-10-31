@@ -128,6 +128,13 @@
             <div class="items">
                 <div class="item-row">
                     <details class="item">
+                        <summary><span class="hl">Built our custom 3DGS pipeline from sparse panoramas.<span class="print"> instagram.com/p/DZsNRB8o772</span></span></summary>
+                        <div class="why">I built it and led the research from early 2026. I replaced the first densification with my influence-accumulation method. When the team moved to a different method, I ported it and kept improving quality, up a lot this year.</div>
+                    </details>
+                    <a class="post screen" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post ↗</a>
+                </div>
+                <div class="item-row">
+                    <details class="item">
                         <summary><span class="hl">Solved blurry windows and mirrors in sparse-panorama 3DGS.<span class="print"> instagram.com/p/DZsNRB8o772</span></span></summary>
                         <div class="why">Fixed blurry windows, outdoor views and mirrors; in production since June 2026. <span class="more-text">This was the main long-standing quality problem, and I found its root cause myself. I ran 140+ controlled training runs first, then a month-long campaign of 600+ experiments to cut haze, floaters and flicker. The winning setup shipped as the default on June 1, 2026, and Giraffe360 showcased it publicly.</span></div>
                     </details>
@@ -145,8 +152,8 @@
                     <div class="why">2 weeks to show first results, 3 weeks to push good ones to production. I led the team. <span class="more-text">I built the toolkit that prepares the exterior splats: it rotates the scene to the correct orientation, selects the largest fragment and crops it. A per-frame outdoor-view video pipeline then renders the orbital video around the property.</span></div>
                 </details>
                 <details id="influence-accumulation" class="item">
-                    <summary><span class="hl">Influence accumulation: my densification method, still the team’s best.</span></summary>
-                    <div class="why">I found the research, implemented it, tested it and pushed it to production in Jan 2026. It is still the team’s best densification method. <span class="more-text">It measures how much each Gaussian contributes to the image during training and relocates the least useful ones, instead of adding new detail everywhere. This improves quality while keeping the model efficient. I implemented it partly with AI-assisted coding, and when the team moved to a new training approach, I ported it there.</span></div>
+                    <summary><span class="hl">Influence accumulation: my densification method, still in the team’s pipeline.</span></summary>
+                    <div class="why">I found the research, implemented and tested it in Jan 2026. It is still used in the team’s pipeline. <span class="more-text">It measures how much each Gaussian contributes to the image during training and relocates the least useful ones, instead of adding new detail everywhere. This improves quality while keeping the model efficient. I implemented it partly with AI-assisted coding, and when the team moved to a new training approach, I ported it there.</span></div>
                 </details>
                 <details class="item">
                     <summary><span class="hl">Implemented Analytic-Splatting in gsplat at CUDA level.</span></summary>

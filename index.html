@@ -89,10 +89,13 @@
         </ul>
         <h2>R&amp;D at Giraffe360 (the apartment stops)</h2>
         <ul>
-            <li>3DGS reconstruction pipeline: 3D Gaussian Splatting reconstruction
-                from sparse panorama views; influence accumulation, a densification
-                method I found, built, tested and shipped (Jan 2026), still the
-                team’s best; Analytic-Splatting in gsplat at CUDA level (June 2026);
+            <li>3DGS reconstruction pipeline: I built our custom pipeline for 3D
+                Gaussian Splatting reconstruction from sparse panorama views, in
+                production since 1 June 2026, with splat quality much improved over
+                the year (<a tabindex="-1" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post</a>);
+                I replaced the first densification with my influence-accumulation
+                method (Jan 2026), which is still used in the team’s pipeline;
+                Analytic-Splatting in gsplat at CUDA level (June 2026);
                 led the pipeline restructuring and created a 3DGS monorepo, which
                 let me fix a long-standing camera-path bug</li>
             <li>Windows, outdoor views and mirrors: fixed blurry windows, outdoor
