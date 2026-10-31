@@ -154,7 +154,7 @@ const MILESTONES = [
     }},
     { label: 'BENCHMARKING', panel: {
         title: 'Benchmarking and evaluation',
-        subtitle: 'GPU training · ClearML · Docker · GitLab CI',
+        subtitle: 'GPU training · Docker · GitLab CI',
         items: [
             { text: 'Validation tools that check quality against ground-truth datasets.' },
             { text: 'Experiment runner: AI-agent-driven training runs on local GPUs.' }
