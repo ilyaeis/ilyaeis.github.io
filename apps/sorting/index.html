@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Sorting visualizer (sort_visualization) — Ilja Safronovs</title>
+<meta name="description" content="sort_visualization in the browser: 16 sorting algorithms in five layouts. The algorithms are the original C++ code compiled to WebAssembly; the drawing is a JavaScript port of ArrayDrawer.cpp.">
+<meta name="author" content="Ilja Safronovs">
+<meta name="theme-color" content="#023047">
+<link rel="canonical" href="https://ilyaeis.github.io/apps/sorting/">
+<link rel="icon" href="data:,">
+<link rel="preload" href="Ruda-Medium.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="modulepreload" href="drawer.js">
+<style>
+@font-face { font-family: Ruda; src: url(Ruda-Medium.woff2) format('woff2'); font-weight: 500; font-display: swap; }
+:root { --fg: rgb(255,183,3); --sel: rgb(251,133,0); --bg: rgb(2,48,71); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+    display: flex; flex-direction: column;
+    background: var(--bg); color: var(--fg);
+    font: 15px/1.4 Ruda, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    overflow: hidden; transition: background 0.3s;
+}
+a { color: inherit; }
+header {
+    display: flex; align-items: center; gap: 1rem;
+    padding: calc(0.3rem + env(safe-area-inset-top)) 1rem 0.3rem;
+    font-size: 0.85rem; letter-spacing: 0.06em;
+}
+header h1 { font-size: 1rem; font-weight: 500; flex: 1; }
+header a { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 0.3rem; text-decoration: none; opacity: 0.85; }
+header a:hover, header a:focus-visible { opacity: 1; text-decoration: underline; }
+body.embed header { display: none; }
+#stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+#view { display: block; }
+/* Menu: over the canvas, which shows the array it will sort */
+#menu {
+    position: absolute; z-index: 2; inset: 0; margin: auto;
+    width: min(26rem, calc(100% - 1.5rem)); height: fit-content; max-height: calc(100% - 1rem); overflow: auto;
+    padding: 1.1rem 1.25rem 1rem;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    border: 1px solid color-mix(in srgb, var(--fg) 45%, transparent);
+    border-radius: 14px;
+    backdrop-filter: blur(3px);
+}
+body.running #menu, body:not(.ready) #menu { display: none; }
+#menu h2 { font-size: 1.35rem; font-weight: 500; text-align: center; margin-bottom: 0.6rem; }
+fieldset { border: 0; margin: 0.55rem 0; }
+legend { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.75; margin-bottom: 0.3rem; }
+.choices { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.choices input { position: absolute; opacity: 0; pointer-events: none; }
+.choices label {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 2.5rem; min-width: 2.5rem;
+    padding: 0 0.7rem; border: 1px solid color-mix(in srgb, var(--fg) 40%, transparent); border-radius: 999px;
+    cursor: pointer; user-select: none;
+}
+.choices input:checked + label { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.choices input:focus-visible + label { outline: 2px solid var(--sel); outline-offset: 2px; }
+#themes label { padding: 0.2rem; }
+.swatch { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 50%; font-size: 0.85rem; }
+select {
+    width: 100%; min-height: 2.5rem; padding: 0 0.6rem; font: inherit; color: var(--fg); background: var(--bg);
+    border: 1px solid color-mix(in srgb, var(--fg) 40%, transparent); border-radius: 8px;
+}
+#start {
+    display: block; width: 100%; margin: 0.9rem 0 0.6rem; min-height: 2.9rem;
+    font: inherit; font-size: 1.05rem; letter-spacing: 0.06em; cursor: pointer;
+    color: var(--bg); background: var(--fg); border: 0; border-radius: 999px;
+}
+#start:hover, #start:focus-visible { background: var(--sel); outline: none; }
+.keys, .note { font-size: 0.78rem; opacity: 0.8; text-align: center; }
+.note { margin-top: 0.5rem; opacity: 0.7; }
+kbd { font: inherit; border: 1px solid color-mix(in srgb, var(--fg) 40%, transparent); border-radius: 4px; padding: 0 0.25rem; }
+/* Run controls: the original speed keys as buttons */
+#controls {
+    display: none; justify-content: center; gap: 0.5rem; flex-wrap: wrap;
+    padding: 0.4rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+}
+body.running #controls { display: flex; }
+#controls button {
+    min-height: 2.75rem; min-width: 5.5rem; padding: 0 0.9rem; font: inherit; cursor: pointer;
+    color: var(--fg); background: transparent; border: 1px solid color-mix(in srgb, var(--fg) 50%, transparent); border-radius: 999px;
+}
+#controls button:hover, #controls button:focus-visible { background: var(--fg); color: var(--bg); outline: none; }
+#info { text-align: center; font-size: 0.75rem; opacity: 0.7; min-height: 1.1rem; padding: 0 1rem; }
+@media (prefers-reduced-motion: reduce) { body { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+    <h1>sort_visualization</h1>
+    <a href="https://github.com/ilyaeis/sort_visualization">github</a>
+    <a href="../../">portfolio</a>
+</header>
+<main id="stage">
+    <canvas id="view" role="img" aria-label="The array as the program draws it"></canvas>
+    <form id="menu" aria-label="Menu">
+        <h2>Sort visualization</h2>
+        <fieldset><legend>Layout</legend><div class="choices" id="layouts"></div></fieldset>
+        <fieldset><legend>Theme</legend><div class="choices" id="themes"></div></fieldset>
+        <fieldset><legend>Fill the array</legend><div class="choices" id="fills"></div></fieldset>
+        <fieldset><legend>Algorithms</legend>
+            <select id="algo" aria-label="Algorithms"><option value="all">All 16, in table order</option></select>
+        </fieldset>
+        <button id="start" type="submit">Start</button>
+        <p class="keys"><kbd>&rarr;</kbd>/<kbd>D</kbd> faster &middot; <kbd>&larr;</kbd>/<kbd>A</kbd> normal speed &middot; <kbd>Esc</kbd> menu</p>
+        <p class="note">The algorithms are the original C++ code (SortAlgorithms.cpp,
+            ShuffleAlgorithms.cpp), compiled to WebAssembly. The drawing is a JavaScript
+            port of ArrayDrawer.cpp. <a href="https://github.com/ilyaeis/sort_visualization">Source</a></p>
+    </form>
+</main>
+<p id="info" aria-live="polite"></p>
+<nav id="controls" aria-label="Speed">
+    <button type="button" data-key="slower" aria-keyshortcuts="ArrowLeft A">&larr; normal</button>
+    <button type="button" data-key="faster" aria-keyshortcuts="ArrowRight D">faster &rarr;</button>
+    <button type="button" data-key="menu" aria-keyshortcuts="Escape">menu</button>
+</nav>
+<noscript><p style="padding:1rem">This app needs JavaScript and WebAssembly.</p></noscript>
+<script type="module" src="app.js"></script>
+</body>
+</html>

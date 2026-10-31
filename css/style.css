@@ -320,6 +320,70 @@ body.panel-open .tap-prompt {
 
 .stop-panel.visible { transform: none; }
 
+/* Portal link in the panel (panel.portal): opens the project app (js/dimension.js) */
+.stop-panel a.stop-panel-portal {
+    display: inline-block;
+    align-self: flex-start;
+    margin-top: 0.9rem;
+    padding: 0.55rem 1rem;
+    border: 1px solid #ff9a3c;
+    border-radius: 999px;
+    color: #ffd9a8;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    box-shadow: 0 0 14px rgba(255, 63, 207, 0.35);
+}
+.stop-panel a.stop-panel-portal::after { content: ' \2197'; }
+.stop-panel a.stop-panel-portal:hover,
+.stop-panel a.stop-panel-portal:focus-visible { color: #fff; border-color: #ffe7a3; }
+.stop-panel a.stop-panel-portal[hidden] { display: none; }
+.stop-panel a.stop-panel-portal + .stop-panel-more { margin-top: 0.3rem; }
+
+/* The dimension: a project app over the scene. The fade time matches FADE_MS in js/dimension.js */
+.dimension {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    background: #07040d;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.45s ease;
+}
+.dimension[hidden] { display: none; }
+.dimension.visible { opacity: 1; pointer-events: auto; }
+.dimension-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: calc(0.25rem + env(safe-area-inset-top)) calc(0.75rem + env(safe-area-inset-right)) 0.25rem calc(0.75rem + env(safe-area-inset-left));
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: #aaa;
+    border-bottom: 1px solid #2a2033;
+}
+.dimension-back {
+    min-height: 2.75rem;
+    padding: 0 0.6rem;
+    background: none;
+    border: 0;
+    color: #e0e0e0;
+    font: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+}
+.dimension-title { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.dimension-tab { color: inherit; display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 0.4rem; }
+.dimension-back:hover, .dimension-back:focus-visible,
+.dimension-tab:hover, .dimension-tab:focus-visible { color: #fff; outline: 1px solid #888; }
+.dimension-status { position: absolute; top: 50%; left: 0; right: 0; text-align: center; color: #888; letter-spacing: 0.1em; font-size: 0.85rem; }
+.dimension-status[hidden] { display: none; }
+.dimension-frame { flex: 1; width: 100%; border: 0; background: transparent; }
+@media (prefers-reduced-motion: reduce) {
+    .dimension { transition: none; }
+}
+
 /* Credit for the apartment splat (CC BY 4.0), shown at the apartment stops and the landing */
 .room-credit {
     position: fixed;

@@ -11,6 +11,9 @@ import {
     update as updateOrchestrator,
     onTap,
     getMailPlane,
+    getPortalHit,
+    enterPortal,
+    setPortalHover,
     CONTACT_EMAIL
 } from './orchestrator.js';
 import {
@@ -42,6 +45,11 @@ import {
     function hitsIcon(e) { return hitsObject(e, getIconObject()); }
     function hitsGithub(e) { return hitsObject(e, getGithubIconObject()); }
     function hitsMail(e) { return hitsObject(e, getMailPlane()); }
+    function hitsPortal(e) { return hitsObject(e, getPortalHit()); }
+
+    // HTML over the canvas: its pointer events are not taps (a link click
+    // must not also advance the journey); .dimension = the open project app
+    const OVERLAYS = '.site-nav, .stop-panel, .dimension';
 
     // Coalesce hover hit-tests to one raycast per frame — pointermove
     // can fire far more often than the display refreshes
@@ -49,8 +57,10 @@ import {
     document.body.addEventListener('pointermove', (e) => {
         if (!hoverEvent) {
             requestAnimationFrame(() => {
+                const portal = hitsPortal(hoverEvent);   // the rim sorts itself while hovered
+                setPortalHover(portal);
                 document.body.style.cursor =
-                    (hitsIcon(hoverEvent) || hitsGithub(hoverEvent) || hitsMail(hoverEvent)) ? 'pointer' : '';
+                    (portal || hitsIcon(hoverEvent) || hitsGithub(hoverEvent) || hitsMail(hoverEvent)) ? 'pointer' : '';
                 hoverEvent = null;
             });
         }
@@ -62,12 +72,12 @@ import {
     const TAP_THRESHOLD = 10; // pixels
 
     document.body.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.site-nav, .stop-panel')) return;
+        if (e.target.closest(OVERLAYS)) return;
         pointerDownPos = { x: e.clientX, y: e.clientY };
     });
 
     document.body.addEventListener('pointerup', (e) => {
-        if (e.target.closest('.site-nav, .stop-panel')) return;
+        if (e.target.closest(OVERLAYS)) return;
         if (!pointerDownPos) return;
         const dx = e.clientX - pointerDownPos.x;
         const dy = e.clientY - pointerDownPos.y;
@@ -75,6 +85,7 @@ import {
             if (hitsIcon(e)) window.open(LINKEDIN_URL, '_blank');
             else if (hitsGithub(e)) window.open(GITHUB_URL, '_blank');
             else if (hitsMail(e)) window.location.href = 'mailto:' + CONTACT_EMAIL;
+            else if (hitsPortal(e)) enterPortal();
             else onTap();
         }
         pointerDownPos = null;
@@ -86,6 +97,7 @@ import {
 
     // Keyboard: Enter / Space advance the journey (links and buttons keep their own behavior)
     document.addEventListener('keydown', (e) => {
+        if (document.body.classList.contains('dimension-open') || e.target.closest('.dimension')) return;
         if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button')) {
             e.preventDefault();
             onTap();
@@ -94,7 +106,7 @@ import {
 
     // Prevent any residual scrolling / bounce on mobile (nav links stay tappable)
     document.addEventListener('touchmove', (e) => {
-        if (!e.target.closest('.site-nav, .stop-panel')) e.preventDefault();
+        if (!e.target.closest(OVERLAYS)) e.preventDefault();
     }, { passive: false });
 
     // ── Animation Loop ─────────────────────────────────────────
