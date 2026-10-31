@@ -51,8 +51,8 @@ Universe `contact`:
 In a browser, `window.journey` (version 1) controls the page. All navigation calls return Promises.
 - `listUniverses()`, `listStops()`, `getStop(id)` (with the panel text), `current()`
 - `goTo(id, { mode: 'fly' | 'jump' })`, `next()`, `previous()`, `whenIdle()`, `resumeLinks()`
-- `goTo` returns `{ ok: true, stop }` or `{ ok: false, reason }`. Reasons: `unknown-stop`, `not-navigable`, `travelling` (await `whenIdle()` and retry), `in-portal` (a project app is open; the visitor closes it).
-- `listStops()` gives `app` (the standalone page) for stops with a portal. `current().phase` is `portal-in`, `dimension` or `portal-out` while an app opens, is open, or closes.
+- `goTo` returns `{ ok: true, stop }` or `{ ok: false, reason }`. Reasons: `unknown-stop`, `not-navigable`, `travelling` (await `whenIdle()` and retry), `in-portal` (a project app is open; the visitor closes it), `exploring` (the visitor walks in the flat; they leave with Back to the journey).
+- `listStops()` gives `app` (the standalone page) for stops with a portal. `current().phase` is `portal-in`, `dimension` or `portal-out` while an app opens, is open, or closes, and `explore` while the visitor walks in the flat.
 - `?go=<id>` lands at a stop at once. Add `&mode=fly` to arrive by flight (needs a real browser).
 - Browsers with WebMCP also expose the same as tools: `list_stops`, `get_current_stop`, `get_panel`, `go_to_stop`, `next_stop`, `previous_stop`, `get_resume_links`.
 

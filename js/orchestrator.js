@@ -15,6 +15,7 @@ import {
 import * as cam from './camera.js';
 import * as intro from './intro3d.js';
 import * as tunnel from './tunnel.js';
+import * as walk from './walk.js';
 import {
     buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
     getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL, fitDistance, viasFor, isIndoorFlight, apartment, setHaloFocus, snapHaloFocus
@@ -30,7 +31,8 @@ export const Phase = {
     VIEW: 3,
     PORTAL_IN: 4,     // the comet dives into a project's portal; the app overlay fades in
     DIMENSION: 5,     // the app overlay is open (dimension.js); the main loop idles
-    PORTAL_OUT: 6     // back out of the portal, into VIEW
+    PORTAL_OUT: 6,    // back out of the portal, into VIEW
+    EXPLORE: 7        // walk mode in the apartment (walk.js); stopIndex stays
 };
 
 // ── State ──────────────────────────────────────────────────────────
@@ -366,6 +368,8 @@ export function init() {
     else showTapPrompt();
     // Dev (?portal=1): enter the stop's portal after the view delay; ?t then counts from the portal start
     portalAuto = q.has('portal');
+    walk.init({ enter: () => enterExplore(), exit: exitExplore });
+    if (q.has('explore')) enterExplore(true);   // dev: with ?go=<apartment stop or contact>
     const tQ = Number(q.get('t'));
     if (q.has('t') && tQ > 0 && tQ <= 30) {
         if (portalAuto) simulateUntil(() => phase === Phase.PORTAL_IN, 10);
@@ -417,6 +421,7 @@ function emitStop(phaseName) {
 
 // Land the comet at stop n instantly (?stop, ?leg, ?go, journey.goTo jump).
 export function jumpTo(n) {
+    leaveExploreNow();
     intro.hideRocket(); hideTapPrompt();
     stopIndex = n;
     const stop = stops[n];
@@ -748,6 +753,7 @@ function stepFaceAlign(dt) {
 // ── Travel setup ───────────────────────────────────────────────────
 export function setupTravel(destIdx, withCorkscrew) {
     const dest = stops[destIdx];
+    leaveExploreNow();
     emitStop('leave'); // before stopIndex moves to the destination
     stops[stopIndex]?.viz?.rim?.setHover(false);
 
@@ -1015,6 +1021,7 @@ export function update(dt) {
         case Phase.VIEW:           updateView(dt); break;
         case Phase.PORTAL_IN:      updatePortal(dt, true); break;
         case Phase.PORTAL_OUT:     updatePortal(dt, false); break;
+        case Phase.EXPLORE:        walk.update(dt); break;
     }
 
     // Tunnel window and nearby visualizations follow the viewer
@@ -1031,7 +1038,7 @@ export function update(dt) {
         updateTrailGlow(trail, totalTime);
     }
 
-    cam.update(dt, controls, camera, worldPos, headingOverride ?? cometDir);
+    if (phase !== Phase.EXPLORE) cam.update(dt, controls, camera, worldPos, headingOverride ?? cometDir);
     if (!skipRender) render();
 }
 
@@ -1631,6 +1638,52 @@ function updatePortal(dt, goingIn) {
     tunnel.setRush(0); tunnel.updateStreaks(0, cometPos, cometDir, 0);
     enterView();
     stepFaceAlign(dt);
+}
+
+// ── EXPLORE (walk mode, walk.js) ───────────────────────────────────
+// From VIEW at an apartment stop or the landing. The comet, the halo focus
+// and the camera rig pause; walk.js owns the camera. "Back to the journey"
+// eases to the VIEW pose and re-enters VIEW at the same stop.
+export function isExploring() { return phase === Phase.EXPLORE; }
+export function enterExplore(immediate = false) {
+    const stop = stops[stopIndex];
+    if (phase !== Phase.VIEW || !walk.canWalk(stop)) return false;
+    hideTapPrompt();
+    trail.line.visible = false;
+    setHaloFocus(null);
+    controls.enabled = false;
+    cam.setScreenShift(false, true);
+    if (camera.view?.enabled) camera.clearViewOffset();
+    enterPhase(Phase.EXPLORE);
+    window.dispatchEvent(new CustomEvent('journey:explore'));   // depthTool.js turns its tools off
+    walk.enterWalk({ immediate });
+    return true;
+}
+export function exitExplore() {
+    if (phase !== Phase.EXPLORE) return;
+    const stop = stops[stopIndex];
+    const pos = stop.center.clone().addScaledVector(stop.normal, -fitFor(stop));
+    walk.exitWalk(pos, stop.center, baseFov, endExplore);
+}
+function endExplore() {
+    const stop = stops[stopIndex];
+    trail.line.visible = true;
+    setHaloFocus(stop);
+    controls.enabled = true;
+    controls.target.copy(stop.center);
+    cam.setScreenShift(hasPanel(stop));
+    enterView();
+}
+// A jump or a flight while walking (agent API): leave at once
+function leaveExploreNow() {
+    if (phase !== Phase.EXPLORE) return;
+    const stop = stops[stopIndex];
+    walk.exitWalk(stop.center.clone().addScaledVector(stop.normal, -fitFor(stop)), stop.center, baseFov, null, true);
+    walk.update(0);
+    controls.target.copy(stop.center);
+    trail.line.visible = true;
+    controls.enabled = true;
+    phase = Phase.VIEW;
 }
 
 // ── Landing mail hit-plane ─────────────────────────────────────────

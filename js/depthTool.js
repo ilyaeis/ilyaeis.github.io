@@ -204,7 +204,8 @@ bDepth.addEventListener('click', () => setDepth(!depthOn));
 bMeasure.addEventListener('click', () => setMeasure(!measureOn));
 bMark.addEventListener('click', mark);
 
-window.addEventListener('keydown', (e) => { if (e.key === 'Escape') allOff(); });
+// Esc: an open project app closes first (dimension.js handles it and prevents the default)
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !e.defaultPrevented) allOff(); });
 
 window.addEventListener('pointermove', (e) => {
     pointerNdc.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
@@ -227,6 +228,14 @@ window.addEventListener('journey:stop', (e) => {
     bar.hidden = !shown;
     if (shown) probe();
     else allOff();
+});
+
+// Walk mode (walk.js) owns the camera and the taps: tools off, toolbar hidden
+// until the next 'journey:stop' enter (back in VIEW)
+window.addEventListener('journey:explore', () => {
+    shown = false;
+    bar.hidden = true;
+    allOff();
 });
 
 requestAnimationFrame(tick);
