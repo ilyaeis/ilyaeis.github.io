@@ -48,7 +48,7 @@ if (el) {
                 more.removeAttribute('rel');
             }
         }
-        el.scrollTop = 0;
+        list.scrollTop = 0;
     }
 
     function show(p) {

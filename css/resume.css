@@ -121,7 +121,7 @@ button {
     border: 1px solid var(--rule-strong);
     border-radius: 999px;
     padding: 0 0.95rem;
-    min-height: 2.25rem;
+    min-height: 2.75rem;
     cursor: pointer;
     transition: color 0.15s ease, border-color 0.15s ease;
 }
@@ -141,7 +141,7 @@ button:hover,
     border: 1px solid var(--rule-strong);
     border-radius: 999px;
     padding: 0 0.95rem;
-    min-height: 2.25rem;
+    min-height: 2.75rem;
     transition: color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -149,6 +149,9 @@ button:hover,
     color: var(--muted);
     text-decoration: none;
     font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
 }
 
 .pdf-alt:hover,
@@ -444,7 +447,7 @@ details.item > summary:focus-visible { outline-offset: 0; }
 
 @media (max-width: 30rem) {
     .item-row { grid-template-columns: 1fr; }
-    .post { margin: 0 0 0.7rem 0.95rem; min-height: 0; }
+    .post { margin: 0 0 0.7rem 0.95rem; }
 }
 
 details.group > .items { margin-top: 0; }
