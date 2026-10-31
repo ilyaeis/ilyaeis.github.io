@@ -30,7 +30,7 @@ More about this role:
 - **Implemented Analytic-Splatting in gsplat at CUDA level.**
   June 2026: exact per-pixel Gaussian integration, which reduces aliasing. I wrote both the computation and its training part, and used it in a downsampling algorithm. I also sped up training by measuring and reducing GPU idle time.
 - **Mentored a junior engineer on a new depth algorithm.**
-  The junior engineer built a new depth algorithm with me (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. It is now the team’s best method. In July 2026 I also found a depth bug in the virtual-tour pipeline and mentored a junior engineer through the fix; it is in final testing. Over time, teammates came to me with their pipeline questions.
+  While improving our depth model I found a depth bug in the virtual-tour pipeline. I mentored a junior engineer through it, and together we built a new depth algorithm (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. It is now the team’s best method and everyone uses it. Over time, teammates came to me with their pipeline questions.
 - **Led the pipeline restructuring and created a 3DGS monorepo.**
   Led the restructuring (July 2026) and created a monorepo for all 3DGS extensions and client apps: ~3000-line files split, duplication removed, defects fixed. I added an automatic check that stops files and functions growing too large. Cleaning up the drone camera path exposed three hidden defects: for example, the camera jerked away when two highlighted features sat close together, and its tilt could drift outside the allowed range. The cleanup also let me fix the half-floor camera problem, open for a long time: in rooms higher or lower than the rest of the storey, the camera sat too low and showed the floor. The fix shipped for all video types.
 - **Built an embeddable Rust/wgpu splat viewer and a comparison tool.**
@@ -40,7 +40,7 @@ More about this role:
 - **Worked on mesh generation and point-count reduction for viewers.**
   Mesh generation from splats, combined with Gaussian splats; a point-count reduction stage (May 2026) for viewers. The reduction stage cuts the number of splats while keeping the major details, for example capping window points at about 1 million. Viewers and compressed scene files need it, so that every client device can run at least some level of detail. It is a prototype on a separate branch.
 - **Made diffusion-based artifact fixing runnable on shared GPUs.**
-  Made a diffusion-based artifact-fixing tool (NVIDIA Fixer) run remotely on shared GPUs in Feb 2026. Before, it ran out of memory on every local machine, so nobody on the team could evaluate it. Running it on the shared ClearML platform turned it from a black box into something the team can test.
+  Made a diffusion-based artifact-fixing tool (Difix, then NVIDIA Fixer) run remotely on shared GPUs in Feb 2026. Before, it ran out of memory on every local machine, so nobody on the team could evaluate it. Running it on the shared ClearML platform turned it from a black box into something the team can test.
 - **Three hackathon ideas recognized; the looped drone shipped.**
   Internal hackathon, Feb 2026 (13 teams, 51 ideas): three of my ideas recognized, one top 20, two special mentions. The ideas were text and logo inside the scene on video (top 20), a video made from still photos (special mention) and a looped drone in each room (special mention). The looped drone then became a shipped feature.
 - **Built an MCP server for the team task board.**
