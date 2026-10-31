@@ -54,6 +54,11 @@ if (el) {
     }
 
     // ── Overlay ───────────────────────────────────────────────────
+    // A modal dialog: while it is open the page behind is inert, so Tab
+    // and screen readers stay in the bar and the app
+    function setInert(on) {
+        for (const c of document.body.children) if (c !== el && c.tagName !== 'SCRIPT') c.inert = on;
+    }
     function load(d) {
         current = d;
         title.textContent = d.title;
@@ -73,6 +78,7 @@ if (el) {
         }
         el.hidden = false;
         open = true;
+        setInert(true);
         history.pushState({ dimension: d.id }, '');   // browser Back closes the overlay
     }
     function show() {
@@ -92,7 +98,8 @@ if (el) {
             frame?.remove();
             frame = null;
         }, FADE_MS);
-        document.getElementById('attractor')?.focus?.();
+        setInert(false);
+        document.getElementById('attractor')?.focus?.();   // (tabindex -1: Enter / Space go on from there)
     }
     // Close requests go through history: one Back entry per visit
     function requestClose() {

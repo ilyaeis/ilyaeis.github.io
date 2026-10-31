@@ -54,7 +54,7 @@
     </script>
 </head>
 <body>
-    <canvas id="attractor"></canvas>
+    <canvas id="attractor" tabindex="-1"></canvas>
 
     <!-- The visible experience is rendered in 3D; this mirror of its
          content is for crawlers, link previews and screen readers -->
@@ -66,7 +66,7 @@
            traits (Creative, Adaptive, Curious), lighting the words as it
            traces them, then swings past strange attractors drifting like
            galaxies to my work first: the Giraffe360 rock (each rock has a
-           short description; tap to continue), then a dive into a 3D
+           short description; tap or press Enter to continue), then a dive into a 3D
            Gaussian splat of a real apartment (Zip-NeRF "london" scene,
            CC BY 4.0), where six splat objects stand for my Giraffe360
            R&amp;D work. You can walk through the flat and collect them; in
@@ -179,7 +179,7 @@
     </nav>
     <noscript><p class="fallback">This page needs JavaScript/WebGL. <a href="resume.html">Open the plain resume.</a></p></noscript>
 
-    <div class="tap-prompt">tap to continue</div>
+    <div class="tap-prompt">tap<span class="key-hint"> or press Enter</span></div>
     <p class="intro-links" hidden><a class="intro-skip" href="?go=splatting&amp;mode=fly">skip to work</a> · <a href="resume.html">resume</a></p>
 
     <p class="room-loading" role="status"></p>
@@ -222,7 +222,7 @@
     <button type="button" class="walk-ui walk-btn walk-explore walk-explore-float" hidden>Explore the flat</button>
     <div class="walk-ui walk-hud" hidden>
         <button type="button" class="walk-btn walk-back">Back to the journey</button>
-        <span class="walk-count" aria-live="polite" title="objects collected">0 / 6</span>
+        <span class="walk-count" aria-live="polite" title="objects collected"><span aria-hidden="true">0 / 6</span><span class="visually-hidden">0 of 6 objects collected</span></span>
     </div>
 
     <script type="module" src="js/stopPanel.js"></script>

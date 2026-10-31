@@ -39,6 +39,8 @@ body {
     white-space: nowrap;
 }
 
+#attractor:focus { outline: none; }   /* focusable (tabindex -1) so focus can return to it; Enter / Space go on */
+
 /* Tap prompt */
 .tap-prompt {
     position: fixed;
@@ -56,6 +58,9 @@ body {
     pointer-events: none;
     user-select: none;
 }
+
+/* The first prompt: " or press Enter" for keyboards, not on touch screens */
+@media (pointer: coarse) { .tap-prompt .key-hint { display: none; } }
 
 .tap-prompt.visible {
     opacity: 1;

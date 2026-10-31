@@ -449,8 +449,14 @@ function setInside(f) { setInsideFade(f); intro.setIntroVisible(f < 0.5); }
 function hasPanel(stop) { return stop.type === StopType.ROCK || stop.type === StopType.PROJECT || stop.type === StopType.OBJECT; }
 
 function showTapPrompt() { if (tapPromptEl) tapPromptEl.classList.add('visible'); }
-// (the intro links go with the first prompt: they never come back)
-function hideTapPrompt() { if (tapPromptEl) tapPromptEl.classList.remove('visible'); if (introLinksEl) introLinksEl.hidden = true; }
+// (the intro links and the first prompt's key hint go with the first prompt:
+// they never come back)
+function hideTapPrompt() {
+    if (!tapPromptEl) return;
+    tapPromptEl.classList.remove('visible');
+    if (introLinksEl) introLinksEl.hidden = true;
+    if (tapPromptEl.textContent !== 'tap to continue') tapPromptEl.textContent = 'tap to continue';
+}
 
 function enterPhase(newPhase) {
     setPhase(newPhase);

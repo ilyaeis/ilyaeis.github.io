@@ -425,7 +425,12 @@ function updateHalos(dt) {
 // ── UI ─────────────────────────────────────────────────────────────
 function panel(p) { window.dispatchEvent(new CustomEvent('walk:panel', { detail: { panel: p } })); }
 function updateHud() {
-    if (countEl) countEl.textContent = `${objectStops().filter(s => collected.has(s.id)).length} / ${total()}`;
+    if (!countEl) return;
+    // "n / 6" on screen; screen readers get it in words (the halos are the only other sign)
+    const n = objectStops().filter(s => collected.has(s.id)).length;
+    const [shown, words] = countEl.children;
+    if (shown) shown.textContent = `${n} / ${total()}`;
+    if (words) words.textContent = `${n} of ${total()} objects collected`;
 }
 function showCollect(stop) {
     if (!collectBtn) return;
