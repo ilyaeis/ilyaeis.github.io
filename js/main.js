@@ -10,6 +10,7 @@ import {
     init as initOrchestrator,
     update as updateOrchestrator,
     onTap,
+    isExploring,
     getMailPlane,
     CONTACT_EMAIL
 } from './orchestrator.js';
@@ -19,6 +20,7 @@ import {
     LINKEDIN_URL,
     GITHUB_URL
 } from './intro3d.js';
+import * as walk from './walk.js';
 
 (function () {
     'use strict';
@@ -47,6 +49,7 @@ import {
     // can fire far more often than the display refreshes
     let hoverEvent = null;
     document.body.addEventListener('pointermove', (e) => {
+        if (isExploring()) return;
         if (!hoverEvent) {
             requestAnimationFrame(() => {
                 document.body.style.cursor =
@@ -62,16 +65,28 @@ import {
     const TAP_THRESHOLD = 10; // pixels
 
     document.body.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.site-nav, .stop-panel')) return;
-        pointerDownPos = { x: e.clientX, y: e.clientY };
+        if (e.target.closest('.site-nav, .stop-panel, .walk-ui')) return;
+        if (pointerDownPos && isExploring()) return;   // walk mode: one finger looks, a second one is ignored
+        pointerDownPos = { id: e.pointerId, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, drag: false };
+    });
+
+    // Walk mode (walk.js): a drag looks around, a tap walks or picks an object
+    document.body.addEventListener('pointermove', (e) => {
+        if (!pointerDownPos || pointerDownPos.id !== e.pointerId || !isExploring()) return;
+        const p = pointerDownPos;
+        if (!p.drag && Math.hypot(e.clientX - p.x, e.clientY - p.y) >= TAP_THRESHOLD) p.drag = true;
+        if (p.drag) walk.onDrag(e.clientX - p.lx, e.clientY - p.ly);
+        p.lx = e.clientX; p.ly = e.clientY;
     });
 
     document.body.addEventListener('pointerup', (e) => {
-        if (e.target.closest('.site-nav, .stop-panel')) return;
-        if (!pointerDownPos) return;
+        if (e.target.closest('.site-nav, .stop-panel, .walk-ui')) return;
+        if (!pointerDownPos || pointerDownPos.id !== e.pointerId) return;
         const dx = e.clientX - pointerDownPos.x;
         const dy = e.clientY - pointerDownPos.y;
-        if (Math.sqrt(dx * dx + dy * dy) < TAP_THRESHOLD) {
+        if (isExploring()) {
+            if (!pointerDownPos.drag) walk.onTap(e.clientX, e.clientY);
+        } else if (Math.sqrt(dx * dx + dy * dy) < TAP_THRESHOLD) {
             if (hitsIcon(e)) window.open(LINKEDIN_URL, '_blank');
             else if (hitsGithub(e)) window.open(GITHUB_URL, '_blank');
             else if (hitsMail(e)) window.location.href = 'mailto:' + CONTACT_EMAIL;
@@ -84,8 +99,23 @@ import {
         pointerDownPos = null;
     });
 
-    // Keyboard: Enter / Space advance the journey (links and buttons keep their own behavior)
+    // Keyboard: Enter / Space advance the journey (links and buttons keep their own behavior).
+    // Walk mode: WASD / arrows walk and turn (walk.js), Enter / Space do nothing.
+    const walkKeys = new Set();
+    const WALK_KEYS = ['w', 'a', 's', 'd', 'q', 'e', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+    document.addEventListener('keyup', (e) => {
+        if (walkKeys.delete(e.key.toLowerCase())) walk.setKeys(new Set(walkKeys));
+    });
+    window.addEventListener('blur', () => { walkKeys.clear(); walk.setKeys(new Set()); });
     document.addEventListener('keydown', (e) => {
+        if (isExploring()) {
+            const k = e.key.toLowerCase();
+            if (WALK_KEYS.includes(k) && !e.target.closest('input,textarea') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                walkKeys.add(k); walk.setKeys(new Set(walkKeys));
+            } else if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button')) e.preventDefault();
+            return;
+        }
         if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button')) {
             e.preventDefault();
             onTap();
@@ -94,7 +124,7 @@ import {
 
     // Prevent any residual scrolling / bounce on mobile (nav links stay tappable)
     document.addEventListener('touchmove', (e) => {
-        if (!e.target.closest('.site-nav, .stop-panel')) e.preventDefault();
+        if (!e.target.closest('.site-nav, .stop-panel, .walk-ui')) e.preventDefault();
     }, { passive: false });
 
     // ── Animation Loop ─────────────────────────────────────────

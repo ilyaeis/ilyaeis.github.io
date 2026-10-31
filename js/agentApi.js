@@ -8,7 +8,7 @@ import { catalog, stopById, UNIVERSES } from './world.js';
 import { Phase, getState, jumpTo, setupTravel, onTap } from './orchestrator.js';
 
 const VERSION = 1;
-const PHASE_NAMES = { [Phase.INTRO]: 'intro', [Phase.ROCKET_EXIT]: 'launch', [Phase.TRAVEL]: 'travel', [Phase.VIEW]: 'view' };
+const PHASE_NAMES = { [Phase.INTRO]: 'intro', [Phase.ROCKET_EXIT]: 'launch', [Phase.TRAVEL]: 'travel', [Phase.VIEW]: 'view', [Phase.EXPLORE]: 'explore' };
 const navigable = catalog.filter(e => e.navigable);
 
 function brief(e) {

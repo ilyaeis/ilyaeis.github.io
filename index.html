@@ -66,7 +66,8 @@
            galaxies, stops at my milestone rocks (each with a short
            description; tap to continue), then dives into a 3D Gaussian
            splat of a real apartment (Zip-NeRF "london" scene, CC BY 4.0),
-           where six splat objects stand for my Giraffe360 R&amp;D work. It
+           where six splat objects stand for my Giraffe360 R&amp;D work (you
+           can also walk through the flat and collect them). It
            leaves through the window and warps into a glowing tunnel
            where my projects run as live visualizations (sorting algorithms,
            a graphing calculator, a workout tracker; Monte Carlo price paths,
@@ -176,7 +177,18 @@
         <p class="stop-panel-subtitle"></p>
         <ul class="stop-panel-items"></ul>
         <a class="stop-panel-more" href="resume.html"></a>
+        <div class="stop-panel-actions">
+            <button type="button" class="walk-btn walk-explore" hidden>Explore the flat</button>
+            <button type="button" class="walk-btn walk-collect" hidden>Collect</button>
+        </div>
     </aside>
+
+    <!-- Walk mode (js/walk.js): the landing's explore button, and the HUD while walking -->
+    <button type="button" class="walk-ui walk-btn walk-explore walk-explore-float" hidden>Explore the flat</button>
+    <div class="walk-ui walk-hud" hidden>
+        <button type="button" class="walk-btn walk-back">Back to the journey</button>
+        <span class="walk-count" aria-live="polite" title="objects collected">0 / 6</span>
+    </div>
 
     <script type="module" src="js/stopPanel.js"></script>
     <script type="module" src="js/agentApi.js"></script>

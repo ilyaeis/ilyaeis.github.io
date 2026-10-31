@@ -80,4 +80,11 @@ if (el) {
         if (d.phase === 'enter' && d.panel) show(d.panel);
         else hide();
     });
+
+    // Walk mode (walk.js): the panel of a picked object, or null to hide
+    window.addEventListener('walk:panel', (e) => {
+        const p = e.detail?.panel;
+        if (p) show(p);
+        else hide();
+    });
 }
