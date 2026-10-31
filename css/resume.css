@@ -419,6 +419,7 @@ details.item > summary:focus-visible { outline-offset: 0; }
 
 .why p + p { margin-top: 0.5rem; }
 .why .meta { font-size: 0.88rem; }
+.more-text { display: inline; }
 .why a { white-space: nowrap; }
 
 /* Headline with a public link: the link sits beside the summary, not inside it. */
@@ -611,7 +612,7 @@ dl.skills dd { color: var(--fg); }
 
     h2::after { background: var(--accent); opacity: 0.5; }
 
-    .entry { break-inside: avoid; }
+    .entry { break-inside: auto; }
     .entry + .entry { margin-top: 9pt; }
 
     h3 { font-size: 10.5pt; color: var(--fg-strong); }
@@ -648,6 +649,7 @@ dl.skills dd { color: var(--fg); }
     .why { padding: 0; margin-top: 1pt; font-size: 9pt; line-height: 1.38; color: var(--muted); }
     .why .meta { font-size: 9pt; }
     .print-brief .why { display: none; }
+    .more-text { display: none; }
 
 
     dl.skills div {
