@@ -147,20 +147,20 @@
                     <div class="why">I found the research, implemented it, tested it and pushed it to production in Jan 2026. It is still the team’s best densification method. <span class="more-text">It measures how much each Gaussian contributes to the image during training and relocates the least useful ones, instead of adding new detail everywhere. This improves quality while keeping the model efficient. I implemented it partly with AI-assisted coding, and when the team moved to a new training approach, I ported it there.</span></div>
                 </details>
                 <details class="item">
+                    <summary><span class="hl">Implemented Analytic-Splatting in gsplat at CUDA level.</span></summary>
+                    <div class="why">June 2026: exact per-pixel Gaussian integration, which reduces aliasing. <span class="more-text">I wrote both the computation and its training part, and used it in a downsampling algorithm. I also sped up training by measuring and reducing GPU idle time.</span></div>
+                </details>
+                <details class="item">
                     <summary><span class="hl">Built tools to measure 3DGS quality against known ground truth.</span></summary>
                     <div class="why">Validation tools and ground-truth datasets (July 2026) to check quality against known truth. <span class="more-text">Before, quality was checked only with no-reference metrics. In March 2026 I also built an experiment runner, so every teammate can run and track training experiments on a local GPU, driven by an AI agent.</span></div>
                 </details>
             </div>
             <details class="group">
-                <summary>More about this role (10 points)</summary>
+                <summary>More about this role (9 points)</summary>
                 <div class="items">
                     <details class="item">
-                        <summary><span class="hl">Implemented Analytic-Splatting in gsplat at CUDA level.</span></summary>
-                        <div class="why">June 2026: exact per-pixel Gaussian integration, which reduces aliasing. <span class="more-text">I wrote both the computation and its training part, and used it in a downsampling algorithm. I also sped up training by measuring and reducing GPU idle time.</span></div>
-                    </details>
-                    <details class="item">
-                        <summary><span class="hl">Mentored a junior engineer on a new depth algorithm.</span></summary>
-                        <div class="why">While improving our depth model I found a depth bug in the virtual-tour pipeline. I mentored a junior engineer through it, and together we built a new depth algorithm (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. <span class="more-text">It is now the team’s best method and everyone uses it. Over time, teammates came to me with their pipeline questions.</span></div>
+                        <summary><span class="hl">Mentored a junior engineer; together we replaced our depth algorithm.</span></summary>
+                        <div class="why">Our depth estimates were poor. I mentored one junior engineer, and together we built a new depth algorithm (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. <span class="more-text">Depth is now good, and the whole team uses the new method. Over time, teammates came to me with their pipeline questions.</span></div>
                     </details>
                     <details class="item">
                         <summary><span class="hl">Led the pipeline restructuring and created a 3DGS monorepo.</span></summary>

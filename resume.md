@@ -22,15 +22,15 @@ Riga · 2025 – present. Giraffe360 makes cameras and software for real-estate 
   2 weeks to show first results, 3 weeks to push good ones to production. I led the team. I built the toolkit that prepares the exterior splats: it rotates the scene to the correct orientation, selects the largest fragment and crops it. A per-frame outdoor-view video pipeline then renders the orbital video around the property.
 - **Influence accumulation: my densification method, still the team’s best.**
   I found the research, implemented it, tested it and pushed it to production in Jan 2026. It is still the team’s best densification method. It measures how much each Gaussian contributes to the image during training and relocates the least useful ones, instead of adding new detail everywhere. This improves quality while keeping the model efficient. I implemented it partly with AI-assisted coding, and when the team moved to a new training approach, I ported it there.
+- **Implemented Analytic-Splatting in gsplat at CUDA level.**
+  June 2026: exact per-pixel Gaussian integration, which reduces aliasing. I wrote both the computation and its training part, and used it in a downsampling algorithm. I also sped up training by measuring and reducing GPU idle time.
 - **Built tools to measure 3DGS quality against known ground truth.**
   Validation tools and ground-truth datasets (July 2026) to check quality against known truth. Before, quality was checked only with no-reference metrics. In March 2026 I also built an experiment runner, so every teammate can run and track training experiments on a local GPU, driven by an AI agent.
 
 More about this role:
 
-- **Implemented Analytic-Splatting in gsplat at CUDA level.**
-  June 2026: exact per-pixel Gaussian integration, which reduces aliasing. I wrote both the computation and its training part, and used it in a downsampling algorithm. I also sped up training by measuring and reducing GPU idle time.
-- **Mentored a junior engineer on a new depth algorithm.**
-  While improving our depth model I found a depth bug in the virtual-tour pipeline. I mentored a junior engineer through it, and together we built a new depth algorithm (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. It is now the team’s best method and everyone uses it. Over time, teammates came to me with their pipeline questions.
+- **Mentored a junior engineer; together we replaced our depth algorithm.**
+  Our depth estimates were poor. I mentored one junior engineer, and together we built a new depth algorithm (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. Depth is now good, and the whole team uses the new method. Over time, teammates came to me with their pipeline questions.
 - **Led the pipeline restructuring and created a 3DGS monorepo.**
   Led the restructuring (July 2026) and created a monorepo for all 3DGS extensions and client apps: ~3000-line files split, duplication removed, defects fixed. I added an automatic check that stops files and functions growing too large. Cleaning up the drone camera path exposed three hidden defects: for example, the camera jerked away when two highlighted features sat close together, and its tilt could drift outside the allowed range. The cleanup also let me fix the half-floor camera problem, open for a long time: in rooms higher or lower than the rest of the storey, the camera sat too low and showed the floor. The fix shipped for all video types.
 - **Built an embeddable Rust/wgpu splat viewer and a comparison tool.**
