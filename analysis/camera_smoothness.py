@@ -45,6 +45,7 @@ LIMITS = {  # metric: (limit, unit)
     'look_speed': (30, 'u/s'),
 }
 JERK_WIN = 0.05  # s
+MID = (0.2, 0.7)  # share of a flight's time counted as mid-flight (head off-axis)
 # Tunnel flights only (frames logged with tunnel=1): see the header
 TUNNEL_LIMITS = {'cam_speed': 120, 'look_speed': 120, 'cam_accel': 160, 'cam_jerk': 1600}
 
@@ -144,6 +145,24 @@ def summary(name, m):
             print(f'      frame {k:5d}  t {t:6.2f}s  {ph:11s} stop {st:2d}  {v:8.1f}')
     trav = m['phase'] == 2
     print(f'  head off-axis in TRAVEL: max {m["head_off"][trav].max():.1f} deg (half vertical FOV is 30)')
+    # The max above is at the hand-offs: a departure starts from the VIEW pose,
+    # and on arrival the comet flies through the face-on camera spot. The middle
+    # of each flight (MID share of its time) shows where the camera loses the comet.
+    mid = np.zeros(len(trav), bool)
+    i, n = 0, len(trav)
+    while i < n:
+        j = i
+        while j < n and trav[j] and m['stop'][j] == m['stop'][i]:
+            j += 1
+        if j > i + 1:
+            x = (m['t'][i:j] - m['t'][i]) / (m['t'][j - 1] - m['t'][i])
+            mid[i:j] = (x >= MID[0]) & (x <= MID[1])
+        i = max(j, i + 1)
+    worst = {}
+    for k in np.where(mid & (m['head_off'] > 30))[0]:
+        worst[m['stop'][k]] = max(worst.get(m['stop'][k], 0), m['head_off'][k])
+    print(f'  head off-axis mid-flight: max {m["head_off"][mid].max():.1f} deg; over 30 into stops: ' +
+          (', '.join(f'{s} ({v:.0f})' for s, v in sorted(worst.items())) or 'none'))
     print(f'  total spikes: {total}')
     return total
 

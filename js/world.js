@@ -316,8 +316,12 @@ export const OBJECT_SCALE = 0.25;        // object height ≈ 0.25 room units �
 // -> living room. Each VIEW camera looks within ~90° of the way the comet
 // leaves next, so no flight has to turn the camera round.
 const OBJECT_SPOTS = {
-    // living room: on the coffee table (top y -0.296), 17 cm tall
-    cherry: { x: -0.06, z: 0.13, y: -0.296, scale: 0.045, cam: [-0.04, -0.12, -0.10], fitMax: 0.5, doors: [] },
+    // living room: on the coffee table (top y -0.296), 17 cm tall. Viewed from
+    // the east-north-east (the free strip by the desk), so the view looks the
+    // way the comet dives in. A view across the dive (it was from the south)
+    // makes the comet hook up to 130° in the last metre: the arrival blend
+    // then whipped the camera (250 deg/s)
+    cherry: { x: -0.06, z: 0.13, y: -0.296, scale: 0.045, cam: [0.17, -0.12, 0.30], fitMax: 0.5, doors: [] },
     // kitchen-diner: on the dining table (cloth y -0.20), 35 cm tall
     vase:   { x: -1.92, z: 1.12, y: -0.20, scale: 0.095, cam: [-1.88, -0.10, 0.82], fitMax: 0.5, doors: [['LW1', -1], ['LH', -1]], light: 0.85 },
     // living room: on the desk by the east wall, next to the printer box, 30 cm long
