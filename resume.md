@@ -18,7 +18,7 @@ Riga · 2025 – present. Giraffe360 makes cameras and software for real-estate 
 - Benchmarking and evaluation: validation tools and ground-truth datasets, to measure quality against known truth; an experiment runner for agent-driven research loops on local GPUs; ClearML GPU runs.
 - Led a small team that built exterior (outdoor) splats and orbital outdoor videos, now in production.
 - Mentored a junior engineer who built a new depth algorithm with me (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. Now the best method; the team uses it.
-- Led the pipeline codebase restructuring: code-quality standard, ~3000-line files split, duplication removed, hidden camera-path defects fixed. It enabled the half-floor camera-height fix.
+- Led the pipeline restructuring and created a monorepo for all 3DGS extensions and client apps: ~3000-line files split, duplication removed, defects fixed. Enabled the half-floor camera fix.
 - Embeddable Rust/wgpu splat viewer (host control, PLY comparison); multi-view comparison tool.
 - Working prototypes: mirror planes with correct reflections; a fly-in “dollhouse” video intro.
 - Mesh generation from splats, combined with Gaussian splats; point-count reduction for viewers.
