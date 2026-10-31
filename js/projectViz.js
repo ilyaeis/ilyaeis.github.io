@@ -11,8 +11,8 @@ import * as THREE from 'three';
 import { isMobile, renderer } from './attractors.js';
 import { generateTextLines } from './strokeFont.js';
 
-export const HALF_W = 1.3;
-export const HALF_H = 1.0;
+const HALF_W = 1.3;
+const HALF_H = 1.0;
 
 // ── Palette ────────────────────────────────────────────────────────
 const C = {
@@ -234,9 +234,9 @@ function brackets(group, hw = HALF_W, hh = HALF_H) {
 
 function smooth01(x) { x = Math.min(Math.max(x, 0), 1); return x * x * (3 - 2 * x); }
 function ease(cur, target, rate, dt) { return target + (cur - target) * Math.exp(-rate * dt); }
-function shuffled(n) {
+function shuffled(n, random = Math.random) {
     const a = Array.from({ length: n }, (_, i) => (i + 1) / n);
-    for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    for (let i = n - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
     return a;
 }
 function gauss() {
@@ -461,6 +461,78 @@ function sortingViz(group) {
         dirty(items); dirty(tips); dirty(base);
     }
     return update;
+}
+
+// ── Portal rim (SORTING) ───────────────────────────────────────────
+// A ring of radial ticks just outside the corner brackets: a shuffled
+// array in the "circle" layout of the original. Hover sorts it (quick
+// sort ops, replayed fast); after the hover it shuffles again. The lit
+// share of the ticks (clockwise from the top) is the loading progress of
+// the app behind the portal. hit = an invisible ring mesh: main.js
+// raycasts it (via the orchestrator) for clicks and the cursor.
+const RIM_N = isMobile ? 240 : 500;
+const RIM_R0 = 1.74;              // inner radius of the ticks (the bracket corners sit at 1.64)
+const RIM_LEN = [0.03, 0.17];            // tick length: min + value × span
+const RIM_SORT_TIME = 1.2;               // s for the hover sort
+const RIM_RESHUFFLE = 1.5;               // s after the hover ends: shuffle again
+const RIM_HIT = [1.5, 2.05];             // hit ring radii (a tap on the viz itself still advances the journey)
+const RIM_FILL_RATE = 3;                 // 1/s: the lit share follows the loading progress
+// Own random numbers: the rim must not change the seeded route (dev/camlog.html)
+let rimSeed = 0x2545f491;
+function rimRandom() { rimSeed = (Math.imul(rimSeed, 1664525) + 1013904223) >>> 0; return rimSeed / 4294967296; }
+function portalRim(group) {
+    const N = RIM_N;
+    const ticks = lineSegs(group, N * 2);
+    let vals = shuffled(N, rimRandom);
+    const disp = vals.slice(), hi = new Float32Array(N);
+    let ops = [], opIdx = 0, opAcc = 0, rate = 0, hover = false, idle = 0, progress = 0, lit = 0, time = 0;
+    const geo = new THREE.RingGeometry(RIM_HIT[0], RIM_HIT[1], 96);
+    const hit = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide }));
+    group.add(hit);
+    const col = new THREE.Color(), tip = new THREE.Color();
+    const grad = v => {
+        const u = Math.min(Math.max(v, 0), 1) * (SORT_GRADIENT.length - 1), k = Math.min(Math.floor(u), SORT_GRADIENT.length - 2);
+        return col.copy(SORT_GRADIENT[k]).lerp(SORT_GRADIENT[k + 1], u - k);
+    };
+    function update(dt) {
+        time += dt;
+        if (hover && !ops.length && opIdx === 0) {
+            ops = opsQuick(vals.slice()); opIdx = 0; opAcc = 0; rate = ops.length / RIM_SORT_TIME;
+        }
+        if (opIdx < ops.length) {
+            opAcc += rate * dt;
+            let n = Math.floor(opAcc); opAcc -= n;
+            while (n-- > 0 && opIdx < ops.length) {
+                const [t, i, j] = ops[opIdx++];
+                if (t === 1) { [vals[i], vals[j]] = [vals[j], vals[i]]; hi[i] = hi[j] = 1; }
+                else { hi[i] = Math.max(hi[i], 0.3); hi[j] = Math.max(hi[j], 0.3); }
+            }
+        }
+        idle = hover ? 0 : idle + dt;
+        if (!hover && opIdx > 0 && opIdx >= ops.length && idle > RIM_RESHUFFLE) {
+            vals = shuffled(N, rimRandom); ops = []; opIdx = 0;
+        }
+        lit += (progress - lit) * (1 - Math.exp(-RIM_FILL_RATE * dt));
+        const k = Math.exp(-9 * dt), pulse = 0.5 + 0.5 * Math.sin(time * 2.2);
+        for (let i = 0; i < N; i++) {
+            hi[i] *= k;
+            disp[i] = ease(disp[i], vals[i], 14, dt);
+            const a = Math.PI / 2 - (i + 0.5) / N * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+            const r1 = RIM_R0 + RIM_LEN[0] + disp[i] * RIM_LEN[1];
+            const on = (i + 0.5) / N <= lit;
+            grad(disp[i]);
+            tip.copy(col).lerp(C.white, hi[i] * 0.8);
+            const kt = on ? 1.15 + 0.25 * pulse * (hover ? 1 : 0.4) + hi[i] : 0.55;
+            setV(ticks, i * 2, c * RIM_R0, s * RIM_R0, col, on ? 0.6 : 0.3, on ? 0.35 : 0.12);
+            setV(ticks, i * 2 + 1, c * r1, s * r1, tip, kt, on ? 0.9 : 0.28);
+        }
+        dirty(ticks);
+    }
+    return {
+        update, hit, outerR: RIM_R0 + RIM_LEN[0] + RIM_LEN[1],
+        setHover(v) { hover = v; },
+        setProgress(p) { progress = Math.min(Math.max(p, 0), 1); }
+    };
 }
 
 // ── CALCULATOR ─────────────────────────────────────────────────────
@@ -1007,12 +1079,15 @@ const FLYBY_TITLE_H = 0.2;
 const FLYBY_SKILLS_H = 0.1;
 const FLYBY_TEXT_W = 2 * HALF_W;         // both lines fit the viz width
 export const FLYBY_TEXT_BOTTOM = -HALF_H - 0.62; // lowest text y (local units)
-export function buildProjectViz(label, { title = null, skills = null } = {}) {
+// portal: a stop with an app behind it gets a rim (portalRim, SORTING only for now)
+export function buildProjectViz(label, { title = null, skills = null, portal = false } = {}) {
     pxScale = window.innerHeight * renderer.getPixelRatio() / (2 * Math.tan(Math.PI / 6));
     const group = new THREE.Group();
     const vis = curVis = { value: 1 };
     const builder = BUILDERS[label];
-    const update = builder ? builder(group) : () => {};
+    const own = builder ? builder(group) : () => {};
+    const rim = portal ? portalRim(group) : null;
+    const update = rim ? dt => { own(dt); rim.update(dt); } : own;
     const centred = t => {               // strokeText puts the left edge at x = 0
         let maxX = -Infinity;
         for (let i = 0; i < t.n; i++) maxX = Math.max(maxX, t.pos[i * 3]);
@@ -1024,5 +1099,5 @@ export function buildProjectViz(label, { title = null, skills = null } = {}) {
     group.traverse(o => { o.frustumCulled = false; });
     // v = 0..1: fade with distance; `shown` = allowed at all (inside the tunnel)
     const setVisibility = (v, shown) => { vis.value = v; group.visible = shown && v > 0.002; };
-    return { group, halfW: HALF_W, halfH: HALF_H, update, setVisibility };
+    return { group, halfW: HALF_W, halfH: HALF_H, update, setVisibility, rim };
 }

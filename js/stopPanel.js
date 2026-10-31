@@ -11,7 +11,16 @@ if (el) {
     const subtitle = el.querySelector('.stop-panel-subtitle');
     const list = el.querySelector('.stop-panel-items');
     const more = el.querySelector('.stop-panel-more');
+    const portal = el.querySelector('.stop-panel-portal');
     let hideTimer = 0;
+
+    // The portal link opens the app inside the journey (dimension.js); it
+    // is a real link, so a new tab or a middle click opens the app page
+    portal?.addEventListener('click', (e) => {
+        if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('journey:portal-request'));
+    });
 
     function fill(p) {
         dates.textContent = p.dates || '';
@@ -48,6 +57,13 @@ if (el) {
                 more.removeAttribute('rel');
             }
         }
+        if (portal) {
+            portal.hidden = !p.portal;
+            if (p.portal) {
+                portal.href = p.portal.href;
+                portal.textContent = p.portal.label;
+            }
+        }
         list.scrollTop = 0;
     }
 
@@ -78,6 +94,13 @@ if (el) {
     window.addEventListener('journey:stop', (e) => {
         const d = e.detail || {};
         if (d.phase === 'enter' && d.panel) show(d.panel);
+        else hide();
+    });
+
+    // Walk mode (walk.js): the panel of a picked object, or null to hide
+    window.addEventListener('walk:panel', (e) => {
+        const p = e.detail?.panel;
+        if (p) show(p);
         else hide();
     });
 }

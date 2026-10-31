@@ -7,6 +7,8 @@ per-frame log, draws graphs and prints spikes that break the thresholds.
     python3 -m http.server 8000            # in the repo root
     python3 analysis/camera_smoothness.py OUT_DIR [--label NAME] [--dt 30 60 144 jitter]
     python3 analysis/camera_smoothness.py OUT_DIR --compare before after
+    python3 analysis/camera_smoothness.py OUT_DIR --label portal --params dim=1
+        (extra camlog.html params: dim=S enters the first portal, stays S s, comes back)
 
 Thresholds ("smooth" = no metric goes above its limit):
   rot speed  <= 90 deg/s   Whole camera orientation (view direction and roll),
@@ -14,7 +16,8 @@ Thresholds ("smooth" = no metric goes above its limit):
                            width (~87 deg) in about 1 s. Faster reads as a whip pan.
   rot accel  <= 400 deg/s2 A turn may not start or stop in a snap: reaching
                            90 deg/s takes at least ~0.25 s.
-  cam speed  <= 30 u/s     The comet peaks near 1.5 x 9 u/s. More is a jump.
+  cam speed  <= 30 u/s     The comet peaks at 11-16 u/s in open space (measured,
+                           seeds 1-6). More is a jump.
   cam accel  <= 40 u/s2    About 3x the comet's own ease-in/out peak.
   cam jerk   <= 400 u/s3   Measured over a 50 ms window, so a one-frame
                            step in acceleration counts the same at any dt.
@@ -22,7 +25,7 @@ Thresholds ("smooth" = no metric goes above its limit):
   Tunnel flights only (frames logged with tunnel=1): cam/look speed <= 120 u/s,
   cam accel <= 160 u/s2, cam jerk <= 1600 u/s3. The tunnel runs at 2x pace
   (TUNNEL_TIME_SCALE in orchestrator.js): the comet rushes down the straight
-  middle of each hop at ~75 u/s, and at twice the speed over the same path
+  middle of each hop at 74 u/s (up to 86 on the warp in), and at twice the speed over the same path
   acceleration grows 4x (v^2 x curvature, v dv/ds), so these are the
   open-space limits scaled for that. Rotation limits are the same everywhere,
   so the view never whips.
@@ -33,7 +36,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-PHASE_NAMES = {0: 'INTRO', 1: 'ROCKET_EXIT', 2: 'TRAVEL', 3: 'VIEW'}
+PHASE_NAMES = {0: 'INTRO', 1: 'ROCKET_EXIT', 2: 'TRAVEL', 3: 'VIEW', 4: 'PORTAL_IN', 5: 'DIMENSION', 6: 'PORTAL_OUT'}
 LIMITS = {  # metric: (limit, unit)
     'rot_speed': (90, 'deg/s'),
     'rot_accel': (400, 'deg/s2'),
@@ -43,14 +46,15 @@ LIMITS = {  # metric: (limit, unit)
     'look_speed': (30, 'u/s'),
 }
 JERK_WIN = 0.05  # s
+MID = (0.2, 0.7)  # share of a flight's time counted as mid-flight (head off-axis)
 # Tunnel flights only (frames logged with tunnel=1): see the header
 TUNNEL_LIMITS = {'cam_speed': 120, 'look_speed': 120, 'cam_accel': 160, 'cam_jerk': 1600}
 
 
-def run_chrome(url, dt):
+def run_chrome(url, dt, params=''):
     out = subprocess.run(
         ['google-chrome', '--headless=new', '--disable-gpu', '--window-size=1280,800',
-         '--virtual-time-budget=20000', '--dump-dom', f'{url}/dev/camlog.html?dt={dt}'],
+         '--virtual-time-budget=20000', '--dump-dom', f'{url}/dev/camlog.html?dt={dt}' + (f'&{params}' if params else '')],
         capture_output=True, text=True, timeout=600).stdout
     m = re.search(r'<pre id="out">(.*?)</pre>', out, re.S)
     if not m or not m.group(1).strip():
@@ -142,6 +146,24 @@ def summary(name, m):
             print(f'      frame {k:5d}  t {t:6.2f}s  {ph:11s} stop {st:2d}  {v:8.1f}')
     trav = m['phase'] == 2
     print(f'  head off-axis in TRAVEL: max {m["head_off"][trav].max():.1f} deg (half vertical FOV is 30)')
+    # The max above is at the hand-offs: a departure starts from the VIEW pose,
+    # and on arrival the comet flies through the face-on camera spot. The middle
+    # of each flight (MID share of its time) shows where the camera loses the comet.
+    mid = np.zeros(len(trav), bool)
+    i, n = 0, len(trav)
+    while i < n:
+        j = i
+        while j < n and trav[j] and m['stop'][j] == m['stop'][i]:
+            j += 1
+        if j > i + 1:
+            x = (m['t'][i:j] - m['t'][i]) / (m['t'][j - 1] - m['t'][i])
+            mid[i:j] = (x >= MID[0]) & (x <= MID[1])
+        i = max(j, i + 1)
+    worst = {}
+    for k in np.where(mid & (m['head_off'] > 30))[0]:
+        worst[m['stop'][k]] = max(worst.get(m['stop'][k], 0), m['head_off'][k])
+    print(f'  head off-axis mid-flight: max {m["head_off"][mid].max():.1f} deg; over 30 into stops: ' +
+          (', '.join(f'{s} ({v:.0f})' for s, v in sorted(worst.items())) or 'none'))
     print(f'  total spikes: {total}')
     return total
 
@@ -205,6 +227,7 @@ def main():
     ap.add_argument('--label', default='run')
     ap.add_argument('--dt', nargs='+', default=['30', '60', '144', 'jitter'])
     ap.add_argument('--url', default='http://localhost:8000')
+    ap.add_argument('--params', default='', help='extra camlog.html query, e.g. dim=1')
     ap.add_argument('--compare', nargs=2, metavar=('A', 'B'), help='plot two saved labels over each other')
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
@@ -222,7 +245,7 @@ def main():
 
     total = 0
     for dt in a.dt:
-        log = run_chrome(a.url, dt)
+        log = run_chrome(a.url, dt, a.params)
         json.dump(log, open(log_path(a.label, dt), 'w'))
         m = metrics(log)
         total += summary(f'{a.label} dt={dt}', m)

@@ -8,13 +8,25 @@ import { catalog, stopById, UNIVERSES } from './world.js';
 import { Phase, getState, jumpTo, setupTravel, onTap } from './orchestrator.js';
 
 const VERSION = 1;
-const PHASE_NAMES = { [Phase.INTRO]: 'intro', [Phase.ROCKET_EXIT]: 'launch', [Phase.TRAVEL]: 'travel', [Phase.VIEW]: 'view' };
+const PHASE_NAMES = { [Phase.INTRO]: 'intro', [Phase.ROCKET_EXIT]: 'launch', [Phase.TRAVEL]: 'travel', [Phase.VIEW]: 'view',
+                      [Phase.PORTAL_IN]: 'portal-in', [Phase.DIMENSION]: 'dimension', [Phase.PORTAL_OUT]: 'portal-out',
+                      [Phase.EXPLORE]: 'explore' };
+// A project app (dimension.js) is open or opening / closing: no navigation
+const inPortal = (p) => p === Phase.PORTAL_IN || p === Phase.DIMENSION || p === Phase.PORTAL_OUT;
+// Why navigation is refused now (null: allowed). Walk mode keeps its own Back button.
+function busy(p) {
+    if (inPortal(p)) return 'in-portal';
+    if (p === Phase.EXPLORE) return 'exploring';
+    if (p === Phase.TRAVEL || p === Phase.ROCKET_EXIT) return 'travelling';
+    return null;
+}
 const navigable = catalog.filter(e => e.navigable);
 
 function brief(e) {
     const o = { id: e.id, universe: e.universe, type: e.type, title: e.title, summary: e.summary,
                 link: e.navigable ? `/?go=${e.id}` : null, navigable: e.navigable };
     if (e.near) o.near = e.near;
+    if (e.portal) o.app = '/' + e.portal.href;   // a standalone app page (the portal at this stop)
     return o;
 }
 
@@ -28,7 +40,7 @@ function current() {
     const e = navigable[s.stopIndex] ?? null;
     return {
         phase: PHASE_NAMES[s.phase],
-        stop: s.phase === Phase.VIEW && e ? e.id : null,
+        stop: (s.phase === Phase.VIEW || s.phase === Phase.EXPLORE || inPortal(s.phase)) && e ? e.id : null,
         destination: s.phase === Phase.TRAVEL && e ? e.id : null,
         universe: e && s.phase !== Phase.TRAVEL ? e.universe : null,
         userControlsCamera: s.userDragging,
@@ -57,7 +69,8 @@ async function goTo(id, { mode = 'fly' } = {}) {
     if (!e) return { ok: false, reason: 'unknown-stop', current: current() };
     if (!e.navigable) return { ok: false, reason: 'not-navigable', near: e.near, current: current() };
     const s = getState();
-    if (s.phase === Phase.TRAVEL || s.phase === Phase.ROCKET_EXIT) return { ok: false, reason: 'travelling', current: current() };
+    const why = busy(s.phase);
+    if (why) return { ok: false, reason: why, current: current() };
     if (mode === 'fly' && e.index >= 1) {
         const arrived = nextEnter(e.id);
         if (e.index === s.stopIndex + 1 && s.phase === Phase.VIEW) setupTravel(e.index, false);
@@ -71,7 +84,8 @@ async function goTo(id, { mode = 'fly' } = {}) {
 
 async function step(delta) {
     const s = getState();
-    if (s.phase === Phase.TRAVEL || s.phase === Phase.ROCKET_EXIT) return { ok: false, reason: 'travelling', current: current() };
+    const why = busy(s.phase);
+    if (why) return { ok: false, reason: why, current: current() };
     if (delta > 0) {
         const arrived = nextEnter();
         onTap();

@@ -126,7 +126,12 @@ const MILESTONES = [
             { text: '16 sorting algorithms animated in five layouts, with speed control.' },
             { text: 'Every line written by hand in C++, before AI tools.' }
         ],
-        more: { href: 'https://github.com/ilyaeis/sort_visualization', label: 'github' }
+        more: { href: 'https://github.com/ilyaeis/sort_visualization', label: 'github' },
+        // The app behind the portal (dimension.js): its page, and the files
+        // fetched on arrival at the stop (their progress lights the rim)
+        portal: { href: 'apps/sorting/', label: 'enter the visualizer', title: 'Sorting visualizer',
+                  preload: ['apps/sorting/', 'apps/sorting/app.js', 'apps/sorting/drawer.js', 'apps/sorting/worker.js',
+                            'apps/sorting/wasm/sortvis.js', 'apps/sorting/wasm/sortvis.wasm', 'apps/sorting/Ruda-Medium.woff2'] }
     }},
     // Giraffe360 R&D (universe 'rnd'): one splat object per area (objects.js), in route order
     { label: 'SPLATTING', panel: {
@@ -143,7 +148,7 @@ const MILESTONES = [
         subtitle: 'The main long-standing quality problem · solved',
         items: [
             { text: 'Shipped 1 June 2026 after 140+, then 600+ experiments.' },
-            { text: 'Root cause: a depth regularizer flattened outdoor views onto the wall.' }
+            { text: 'Fixed blurry windows, outdoor views and mirrors.' }
         ],
         more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post' }
     }},
@@ -187,8 +192,8 @@ const MILESTONES = [
 ];
 
 // ── Tuning ─────────────────────────────────────────────────────────
-export const TEXT_SCALE = 0.22;          // world units per 2D unit (text/landing)
-export const ROCK_SCALE = 0.4;           // world units per 2D unit (rocks)
+const TEXT_SCALE = 0.22;          // world units per 2D unit (text/landing)
+const ROCK_SCALE = 0.4;           // world units per 2D unit (rocks)
 const STROKE_INTENSITY = 1.5;            // bold letter strokes (HDR → bloom)
 const LINK_INTENSITY = 0.35;             // faint pen-travel strokes
 
@@ -202,12 +207,15 @@ const SCENERY_SCALE_MAX = 6.0;
 const SCENERY_STANDOFF = 0.35;           // center sits this × leg length beside the leg midpoint
 const SCENERY_STANDOFF_MIN = 5.0;
 const SCENERY_SPIN = 0.04;               // rad/s about local Y
+const SCENERY_TRIES = 24;                // random angles round the leg; the one farthest from the stops' views wins
+const PANEL_FIT = [0.5, 0.55];           // a stop's view share beside its panel (orchestrator ROCK_FIT_SIDE / ROCK_FIT_BOTTOM): the farthest VIEW camera
 // leg i = flight into stops[i]; leg 0 is the intro corkscrew into the text,
 // leg 1 (text -> rock 1) has the first galaxy. Attractor k % ATTRACTORS.length is reused
 // when there are more legs than attractors.
-// Leg 5 (GIRAFFE360 -> the apartment window) has the last one. None
-// indoors, on the warp into the tunnel or inside it, or on the roof dive.
-const SCENERY_LEGS = [1, 2, 3, 4, 5];
+// One galaxy on each leg into a rock and on the dive into the apartment
+// (into its first object). None indoors, on the warp into the tunnel or
+// inside it, or on the roof dive.
+const SCENERY_LEGS = [];   // filled from ROUTE below
 
 // Projects tunnel (tunnel.js): entry point E = apartment window + e1 × TUNNEL_HOP.
 // Along s: the warp throat at 0, a rush, the first fly-by at TUNNEL_RUSH,
@@ -243,6 +251,7 @@ const ROCK_HOP_MIN = 32;                 // rock → rock (same scene)
 const ROCK_HOP_MAX = 40;
 const MIN_SEPARATION = 26;
 const ROCK_SEPARATION = 22;              // rocks may sit near each other
+const TEXT_EXIT_MIN_DOT = 0.2;           // the hop after the traits: at least this aligned with the helix exit
 
 const TEXT_DIM_ALPHA = 0.25;            // the text block starts dim; lit as the comet traces it (1.0 = always lit)
 
@@ -254,6 +263,11 @@ const TEXT_DIM_ALPHA = 0.25;            // the text block starts dim; lit as the
 // LANDING_TEXT.z room units, so s = fit / 0.65 (about 4.6 world units per
 // room unit on desktop, more on portrait screens). Computed once at build.
 const ROOM_FLOOR = -0.413;
+// Metres per room unit, for the measure tool (depthTool.js). 3.63 assumes a
+// 1.5 m camera height; calibration on standard fixtures (worktop 900 mm,
+// door 1981 mm; zipnerf-room/scripts/calibrate_scale.py) gives × 0.95, ±3 %.
+// Approximately metric: show "≈", never claim more.
+export const M_PER_UNIT = 3.45;
 const ROOM_BOX = { min: [-2.64, -0.47, -0.84], max: [0.91, 0.30, 2.08] }; // all rooms (fade, clearance)
 const ROOM_WINDOW = [0, -0.02, -0.78];   // bay window centre (the frame: the window faces winDir; the tunnel leaves here)
 // The comet enters and leaves over the window wall, just above the cut
@@ -299,15 +313,19 @@ const DOORS = {
 // `cam` (room units; only its direction counts, the distance is the fit,
 // capped at fitMax room units so a portrait fit stays inside the walls).
 // `doors`: the doorways from the previous object, with the crossing sign.
-export const OBJECT_SCALE = 0.25;        // object height ≈ 0.25 room units ≈ 0.9 m
+const OBJECT_SCALE = 0.25;        // object height ≈ 0.25 room units ≈ 0.9 m
 // Optional: `y` = base height (default: the floor), `scale` (default OBJECT_SCALE),
 // `light` (× the object brightness in room.js: lamps near or not), `haloTilt` (deg).
 // The tour: living room -> hall (in by LH, out by CH) -> bedroom -> corridor
 // -> living room. Each VIEW camera looks within ~90° of the way the comet
 // leaves next, so no flight has to turn the camera round.
 const OBJECT_SPOTS = {
-    // living room: on the coffee table (top y -0.296), 17 cm tall
-    cherry: { x: -0.06, z: 0.13, y: -0.296, scale: 0.045, cam: [-0.04, -0.12, -0.10], fitMax: 0.5, doors: [] },
+    // living room: on the coffee table (top y -0.296), 17 cm tall. Viewed from
+    // the east-north-east (the free strip by the desk), so the view looks the
+    // way the comet dives in. A view across the dive (it was from the south)
+    // makes the comet hook up to 130° in the last metre: the arrival blend
+    // then whipped the camera (250 deg/s)
+    cherry: { x: -0.06, z: 0.13, y: -0.296, scale: 0.045, cam: [0.17, -0.12, 0.30], fitMax: 0.5, doors: [] },
     // kitchen-diner: on the dining table (cloth y -0.20), 35 cm tall
     vase:   { x: -1.92, z: 1.12, y: -0.20, scale: 0.095, cam: [-1.88, -0.10, 0.82], fitMax: 0.5, doors: [['LW1', -1], ['LH', -1]], light: 0.85 },
     // living room: on the desk by the east wall, next to the printer box, 30 cm long
@@ -339,31 +357,31 @@ const HALO_FADE_TIME = 0.5;              // s: a ring fades in (out) as its stop
 const OBJECT_PAD = 0.15;                 // × height: framing room above and below the object
 const OBJECT_FRAME = 1.12;               // × the halo / object half width: framing room beside it (the fit)
 const PLACE_TRIES = 12;
+// The rocks after the apartment (education): placed once the apartment and
+// the tunnel exist, clear of both, as one chain that turns smoothly back to
+// the tunnel throat (placeAfterApartment)
+const AFTER_TRIES = 1500;
 const MAX_PITCH = 0.55;                  // |y| of hop direction — keeps text upright
 
 // Overall outward drift of the journey
-export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
+const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 
-// Visit order. Planar stops carry their own paletteIdx (into the
-// ATTRACTORS table) so every scene glows in a different color — the
-// first four milestone rocks are ONE scene and share a single palette.
+// Visit order: the work first (the Giraffe360 rock, then the apartment of
+// its R&D objects), then the education rocks, the projects tunnel and the
+// contact landing. Planar stops carry their own paletteIdx (into the
+// ATTRACTORS table) so every scene glows in a different color — the rocks
+// share one palette.
 // The text block is one stop; the comet traces it, spirals around it and
 // flies on without a tap (orchestrator).
 const ROUTE = [
     { id: 'traits',     universe: 'intro',      type: StopType.TEXT,    paletteIdx: 0,
       title: 'Traits', summary: 'Creative. Adaptive. Curious.' },
-    { id: 'rvkg',       universe: 'milestones', type: StopType.ROCK,    milestone: 0, paletteIdx: 1,
-      summary: 'Programming and mathematics track; state mathematics olympiads.' },
-    { id: 'rtu',        universe: 'milestones', type: StopType.ROCK,    milestone: 1, paletteIdx: 1,
-      summary: 'Professional Bachelor in Financial Engineering.' },
-    { id: 'ai-talent',  universe: 'milestones', type: StopType.ROCK,    milestone: 2, paletteIdx: 1,
-      summary: 'Ponder AI talent program.' },
-    { id: 'giraffe360', universe: 'milestones', type: StopType.ROCK,    milestone: 3, paletteIdx: 1,
+    { id: 'giraffe360', universe: 'work',       type: StopType.ROCK,    milestone: 3, paletteIdx: 1,
       summary: 'R&D engineer in 3D reconstruction and computer vision: 3DGS from sparse panorama views, benchmarking, research.' },
     { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 10, object: 'cherry', paletteIdx: 3,
       summary: '3DGS reconstruction from sparse panorama views; influence accumulation, Analytic-Splatting, the pipeline restructuring.' },
     { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 11, object: 'vase', paletteIdx: 3,
-      summary: 'Solved blurry windows, outdoor views and mirrors (a depth regularizer root cause); exterior splats and orbital videos.' },
+      summary: 'Solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.' },
     { id: 'benchmarking',    universe: 'rnd', type: StopType.OBJECT, milestone: 12, object: 'gpu', paletteIdx: 3,
       summary: 'Validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.' },
     { id: 'mesh-generation', universe: 'rnd', type: StopType.OBJECT, milestone: 13, object: 'chair', paletteIdx: 3,
@@ -372,6 +390,12 @@ const ROUTE = [
       summary: 'MCP server for the team task board; mentoring on a new depth algorithm; the looped drone video.' },
     { id: 'tour-narration',  universe: 'rnd', type: StopType.OBJECT, milestone: 15, object: 'robot', paletteIdx: 3,
       summary: 'Earlier (Jul - Oct 2025): a small LLM service that wrote tour narration.' },
+    { id: 'rvkg',       universe: 'education',  type: StopType.ROCK,    milestone: 0, paletteIdx: 1,
+      summary: 'Programming and mathematics track; state mathematics olympiads.' },
+    { id: 'ai-talent',  universe: 'education',  type: StopType.ROCK,    milestone: 2, paletteIdx: 1,
+      summary: 'Ponder AI talent program.' },
+    { id: 'rtu',        universe: 'education',  type: StopType.ROCK,    milestone: 1, paletteIdx: 1,
+      summary: 'Professional Bachelor in Financial Engineering.' },
     { id: 'flow',       universe: 'projects',   type: StopType.PROJECT, milestone: 5, paletteIdx: 2,
       summary: 'Offline workout tracker app (Dart/Flutter).' },
     { id: 'calculator', universe: 'projects',   type: StopType.PROJECT, milestone: 8, paletteIdx: 2,
@@ -379,14 +403,18 @@ const ROUTE = [
     { id: 'sorting',    universe: 'projects',   type: StopType.PROJECT, milestone: 9, paletteIdx: 2,
       summary: 'Sorting algorithm visualizer (C++/SFML).' },
     { id: 'contact',    universe: 'contact',    type: StopType.LANDING, paletteIdx: 4,
-      title: 'Contact', summary: 'Get in touch by email, LinkedIn or GitHub.' },
+      title: 'Contact', summary: 'Get in touch by email, LinkedIn or GitHub.' }
 ];
+ROUTE.forEach((d, i) => {
+    if (d.type === StopType.ROCK || (d.type === StopType.OBJECT && ROUTE[i - 1].type !== StopType.OBJECT)) SCENERY_LEGS.push(i);
+});
 // Universes are names, not indexes. A new universe is a new entry here
 // plus ROUTE entries that use its id.
 export const UNIVERSES = [
     { id: 'intro',      title: 'Intro' },
-    { id: 'milestones', title: 'Milestones' },
+    { id: 'work',       title: 'Work' },
     { id: 'rnd',        title: 'Giraffe360 R&D' },
+    { id: 'education',  title: 'Education' },
     { id: 'projects',   title: 'Projects' },
     { id: 'contact',    title: 'Contact' },
 ];
@@ -409,6 +437,8 @@ export const catalog = [
         title: d.title ?? MILESTONES[d.milestone].panel.title,
         summary: d.summary,
         panel: d.milestone !== undefined ? MILESTONES[d.milestone].panel : null,
+        portal: d.milestone !== undefined && MILESTONES[d.milestone].panel.portal
+            ? { href: MILESTONES[d.milestone].panel.portal.href, label: MILESTONES[d.milestone].panel.portal.label } : null,
         navigable: true
     })),
     ...FLYBYS.map(fb => {
@@ -471,6 +501,7 @@ export let flybys = [];                  // { label, s, viz }
 export let tunnelExitS = 0;              // s where the tunnel ends (the warp out)
 let mailPlane = null;
 export function getMailPlane() { return mailPlane; }
+let landingScale = TEXT_SCALE;           // world units per 2D unit of the landing text (smaller on narrow portrait screens)
 
 // The apartment frame (room units -> world): world = position + R(yaw) × room × scale.
 // room.js renders the splat and the objects into it; `objects` lists the
@@ -489,7 +520,7 @@ export function roomToWorld(x, y, z, out = new THREE.Vector3()) {
     return out.set(x, y, z).applyQuaternion(apartment.quaternion)
         .multiplyScalar(apartment.scale).add(apartment.position);
 }
-export function roomDirToWorld(x, y, z, out = new THREE.Vector3()) {
+function roomDirToWorld(x, y, z, out = new THREE.Vector3()) {
     return out.set(x, y, z).applyQuaternion(apartment.quaternion).normalize();
 }
 // World point -> room units
@@ -503,9 +534,11 @@ export function worldToRoom(p, out = new THREE.Vector3()) {
 // centred on the orbit target, fits the view with a small margin.
 // availW / availH: share of the view it may fill (the HTML panel takes the rest).
 export function fitDistance(halfW, halfH, availW = 1, availH = 1) {
+    return THREE.MathUtils.clamp(fitUnclamped(halfW, halfH, availW, availH), controls.minDistance, controls.maxDistance);
+}
+function fitUnclamped(halfW, halfH, availW = 1, availH = 1) {
     const tanV = Math.tan(camera.fov * Math.PI / 360);
-    const fit = 1.25 * Math.max(halfH / (tanV * availH), halfW / (tanV * camera.aspect * availW));
-    return THREE.MathUtils.clamp(fit, controls.minDistance, controls.maxDistance);
+    return 1.25 * Math.max(halfH / (tanV * availH), halfW / (tanV * camera.aspect * availW));
 }
 
 const _vec3 = new THREE.Vector3();
@@ -533,8 +566,59 @@ function randomHopDir(out) {
     out.y += rand(-1.1, 1.1);
     out.z += rand(-2.2, 2.2);
     out.normalize();
-    out.y = THREE.MathUtils.clamp(out.y, -MAX_PITCH, MAX_PITCH);
-    return out.normalize();
+    // clamp the pitch, keeping the length 1 (scaling y alone and normalising
+    // again lets a near-vertical kick through)
+    if (Math.abs(out.y) > MAX_PITCH) {
+        const h = Math.hypot(out.x, out.z), k = h > 1e-6 ? Math.sqrt(1 - MAX_PITCH * MAX_PITCH) / h : 0;
+        out.set(out.x * k, Math.sign(out.y) * MAX_PITCH, out.z * k);
+        if (h <= 1e-6) out.set(Math.sqrt(1 - MAX_PITCH * MAX_PITCH), Math.sign(out.y) * MAX_PITCH, 0);
+    }
+    return out;
+}
+
+// The rocks after the apartment (education), placed together as one chain
+// from `prev` (the apartment) to the tunnel throat: each clear of the tunnel
+// axis (all of it, the exit comes home too), of the apartment and of the
+// other stops. The chain leaves the window (`fwd`) and must come back to
+// the throat, behind it and along the tunnel axis (no hairpin into the
+// warp), so it turns round somewhere: the best of the tries spreads that
+// turn over all its corners (the smallest largest turn). Each rock faces
+// its hop, so a corner is a turn at a departure; a sharp one makes the
+// comet loop back past the camera (speed dips, a whipping view).
+// tight[k]: rock k hops from a rock (the tight rock scene).
+function placeAfterApartment(prev, placed, tight, fwd) {
+    const T0 = tunnel.centreWorld(0, new THREE.Vector3()), e1 = tunnel.tangentWorld(0, new THREE.Vector3());
+    const chain = tight.map(() => new THREE.Vector3()), dir = new THREE.Vector3(), d0 = new THREE.Vector3();
+    const toThroat = new THREE.Vector3();
+    let best = null, bestScore = -Infinity;
+    for (let i = 0; i < AFTER_TRIES; i++) {
+        let p = prev, maxTurn = 0, sumTurn = 0;
+        d0.copy(fwd);
+        for (let k = 0; k < chain.length; k++) {
+            randomHopDir(dir);
+            const [hop0, hop1] = tight[k] ? [ROCK_HOP_MIN, ROCK_HOP_MAX] : [MIN_HOP, MAX_HOP];
+            chain[k].copy(p).addScaledVector(dir, rand(hop0, hop1));
+            const a = d0.angleTo(dir);
+            maxTurn = Math.max(maxTurn, a); sumTurn += a;
+            d0.copy(dir); p = chain[k];
+        }
+        toThroat.subVectors(T0, p).normalize();
+        for (const a of [d0.angleTo(toThroat), toThroat.angleTo(e1)]) { maxTurn = Math.max(maxTurn, a); sumTurn += a; }
+        const turnScore = 10 - maxTurn - 0.25 * sumTurn;
+        if (turnScore <= bestScore) continue;            // a clear chain could not beat the best: skip the clearance
+        let clear = Infinity;
+        chain.forEach((c, k) => {
+            const sep = tight[k] ? ROCK_SEPARATION : MIN_SEPARATION;
+            clear = Math.min(clear, tunnel.axisDistance(c, tunnelExitS) / TUNNEL_CLEAR,
+                             (c.distanceTo(apartmentCentre) - apartmentRadius) / sep);
+            for (const q of placed) clear = Math.min(clear, c.distanceTo(q) / sep);
+            for (let j = 0; j < k; j++) clear = Math.min(clear, c.distanceTo(chain[j]) / sep);
+        });
+        const score = clear >= 1 ? turnScore : clear;
+        if (score > bestScore) { bestScore = score; best = chain.map(c => c.clone()); }
+    }
+    if (bestScore < 1) console.warn('rocks after the apartment: not fully clear', bestScore.toFixed(2));
+    return best;
 }
 
 function placeNextCenter(prev, placed, hopMin, hopMax, separation, reject = null) {
@@ -603,7 +687,7 @@ function projectPoints(label, halfW, halfH) {
 
 // ── Planar stop (text / rock / landing / project) ──────────────────
 function buildPlanarStop(def, center, right, up, palette) {
-    const scale = def.type === StopType.ROCK ? ROCK_SCALE : TEXT_SCALE;
+    const scale = def.type === StopType.ROCK ? ROCK_SCALE : def.type === StopType.LANDING ? landingScale : TEXT_SCALE;
     let points, staticFrom = 0;
     if (def.type === StopType.ROCK) {
         const ms = MILESTONES[def.milestone];
@@ -672,6 +756,13 @@ function buildPlanarStop(def, center, right, up, palette) {
 // Each curve sits beside one flight leg so the comet can swing past it.
 function buildScenery(scene) {
     scenery = [];
+    // Each stop's view: a sphere round the VIEW camera spot and the stop
+    // (the fit, with room for a panel: the largest one), so no galaxy curve
+    // runs through a rock, its label or the space in front of it
+    const views = stops.map(st => {
+        const fit = fitDistance(st.halfW, st.halfH, PANEL_FIT[0], PANEL_FIT[1]);
+        return { c: st.center.clone().addScaledVector(st.normal, -fit / 2), r: fit / 2 + Math.hypot(st.halfW, st.halfH) };
+    });
     const perp = new THREE.Vector3();
     const base = new THREE.Vector3();
     const cand = new THREE.Vector3();
@@ -695,12 +786,13 @@ function buildScenery(scene) {
         base.normalize();
         const base2 = new THREE.Vector3().crossVectors(dir, base).normalize();
 
-        let center = null, bestD = -1;
-        for (let t = 0; t < PLACE_TRIES; t++) {
+        let center = null, bestD = -Infinity;
+        for (let t = 0; t < SCENERY_TRIES; t++) {
             const ang = Math.random() * Math.PI * 2;
             perp.copy(base).multiplyScalar(Math.cos(ang)).addScaledVector(base2, Math.sin(ang));
             cand.copy(mid).addScaledVector(perp, standoff);
             let d = Infinity;
+            for (const v of views) d = Math.min(d, cand.distanceTo(v.c) - v.r - radius);   // out of every stop's view
             for (const st of stops) d = Math.min(d, cand.distanceTo(st.center));
             for (const sc of scenery) d = Math.min(d, cand.distanceTo(sc.center));
             d = Math.min(d, tunnel.axisDistance(cand, tunnelExitS) - tunnel.TUNNEL_RADIUS - radius - 4); // off the tunnel
@@ -991,15 +1083,12 @@ function doorVias(name, sign) {
     const d = DOORS[name], a = d.axis.map(v => v * sign), lead = d.lead ?? DOOR_LEAD;
     return (lead ? [-lead, 0, lead] : [0]).map(k => via(d.p.map((v, i) => v + a[i] * k), a));
 }
-function windowVias(inward) {
-    if (inward) {
-        // dive in over the cut ceiling, heading the way the comet comes from GIRAFFE360
-        const h = apartment.entryDir;
-        const P = via([ENTRY_TOP[0] - h.x * ENTRY_BACK, ENTRY_TOP[1], ENTRY_TOP[2] - h.z * ENTRY_BACK], [h.x, -ENTRY_DIVE, h.z]);
-        // the line-up point is free (no direction): the flight bends onto the dive gradually
-        return [{ p: P.p.clone().addScaledVector(P.dir, -WINDOW_STANDOFF), dir: null }, P];
-    }
-    return [via(WALL_TOP, WALL_OUT)];
+function windowVias() {
+    // dive in over the cut ceiling, heading the way the comet comes from GIRAFFE360
+    const h = apartment.entryDir;
+    const P = via([ENTRY_TOP[0] - h.x * ENTRY_BACK, ENTRY_TOP[1], ENTRY_TOP[2] - h.z * ENTRY_BACK], [h.x, -ENTRY_DIVE, h.z]);
+    // the line-up point is free (no direction): the flight bends onto the dive gradually
+    return [{ p: P.p.clone().addScaledVector(P.dir, -WINDOW_STANDOFF), dir: null }, P];
 }
 // Out over the window wall, already turned towards `to` (the loop back to the first rock)
 function exitTowards(to) {
@@ -1011,15 +1100,14 @@ function exitTowards(to) {
 export function viasFor(from, dest) {
     const fromIn = from?.type === StopType.OBJECT || from?.type === StopType.LANDING;
     if (dest.type === StopType.OBJECT) {
-        if (from?.type !== StopType.OBJECT) return windowVias(true);           // from outside: in through the window
+        if (from?.type !== StopType.OBJECT) return windowVias();           // from outside: in through the window
         return OBJECT_SPOTS[dest.objectName].doors.flatMap(([n, sg]) => doorVias(n, sg));
     }
-    if (dest.type === StopType.PROJECT && from?.type === StopType.OBJECT) return windowVias(false);   // out over the window wall to the tunnel
     if (dest.type === StopType.LANDING) {
         // over the roof, then a dive through the cut ceiling (down and towards the windows)
         return [{ p: roomToWorld(...ROOM_ROOF), dir: roomDirToWorld(0, -1, -1) }];
     }
-    if (fromIn) return exitTowards(dest.center);                            // the landing loops back out over the window wall
+    if (fromIn) return exitTowards(dest.center);                            // out over the window wall: to the first education rock, and the landing loop back
     return [];
 }
 export function isIndoorFlight(from, dest) {
@@ -1051,8 +1139,14 @@ export function buildWorld(scene) {
     const { points: landPts } = generateTextLines(LANDING_LINES);
     let lx = 0, ly = 0;
     for (const p of landPts) { lx = Math.max(lx, Math.abs(p.x)); ly = Math.max(ly, Math.abs(p.y)); }
-    const roomScale = fitDistance(lx * TEXT_SCALE, ly * TEXT_SCALE) / (LANDING_CAM_Z - LANDING_TEXT[2]);
+    // On a narrow portrait screen the email line needs a fit past
+    // controls.maxDistance (the camera cannot back off that far): the
+    // landing text shrinks until it fits at that distance
+    landingScale = TEXT_SCALE * Math.min(1, controls.maxDistance / fitUnclamped(lx * TEXT_SCALE, ly * TEXT_SCALE));
+    const roomScale = fitDistance(lx * landingScale, ly * landingScale) / (LANDING_CAM_Z - LANDING_TEXT[2]);
     apartment.objects = [];
+    let afterApartment = false;   // rocks after it are placed clear of it and the tunnel
+    let afterChain = [];          // ... as one chain (placeAfterApartment)
 
     for (const def of ROUTE) {
         // Rock → rock stays tight (the meteors are one scene);
@@ -1063,6 +1157,7 @@ export function buildWorld(scene) {
             if (prevDef?.type !== StopType.OBJECT) {
                 placeApartmentAndTunnel(prev, stops[stops.length - 1].normal, placed, tunnelExitS, roomScale);
                 placed.push(apartmentCentre.clone());
+                afterApartment = true;
             }
             const palette = ATTRACTORS[def.paletteIdx ?? 0].palette;
             const stop = { id: def.id, universe: def.universe, type: def.type, paletteIdx: def.paletteIdx ?? 0,
@@ -1083,6 +1178,21 @@ export function buildWorld(scene) {
             // In the living room, in front of the bay windows, facing the camera inside
             center = roomToWorld(...LANDING_TEXT);
             prev = center.clone().sub(apartment.winDir);
+        } else if (afterApartment) {
+            if (!afterChain.length) {
+                // this rock and the rocks right after it, as one chain (out over the window wall)
+                const i0 = ROUTE.indexOf(def), tightK = [];
+                for (let i = i0; ROUTE[i]?.type === StopType.ROCK; i++) tightK.push(ROUTE[i - 1].type === StopType.ROCK);
+                afterChain = placeAfterApartment(prev, placed, tightK, apartment.winDir);
+            }
+            center = afterChain.shift();
+        } else if (prevDef?.type === StopType.TEXT) {
+            // The comet leaves the traits helix sideways, along -right
+            // (orchestrator helixPos): no hop behind that, or the first leg
+            // makes a hairpin (a cusp: the camera speed dips, acceleration spikes)
+            const exit = stops[stops.length - 1].right.clone().negate(), h = new THREE.Vector3();
+            center = placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION,
+                c => h.subVectors(c, prev).normalize().dot(exit) < TEXT_EXIT_MIN_DOT);
         } else {
             center = tight
                 ? placeNextCenter(prev, placed, ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION)
@@ -1102,7 +1212,7 @@ export function buildWorld(scene) {
         const palette = ATTRACTORS[paletteIdx].palette;
         let viz = null;
         if (def.type === StopType.PROJECT) {
-            viz = buildProjectViz(MILESTONES[def.milestone].label);
+            viz = buildProjectViz(MILESTONES[def.milestone].label, { portal: !!MILESTONES[def.milestone].panel.portal });
             def.vizHalfW = viz.halfW; def.vizHalfH = viz.halfH;
             viz.group.position.copy(center);
             viz.group.quaternion.setFromRotationMatrix(
@@ -1126,6 +1236,13 @@ export function buildWorld(scene) {
             ...built
         };
         if (def.type === StopType.PROJECT) stop.line.material = getStopMaterial('inside');
+        if (viz?.rim) {
+            // A portal stop: the camera fit takes in the rim (fitHalfW/H), the comet loops round it
+            stop.portal = stop.panel.portal;
+            stop.rimR = viz.rim.outerR;
+            stop.fitHalfW = Math.max(stop.halfW, viz.rim.outerR);
+            stop.fitHalfH = Math.max(stop.halfH, viz.rim.outerR);
+        }
         if (def.type === StopType.LANDING) { ownMaterial(stop.line); stop.focusVis = 0; }
         scene.add(stop.line);
         stops.push(stop);

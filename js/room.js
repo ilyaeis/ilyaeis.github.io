@@ -2,24 +2,34 @@
 // CC BY 4.0, reconstructed with gsplat) with the six R&D splat objects
 // (objects.js) inside. Self-initialising. It listens for the 'journey:stop'
 // event (see stopPanel.js), loads Spark, the splat and the objects lazily a
-// few stops before the apartment, and fades them in as the camera comes
-// close. world.js places the apartment frame (`apartment`); this module
+// stop before the apartment (wantsRoom), and fades them in as the camera
+// comes close. world.js places the apartment frame (`apartment`); this module
 // only renders into it, so the orchestrator and the camera need no changes.
 
 import * as THREE from 'three';
 import { scene, renderer, camera, bloomPass, isMobile, setStarVisibility } from './attractors.js';
-import { stops, apartment, getInsideFade, setRoomFade, StopType } from './world.js';
+import { apartment, getInsideFade, setRoomFade, StopType, catalog, worldToRoom } from './world.js';
+
+// The apartment API for the add-ons (walk.js, depthTool.js): its frame
+// (position, quaternion, scale), room <-> world points and metres per unit
+export { apartment, roomToWorld, worldToRoom, M_PER_UNIT } from './world.js';
 import { setIntroRoomHidden } from './intro3d.js';
 
 // ── Tuning ─────────────────────────────────────────────────────────
 const ROOM_URL = 'assets/room/apartment.sog';
 const ROOM_LITE_URL = 'assets/room/apartment-lite.sog';   // mobile
-const PREFETCH_STOPS_BEFORE = 3;     // start loading when entering the stop this many before the first apartment stop (RTU)
+// The stops inside the apartment, by universe (the R&D objects, the landing)
+const APARTMENT_UNIVERSES = ['rnd', 'contact'];
 // Fade by the camera distance outside the apartment box, in room units
 // (0 inside). From outside it reads as a dollhouse (the ceiling is cut),
 // so it shows from far: the comet sees it before it dives in.
 const FADE_START = 8;                // opacity 0 at this distance or more (≈ 37 world units)
 const FADE_FULL = 3;                 // opacity 1 at this distance or less
+// A slow network: while the camera is near the apartment (or the skip link
+// holds the comet at the stop before it) and the room is not in yet, a
+// small line says so (`.room-loading`, with the download share when the
+// server sends a length). Once it is in, the room fades in over this long
+const LOAD_FADE_IN = 1.2;            // s
 // Indoors the outside world's lines (rocks, galaxies, intro) and the stars
 // would shine through the walls: they fade as the camera reaches the walls
 const INDOOR_FADE = [0.6, 0.05];     // outside distance where that fade starts .. is done
@@ -32,24 +42,49 @@ const ROOM_BRIGHTNESS = 0.42;
 const OBJECT_LIGHT = [0.44, 0.37, 0.29];
 const BLOOM_THRESHOLD_IN_ROOM = 0.75; // the HDR strokes (halo, text, comet) bloom, the white objects do not
 const OBJECT_SPLATS = isMobile ? 5000 : 16000;   // per object: fewer read soft up close
+// SparkRenderer knobs, matched to how the room was trained (gsplat):
+// minAlpha 1/255 cuts the faint tails the trainer also skips (Spark: 0.5/255);
+// maxStdDev 3 is the trainer's splat extent (Spark: √8). blurAmount 0.3 is
+// the screen-space blur of antialiased training (keep it); focalAdjustment 1,
+// preBlurAmount 0 and falloff 1 are Spark's defaults, left as they are.
+// sortRadial stays on (default): no visible change in stills, and the order
+// does not flip when the camera only turns. Colour space: Spark writes linear
+// into the composer target (encodeLinear), and the bloom pass draws it to the
+// screen with sRGB encoding, so the default is right: do not force it off.
+const SPARK_OPTIONS = { minAlpha: 1 / 255, maxStdDev: 3.0 };
 
 const creditEl = document.querySelector('.room-credit');
-// stops[] is built by the orchestrator after this module loads, so the
-// apartment stops are looked up on first use (by universe, never by index).
-let firstRndIdx = -1;
+const loadingEl = document.querySelector('.room-loading');
 
 let bloomOutside = 0.1;               // read from the bloom pass on load
 let group = null;                     // the apartment frame
 const meshes = [];                    // splat meshes (room + objects): opacity
 const objects = [];                   // object meshes: idle animation
+// For depthTool.js (lens + raycast): the room mesh once loaded, and the object meshes
+export let roomMesh = null;
+export const objectMeshes = [];
 let loading = false;
 let time = 0, lastNow = 0;
+let loadFade = 0;                     // 0 -> 1 over LOAD_FADE_IN once the room is in
+let held = false;                     // the skip link waits for the room (setRoomHold)
+let loadShare = -1;                   // downloaded share of the splat (-1: unknown)
+let failed = false;                   // the last load failed: no loading line (the next stop tries again)
+let resolveReady;
+const ready = new Promise(r => { resolveReady = r; });
 const _p = new THREE.Vector3();
 
-// Camera distance outside the apartment box, room units (0 inside)
+// The apartment for the skip link (main.js): start loading now (hover,
+// focus, click), is it in, and a promise for that
+export function prefetchRoom() { loadRoom(); }
+export function roomReady() { return !!group; }
+export function whenRoomReady() { return ready; }
+// While held, the loading line shows wherever the camera is
+export function setRoomHold(on) { held = on; }
+
+// Camera distance outside the apartment box, room units (0 inside).
+// worldToRoom works before the splat is in (the frame comes from world.js)
 function outsideDistance() {
-    _p.copy(camera.position);
-    group.worldToLocal(_p);
+    worldToRoom(camera.position, _p);
     const b = apartment.box;
     const dx = Math.max(b.min[0] - _p.x, 0, _p.x - b.max[0]);
     const dy = Math.max(b.min[1] - _p.y, 0, _p.y - b.max[1]);
@@ -64,7 +99,10 @@ function tick(now) {
     const dt = lastNow ? Math.min((now - lastNow) / 1000, 0.1) : 0;
     lastNow = now;
     const d = outsideDistance();
-    const a = (1 - THREE.MathUtils.smoothstep(d, FADE_FULL, FADE_START)) * (1 - getInsideFade());
+    if (!group) { showLoading(!failed && (held || (d < FADE_START && getInsideFade() < 0.5))); return; }
+    showLoading(false);
+    loadFade = Math.min(1, loadFade + dt / LOAD_FADE_IN);
+    const a = (1 - THREE.MathUtils.smoothstep(d, FADE_FULL, FADE_START)) * (1 - getInsideFade()) * loadFade;
     const indoor = 1 - THREE.MathUtils.smoothstep(d, INDOOR_FADE[1], INDOOR_FADE[0]);
     setRoomFade(indoor);
     setIntroRoomHidden(indoor > 0.5);
@@ -77,21 +115,34 @@ function tick(now) {
     objects.forEach((m, i) => m.userData.idle(time + i * 1.3));
 }
 
+function showLoading(on) {
+    if (!loadingEl) return;
+    if (on) {
+        // (whole tens only: the line is a status for screen readers too)
+        const text = loadShare >= 0 ? `loading the flat · ${Math.floor(loadShare * 10) * 10} %` : 'loading the flat…';
+        if (loadingEl.textContent !== text) loadingEl.textContent = text;
+    }
+    loadingEl.classList.toggle('visible', on);
+}
+
 async function loadRoom() {
     if (group || loading) return;
     loading = true;
+    failed = false;
+    if (!lastNow) requestAnimationFrame(tick);   // the loading line until the room is in, then the fades
     try {
         // objects.js imports Spark statically, so it stays behind this dynamic import
         const [{ SplatMesh, SparkRenderer }, { buildObject, mulberry32, contactShadow, FOOT }] =
             await Promise.all([import('@sparkjsdev/spark'), import('./objects.js')]);
-        const spark = new SparkRenderer({ renderer });
+        const spark = new SparkRenderer({ renderer, ...SPARK_OPTIONS });
         spark.renderOrder = -10;   // splats first, so the additive strokes and trail draw over them
         scene.add(spark);
         const g = new THREE.Group();
         g.position.copy(apartment.position);
         g.quaternion.copy(apartment.quaternion);
         g.scale.setScalar(apartment.scale);
-        const room = new SplatMesh({ url: isMobile ? ROOM_LITE_URL : ROOM_URL });
+        const room = new SplatMesh({ url: isMobile ? ROOM_LITE_URL : ROOM_URL,
+            onProgress: e => { if (e.lengthComputable && e.total > 0) loadShare = e.loaded / e.total; } });
         room.recolor = new THREE.Color(ROOM_BRIGHTNESS, ROOM_BRIGHTNESS, ROOM_BRIGHTNESS);
         meshes.push(room);
         g.add(room);
@@ -110,6 +161,7 @@ async function loadRoom() {
                 meshes.push(shadow);
             }
             objects.push(m);
+            objectMeshes.push(m, ...(m.userData.fans ?? []));
             g.add(holder);
         });
         for (const m of meshes) { m.opacity = 0; m.visible = false; }
@@ -117,20 +169,35 @@ async function loadRoom() {
         bloomOutside = bloomPass.threshold;
         await room.initialized;
         group = g;
+        roomMesh = room;
         scene.add(g);
         g.updateMatrixWorld(true);
-        requestAnimationFrame(tick);
+        resolveReady();
     } catch (err) {
         console.error('apartment load failed', err);
         loading = false;
+        failed = true;
     }
 }
 
+// When to load (Spark and the splat, about 15 MB): by universe, never by
+// index. On entering a stop in the apartment, or in the universe right
+// before it in route order (the Giraffe360 rock: the work path; the flight
+// from it is short). Elsewhere only when a flight into the apartment starts
+// ('leave' with `to`: the warp out from the last project is a long flight).
+// So the intro, the traits, the education rocks and the projects (also by
+// ?go, or an open project app) load nothing.
+const route = catalog.filter(e => e.navigable);              // index = the stop index
+const inApartment = e => APARTMENT_UNIVERSES.includes(e?.universe);
+const leadUniverse = route[route.findIndex(inApartment) - 1]?.universe;
+function wantsRoom({ phase, universe, to }) {
+    if (phase === 'enter') return inApartment({ universe }) || universe === leadUniverse;
+    return to !== undefined && inApartment(route[to]);
+}
+
 window.addEventListener('journey:stop', e => {
-    const { phase, index, universe, type } = e.detail;
-    if (firstRndIdx < 0) firstRndIdx = stops.findIndex(s => s.universe === 'rnd');
-    if (firstRndIdx < 0) return;
-    if (phase === 'enter' && index >= firstRndIdx - PREFETCH_STOPS_BEFORE) loadRoom();
+    const { phase, universe, type } = e.detail;
+    if (wantsRoom(e.detail)) loadRoom();
     // The credit shows at the apartment stops and the landing
     if (creditEl && (universe === 'rnd' || type === StopType.LANDING)) creditEl.hidden = phase !== 'enter';
 });

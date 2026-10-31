@@ -111,15 +111,17 @@ function headingToDir() {
 // projection offset (camera.setViewOffset): orbit target and user
 // rotation still pivot on the stop center.
 // Keep PANEL_SIDE_QUERY identical to the media query in css/style.css.
-export const PANEL_SIDE_QUERY = '(min-width: 700px) and (orientation: landscape)';
+const PANEL_SIDE_QUERY = '(min-width: 700px) and (orientation: landscape)';
 const SHIFT_SIDE_X = 0.25;      // rock center at 25% of width
 const SHIFT_BOTTOM_Y = 0.18;    // rock center at ~32% of height
 const SHIFT_TIME = 0.8;         // s: smooth time; ramps during the flight
 let shiftTarget = 0;
-const shift = { x: 0, v: 0 };
+// Two springs in a row (the goal eases first), so a shift starts with zero
+// acceleration: no rotation jolt on a departure from a stop without a panel
+const shift = { x: 0, v: 0 }, shiftGoal = { x: 0, v: 0 };
 export function setScreenShift(on, immediate = false) {
     shiftTarget = on ? 1 : 0;
-    if (immediate) { shift.x = shiftTarget; shift.v = 0; }
+    if (immediate) { shift.x = shiftGoal.x = shiftTarget; shift.v = shiftGoal.v = 0; }
 }
 export function isPanelSideLayout() { return window.matchMedia(PANEL_SIDE_QUERY).matches; }
 
@@ -206,7 +208,8 @@ export function update(dt, controls, camera, cometPos, cometDir) {
         smoothDampVec(controls.target, orbitCenter, targetVel, ORBIT_TIME, dt);
     }
 
-    smoothDampScalar(shift, shiftTarget, SHIFT_TIME, dt);
+    smoothDampScalar(shiftGoal, shiftTarget, SHIFT_TIME / 2, dt);
+    smoothDampScalar(shift, shiftGoal.x, SHIFT_TIME / 2, dt);
     if (shift.x < 0.002 && shiftTarget === 0) {
         if (camera.view?.enabled) camera.clearViewOffset();
     } else {

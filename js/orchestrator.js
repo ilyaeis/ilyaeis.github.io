@@ -15,6 +15,9 @@ import {
 import * as cam from './camera.js';
 import * as intro from './intro3d.js';
 import * as tunnel from './tunnel.js';
+import * as portal from './portal.js';
+import * as explore from './explore.js';
+import { setPhaseOwner } from './input.js';
 import {
     buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
     getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL, fitDistance, viasFor, isIndoorFlight, apartment, setHaloFocus, snapHaloFocus
@@ -27,7 +30,11 @@ export const Phase = {
     INTRO: 0,
     ROCKET_EXIT: 1,   // first tap: the rocket morphs into the comet in place
     TRAVEL: 2,
-    VIEW: 3
+    VIEW: 3,
+    PORTAL_IN: 4,     // the comet dives into a project's portal; the app overlay fades in
+    DIMENSION: 5,     // the app overlay is open (dimension.js); the main loop idles
+    PORTAL_OUT: 6,    // back out of the portal, into VIEW
+    EXPLORE: 7        // walk mode in the apartment (walk.js); stopIndex stays
 };
 
 // ── State ──────────────────────────────────────────────────────────
@@ -259,8 +266,11 @@ const LIFT_SKIP = 0.4;               // room units: no lift when the next via is
 // Projects tunnel (tunnel.js). Flights inside it follow the centreline.
 const TUNNEL_DEPART = 8;             // s after a project stop where the departure joins the centreline
 const ARRIVE_BLEND = 0.3;            // share of the flight time over which the camera blends into the VIEW pose (time-based, so dt-free)
+const ARRIVE_BLEND_DIVE = 0.36;      // ... on the dive into the apartment (the view turns down onto the first object)
 const ARRIVE_TIME = 2.6 * TUNNEL_TIME_SCALE; // tunnel stops: blend over the last this many seconds
 const ARRIVE_MIN_DOT = 0.3;          // ... only if the arrival heading is this aligned with the stop's facing
+const ARRIVE_LAG = 0.5;              // s: the chase heading trails the path about this much (camera.js TURN_TIME)
+const ARRIVE_SWING = THREE.MathUtils.degToRad(20); // open-space flights into a rock or the traits end at most this far off the stop's facing
 const FOLLOW_EASE = 0.3;             // path share over which the chase distance eases to the destination fit
 const JOIN_HEADING_MIX = 1.0;        // departure into the tunnel: share of the live heading in the first control arm
 const TUNNEL_LAND = 6;               // the last units of s blend from the centreline onto the label start
@@ -304,11 +314,13 @@ const WARP_COMET = 1.2;              // extra comet intensity at the peak
 const WARP_FADE_PRE = 2.2 * TUNNEL_TIME_SCALE; // s: the worlds cross-fade from this long before the jump
 const WARP_FADE_POST = 0.4 * TUNNEL_TIME_SCALE; // ... to this long after it (reversed on the way out)
 
+
 // Rocket → comet morph duration (3D rocket — see intro3d.js)
 const ROCKET_MORPH_DURATION = intro.CHARGE_DURATION;
 
 // DOM refs
 let tapPromptEl = null;
+let introLinksEl = null;   // "skip to work · resume" under the first prompt
 
 // ── Init ───────────────────────────────────────────────────────────
 export function init() {
@@ -326,7 +338,20 @@ export function init() {
     controls.addEventListener('end', () => { userDragging = false; });
     baseFov = camera.fov;
     tunnel.setFlare(0, tunnelExitS);
+    // The portal and walk mode modules get a small interface to the journey
+    const J = {
+        Phase, cometPos, cometDir, worldPos,
+        WARP_COMET, WARP_FOV, TRAVEL_POINTS_PER_FRAME,
+        get phase() { return phase; }, get phaseTime() { return phaseTime; },
+        get stop() { return stops[stopIndex]; }, get trail() { return trail; }, get baseFov() { return baseFov; },
+        viewDelay: (stop) => VIEW_TAP_DELAY[stop.type],
+        enterPhase, setPhase, enterView, emitStop, hideTapPrompt, stepFaceAlign, traceWorld, fitFor, hasPanel, legPoint
+    };
     const q = new URLSearchParams(location.search);
+    // Dev (?portal=1): enter the stop's portal after the view delay; ?t then counts from the portal start
+    const portalAuto = q.has('portal');
+    portal.init(J, portalAuto);
+    explore.init(J);
     const stopQ = Number(q.get('stop')), legQ = Number(q.get('leg'));
     const goTarget = q.has('go') ? stopById(q.get('go')) : null;
     if (goTarget?.navigable) {          // ?go=<id>[&mode=fly|jump]
@@ -336,9 +361,23 @@ export function init() {
     }
     else if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
     else if (q.has('leg') && Number.isInteger(legQ) && legQ >= 1 && stops[legQ]) { jumpTo(legQ - 1); setupTravel(legQ, false); }
-    else showTapPrompt();
+    else if (q.has('portal') && stops.some(st => st.portal)) jumpTo(stops.findIndex(st => st.portal));
+    else {
+        showTapPrompt();
+        // Skip to work: a real link (?go, by flight) to the first stop of the apartment
+        introLinksEl = document.querySelector('.intro-links');
+        const skip = introLinksEl?.querySelector('.intro-skip');
+        if (skip) {
+            skip.href = '?go=' + stops.find(st => st.universe === 'rnd').id + '&mode=fly';
+            introLinksEl.hidden = false;
+        }
+    }
+    if (q.has('explore')) explore.enterExplore(true);   // dev: with ?go=<apartment stop or contact>
     const tQ = Number(q.get('t'));
-    if (q.has('t') && tQ > 0 && tQ <= 30) simulate(tQ);
+    if (q.has('t') && tQ > 0 && tQ <= 30) {
+        if (portalAuto) simulateUntil(() => phase === Phase.PORTAL_IN, 10);
+        simulate(tQ);
+    }
     frozen = q.has('freeze');
 }
 
@@ -349,6 +388,11 @@ function simulate(seconds) {
     for (let t = 0; t < seconds; t += 1 / 60) update(1 / 60);
     skipRender = false;
 }
+function simulateUntil(done, maxSeconds) {
+    skipRender = true;
+    for (let t = 0; t < maxSeconds && !done(); t += 1 / 60) update(1 / 60);
+    skipRender = false;
+}
 
 export function onTap() { tapPending = true; }
 
@@ -357,29 +401,25 @@ export function setSkipRender(v) { skipRender = v; }
 export function getState() {
     return { phase, stopIndex, userDragging, phaseTime };
 }
-// Dev only: the current flight path, n samples (world units)
-export function devPath(n = 200) {
-    const out = [];
-    for (let i = 0; i <= n; i++) out.push(travelPoint(i / n, new THREE.Vector3()).toArray());
-    return out;
-}
 export function devState() {
     return { phase, phaseTime, stopIndex, stopType: stops[stopIndex]?.type ?? -1, worldPos, cometPos,
-             tunnelFlight: phase === Phase.TRAVEL && easeC2, headS };
+             tunnelFlight: phase === Phase.TRAVEL && easeC2, headS, portal: !!stops[stopIndex]?.portal };
 }
 
 // Tell the DOM (stopPanel.js) which stop the comet enters or leaves
-function emitStop(phaseName) {
+// (extra: { to } on a 'leave' that starts a flight: the destination index)
+function emitStop(phaseName, extra = null) {
     const stop = stops[stopIndex];
     if (!stop) return;
     window.dispatchEvent(new CustomEvent('journey:stop', {
         detail: { phase: phaseName, index: stopIndex, type: stop.type, panel: stop.panel || null,
-                  id: stop.id, universe: stop.universe, label: stop.panel?.title ?? stop.id }
+                  id: stop.id, universe: stop.universe, label: stop.panel?.title ?? stop.id, ...extra }
     }));
 }
 
 // Land the comet at stop n instantly (?stop, ?leg, ?go, journey.goTo jump).
 export function jumpTo(n) {
+    explore.leaveNow();
     intro.hideRocket(); hideTapPrompt();
     stopIndex = n;
     const stop = stops[n];
@@ -403,13 +443,27 @@ function setInside(f) { setInsideFade(f); intro.setIntroVisible(f < 0.5); }
 function hasPanel(stop) { return stop.type === StopType.ROCK || stop.type === StopType.PROJECT || stop.type === StopType.OBJECT; }
 
 function showTapPrompt() { if (tapPromptEl) tapPromptEl.classList.add('visible'); }
-function hideTapPrompt() { if (tapPromptEl) tapPromptEl.classList.remove('visible'); }
+// (the intro links and the first prompt's key hint go with the first prompt:
+// they never come back)
+function hideTapPrompt() {
+    if (!tapPromptEl) return;
+    tapPromptEl.classList.remove('visible');
+    if (introLinksEl) introLinksEl.hidden = true;
+    if (tapPromptEl.textContent !== 'tap to continue') tapPromptEl.textContent = 'tap to continue';
+}
 
 function enterPhase(newPhase) {
-    phase = newPhase;
+    setPhase(newPhase);
     phaseTime = 0;
     phaseFirstFrame = true;
     tapPending = false; // taps don't queue across phases — each stop wants its own
+}
+// The phase alone (leaving walk mode at once keeps the phase time); it also
+// sets who owns the input (input.js)
+function setPhase(newPhase) {
+    phase = newPhase;
+    setPhaseOwner(phase === Phase.PORTAL_IN || phase === Phase.DIMENSION || phase === Phase.PORTAL_OUT ? 'portal'
+                  : phase === Phase.EXPLORE ? 'walk' : 'journey');
 }
 
 // Share of the viewport the rock may fill (the HTML panel takes the rest)
@@ -428,7 +482,7 @@ function fitFor(stop) {
     }
     if (!hasPanel(stop)) return fitDistance(stop.halfW, stop.halfH);
     const [w, h] = cam.isPanelSideLayout() ? [ROCK_FIT_SIDE, 1] : [1, ROCK_FIT_BOTTOM];
-    const fit = fitDistance(stop.halfW, stop.halfH, w, h);
+    const fit = fitDistance(stop.fitHalfW ?? stop.halfW, stop.fitHalfH ?? stop.halfH, w, h);   // a portal stop takes in its rim
     return stop.type === StopType.OBJECT ? Math.min(fit, stop.fitMax) : fit;
 }
 
@@ -711,7 +765,9 @@ function stepFaceAlign(dt) {
 // ── Travel setup ───────────────────────────────────────────────────
 export function setupTravel(destIdx, withCorkscrew) {
     const dest = stops[destIdx];
-    emitStop('leave'); // before stopIndex moves to the destination
+    explore.leaveNow();
+    emitStop('leave', { to: destIdx }); // before stopIndex moves to the destination
+    stops[stopIndex]?.viz?.rim?.setHover(false);
 
     // Aim at the FIRST stroke point so the comet flies straight into the
     // start of the trajectory (no spoke through the center) and begins
@@ -750,6 +806,7 @@ export function setupTravel(destIdx, withCorkscrew) {
     }
     if (inTunnel || toTunnel) buildTunnelLegs(from, dest, inTunnel, toTunnel, vias);
     else buildOpenLegs(vias);
+    if (!inTunnel && (dest.type === StopType.ROCK || dest.type === StopType.TEXT)) faceArrival(travelLegs[travelLegs.length - 1], dest);
 
     // Time proportional to chord length
     let total = 0;
@@ -799,11 +856,39 @@ export function setupTravel(destIdx, withCorkscrew) {
     // from behind, a straight blend would swing the camera through the stop
     // (the face-align glide in VIEW goes round the side instead)
     arriveBlend = travelTangent(0.999, _vA).dot(dest.normal) > ARRIVE_MIN_DOT;
+    // Into a rock or the traits: the chase view at the start of the blend
+    // must face the stop too (the heading lags the path by ~ARRIVE_LAG s), or
+    // the blend turns it too fast; the VIEW glide then goes round at its capped pace
+    if (arriveBlend && !inTunnel && (dest.type === StopType.ROCK || dest.type === StopType.TEXT)) {
+        for (let x = 1 - ARRIVE_BLEND - ARRIVE_LAG / travelDuration; x < 1; x += 0.02) {
+            if (travelTangent(travelEase(Math.max(x, 0)), _vA).dot(dest.normal) < ARRIVE_MIN_DOT) { arriveBlend = false; break; }
+        }
+    }
     cam.setFollowDistance(followFrom);
     // A fly-by is framed centred: the panel shift comes back after it
     shiftBack = !flyby;
     cam.setScreenShift(hasPanel(dest) && !flyby);
     enterPhase(Phase.TRAVEL);
+}
+
+// The last leg into a rock (or the traits) arrives along the stop's facing,
+// at most ARRIVE_SWING off it. A hover departure (Thales point) or a galaxy
+// via can bring the comet in from the side; the chase camera then trails at
+// that angle, and the arrival blend (into the face-on view) has to turn the
+// view fast (up to 137 deg/s). The arm keeps its length. A leg that comes
+// from behind the stop (the loop back to the first rock) stays as it is: the
+// VIEW glide goes round the side (an arrival from the front would need a hairpin).
+const _qArr = new THREE.Quaternion(), _qId = new THREE.Quaternion();
+function faceArrival(leg, dest) {
+    if (_vC.subVectors(leg.p3, leg.p0).normalize().dot(dest.normal) < ARRIVE_MIN_DOT) return;
+    const arm = leg.p2.distanceTo(leg.p3);
+    _vC.subVectors(leg.p2, leg.p3).normalize();           // the arrival arm, pointing back
+    _vD.copy(dest.normal).negate();                        // back towards the VIEW camera
+    const a = _vC.angleTo(_vD);
+    if (a <= ARRIVE_SWING) return;
+    _qArr.setFromUnitVectors(_vD, _vC);
+    _qId.identity().slerp(_qArr, ARRIVE_SWING / a);
+    leg.p2.copy(leg.p3).addScaledVector(_vD.applyQuaternion(_qId), arm);
 }
 
 // Path share where leg k ends (the warp jump point)
@@ -929,8 +1014,11 @@ function buildOpenLegs(vias = []) {
     if (via) {
         const viaPos = galaxyViaPoint(via, _targetPos);
         const leg1 = buildFirstLeg(viaPos);
-        // Depart the via along leg1's arrival tangent — smooth join
-        _vec3.subVectors(leg1.p3, leg1.p2).normalize();
+        // Cross the via along the mean of the ways in and out (a random
+        // crossing made a tight S-bend there: acceleration spikes mid-flight),
+        // and depart it along the same direction — smooth join
+        _vec3.subVectors(viaPos, cometPos).normalize().add(_vA.subVectors(_targetPos, viaPos).normalize()).normalize();
+        leg1.p2.copy(viaPos).addScaledVector(_vec3, -VIA_PULL * leg1.p0.distanceTo(viaPos));
         travelLegs.push(leg1, buildLeg(viaPos, _vec3, _targetPos, true));
     } else {
         travelLegs.push(buildFirstLeg(_targetPos));
@@ -964,7 +1052,7 @@ function applyCorkscrew(t, point) {
 
 // ── Update ─────────────────────────────────────────────────────────
 export function update(dt) {
-    if (isPaused()) return;
+    if (isPaused() || phase === Phase.DIMENSION) return;   // the app overlay covers the scene: idle
     if (frozen) { render(); return; }
     totalTime += dt;
     addJourneyTime(dt);
@@ -975,11 +1063,15 @@ export function update(dt) {
         case Phase.ROCKET_EXIT:    updateRocketExit(dt); break;
         case Phase.TRAVEL:         updateTravel(dt); break;
         case Phase.VIEW:           updateView(dt); break;
+        case Phase.PORTAL_IN:      portal.update(dt, true); break;
+        case Phase.PORTAL_OUT:     portal.update(dt, false); break;
+        case Phase.EXPLORE:        explore.update(dt); break;
     }
 
     // Tunnel window and nearby visualizations follow the viewer
     const here = stops[stopIndex];
-    headS = phase === Phase.VIEW && here?.tunnelS != null ? here.tunnelS : tunnel.sOf(cometPos);
+    const atStop = phase === Phase.VIEW || phase === Phase.PORTAL_IN || phase === Phase.PORTAL_OUT;
+    headS = atStop && here?.tunnelS != null ? here.tunnelS : tunnel.sOf(cometPos);
     tunnel.setView(headS);
     updateWorld(dt, headS);
 
@@ -990,7 +1082,7 @@ export function update(dt) {
         updateTrailGlow(trail, totalTime);
     }
 
-    cam.update(dt, controls, camera, worldPos, headingOverride ?? cometDir);
+    if (phase !== Phase.EXPLORE) cam.update(dt, controls, camera, worldPos, headingOverride ?? cometDir);
     if (!skipRender) render();
 }
 
@@ -1134,7 +1226,8 @@ function updateTravel(dt) {
         // in the tunnel: over the last ARRIVE_TIME s (the flights are long; the rush is over by then)
         cam.setArrival(null, null, THREE.MathUtils.smootherstep(phaseTime + dt, travelDuration - ARRIVE_TIME, travelDuration));
     } else {
-        cam.setArrival(null, null, THREE.MathUtils.smootherstep(x, 1 - ARRIVE_BLEND, 1));
+        const share = dest.type === StopType.OBJECT ? ARRIVE_BLEND_DIVE : ARRIVE_BLEND;   // (indoor flights: the rail below)
+        cam.setArrival(null, null, THREE.MathUtils.smootherstep(x, 1 - share, 1));
     }
     if (indoor) {
         const L = travelWeightedLen, s = apartment.scale;
@@ -1344,7 +1437,7 @@ function helixPos(stop, u, out) {
 // Lazy Lissajous loop around a planar stop, sized to its bounds.
 function loopPos(stop, u, out) {
     if (stop.type === StopType.TEXT) return helixPos(stop, u, out);
-    if (stop.type === StopType.PROJECT) return frameLoopPos(stop, u, out);
+    if (stop.type === StopType.PROJECT) return stop.rimR ? rimLoopPos(stop, u, out) : frameLoopPos(stop, u, out);
     if (stop.type === StopType.OBJECT) return ringLoopPos(stop, u, out);
     const w = Math.max(stop.halfW * 1.25, 0.4);
     const h = Math.max(stop.halfH * 1.6, 0.3);
@@ -1398,6 +1491,15 @@ function frameLoopPos(stop, u, out) {
         .addScaledVector(stop.normal, 0.2 * Math.sin(0.8 * u));
 }
 
+// Portal stops: the comet circles just outside the rim (clockwise, from the top)
+function rimLoopPos(stop, u, out) {
+    const R = stop.rimR + PROJECT_LOOP_PAD, a = Math.PI / 2 - u * PROJECT_LOOP_SPEED / R;
+    return out.copy(stop.center)
+        .addScaledVector(stop.right, R * Math.cos(a))
+        .addScaledVector(stop.up, R * Math.sin(a))
+        .addScaledVector(stop.normal, 0.2 * Math.sin(0.8 * u));
+}
+
 // The orbit the comet actually rides: the Lissajous plus a settle offset
 // that decays from the trajectory end (set when tracing finishes) so the
 // comet flies off the last stroke and eases onto the loop — instead of
@@ -1445,9 +1547,14 @@ function updateView(dt) {
     }
 
     const delay = VIEW_TAP_DELAY[stop.type];
-    if (phaseTime >= delay) showTapPrompt();
+    if (phaseTime >= delay && portal.devAutoEnter(stop)) return;
+    // A tap waits for the view delay and for the face-on glide to settle: an
+    // arrival from behind glides round the stop at up to FACE_ALIGN_MAX_TURN,
+    // and a departure then would reverse that turn in a snap (a drag ends the glide)
+    const ready = phaseTime >= delay && camAligned;
+    if (ready) showTapPrompt();
 
-    if (tapPending && phaseTime >= delay) {
+    if (tapPending && ready) {
         tapPending = false;
         hideTapPrompt();
 

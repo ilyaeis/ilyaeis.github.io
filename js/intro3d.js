@@ -21,12 +21,15 @@ const ICON_SIZE = 0.085;
 // Intro text/icon/rocket live in WORLD space at the orbit center, so
 // dragging the view rotates them together with the starfield
 const INTRO_SCALE = 0.6;        // compensates for the closer orbit distance
+const INTRO_FIT = 0.88;         // the widest text line spans at most this share of the view width (phones: the anchor scales down)
 const INTRO_VIEW_DIST = 1.2;    // initial camera orbit radius
 const TEXT_INTRO_Y = 0.02;
 const ICON_INTRO_Y = -0.33;
 const ICON_X = 0.075;           // horizontal offset of each icon from center
 
 let camera = null;
+let introScale = INTRO_SCALE;   // the anchor scale now (fitIntro)
+let textHalfW = 0;              // half the widest text line, anchor units (0 until the font loads)
 
 // Groups — anchor is in world space; rocket is a camera child (HUD)
 let introAnchor = null;   // world-space anchor facing the initial camera
@@ -90,10 +93,11 @@ function buildText(font) {
         );
         const mesh = new THREE.Mesh(geo, mat);
         textGroup.add(mesh);
+        textHalfW = Math.max(textHalfW, (bb.max.x - bb.min.x) / 2);
     }
 
     makeLine('Ilja Safronovs', NAME_SIZE, nameMat, 0.10);
-    makeLine('R&D engineer. student. builder.', TAGLINE_SIZE, tagMat, -0.06);
+    makeLine('3D reconstruction and computer vision · Giraffe360 · Riga', TAGLINE_SIZE, tagMat, -0.06);
 }
 
 // ── Build: icons (LinkedIn, GitHub) ────────────────────────────────
@@ -216,11 +220,13 @@ export function init(scene, cam) {
 // derive from what the initial camera sees, so loops stay in frame.
 function rocketIdlePos(t, out) {
     const { hw, hh } = viewExtents(INTRO_VIEW_DIST);
-    const ax = hw / INTRO_SCALE;
-    const ay = hh / INTRO_SCALE;
+    const ax = hw / introScale;
+    const ay = hh / introScale;
+    // portrait (phones): the text spans the width, so the loops stay in the band above it
+    const [amp, mid] = hw < hh ? [0.17, 0.6] : [0.42, 0.18];
     out.set(
         ax * 0.55 * Math.sin(t * 0.55),
-        ay * (0.42 * Math.sin(t * 1.1 + 1.2) + 0.18),
+        ay * (amp * Math.sin(t * 1.1 + 1.2) + mid),
         0.35 * Math.sin(t * 0.8 + 0.5)
     );
     return out;
@@ -253,7 +259,7 @@ export function setRocketCharging() {
     // Short forward run — stays comfortably on screen while the comet
     // line grows out of its tip
     const { hw } = viewExtents(INTRO_VIEW_DIST);
-    dashDist = (hw / INTRO_SCALE) * 0.4;
+    dashDist = (hw / introScale) * 0.4;
 }
 
 // Hidden inside the projects tunnel (the walls are see-through)
@@ -287,10 +293,19 @@ export function getGithubIconObject() {
     return githubGroup;
 }
 
+// Scale the anchor so the widest line fits the view width (narrow phones);
+// frozen once the rocket morphs into the comet
+function fitIntro() {
+    if (!textHalfW || rocketMode !== 'idle') return;
+    introScale = Math.min(INTRO_SCALE, INTRO_FIT * viewExtents(INTRO_VIEW_DIST).hw / textHalfW);
+    introAnchor.scale.setScalar(introScale);
+}
+
 // ── Per-frame update ───────────────────────────────────────────────
 export function update(dt, totalTime) {
     time = totalTime;
     appearT += dt;
+    fitIntro();
 
     // Fade everything in once built
     const fadeIn = Math.min(appearT / 0.8, 1);
