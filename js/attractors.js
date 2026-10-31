@@ -278,7 +278,8 @@ function createStarfield() {
             uSceneCenter: { value: new THREE.Vector3() },
             uSceneDist: { value: 1.2 },
             uFieldSize: { value: STAR_FIELD_SIZE },
-            uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO) }
+            uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO) },
+            uVis: { value: 1 }
         },
         vertexShader: `
             uniform float uTime;
@@ -287,6 +288,7 @@ function createStarfield() {
             uniform float uSceneDist;
             uniform float uFieldSize;
             uniform float uPixelRatio;
+            uniform float uVis;
             attribute vec3 aParam;
             attribute float aSize;
             varying float vAlpha;
@@ -306,7 +308,7 @@ function createStarfield() {
                 // and ones near the wrap boundary (hides recenter pops)
                 float nearFade = smoothstep(0.25 * uSceneDist, 0.75 * uSceneDist, distance(wp, uCamPos));
                 float farFade = 1.0 - smoothstep(0.85, 0.98, t);
-                vAlpha = aParam.z * tw * nearFade * farFade;
+                vAlpha = aParam.z * tw * nearFade * farFade * uVis;
 
                 // Size relative to the scene distance, so stars keep the
                 // same apparent size whatever the zoom level is
@@ -332,6 +334,13 @@ function createStarfield() {
     starPoints.frustumCulled = false;
     starPoints.renderOrder = -1; // behind the trail
     scene.add(starPoints);
+}
+
+// Stars fade out indoors (room.js): they would read as dust on the walls
+export function setStarVisibility(v) {
+    if (!starPoints) return;
+    starPoints.material.uniforms.uVis.value = v;
+    starPoints.visible = v > 0.002;
 }
 
 const BLOOM_STRENGTH = 1.2;

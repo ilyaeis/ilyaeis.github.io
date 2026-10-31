@@ -44,6 +44,10 @@ let chaseFresh = false;                       // first FOLLOW frame: seed from t
 // VIEW pose (look at the stop centre, camera at the face-on spot), so the
 // focus never jumps from the comet to the stop when the flight ends.
 const arrive = { w: 0, target: new THREE.Vector3(), pos: new THREE.Vector3() };
+// Rail (indoor flights): a pose that rides the comet's own path (orchestrator),
+// so the camera stays in the free space the comet flies through (doorways).
+// Blended over the chase pose by w, before the arrival blend.
+const rail = { w: 0, target: new THREE.Vector3(), pos: new THREE.Vector3() };
 
 // Measured pose velocity (for hand-offs)
 export const cameraVel = new THREE.Vector3(); // read-only outside
@@ -135,6 +139,12 @@ export function devState() { return { mode: currentMode, chaseDist: dist.x, chas
 export function setOrbitCenter(x, y, z) { orbitCenter.set(x, y, z); }
 
 // w = 0..1 (the caller eases it); target = stop centre, pos = VIEW camera spot
+export function setRail(pos, target, w) {
+    rail.w = w;
+    if (pos) rail.pos.copy(pos);
+    if (target) rail.target.copy(target);
+}
+
 export function setArrival(target, pos, w) {
     arrive.w = w;
     if (target) arrive.target.copy(target);
@@ -184,6 +194,10 @@ export function update(dt, controls, camera, cometPos, cometDir) {
         }
         controls.target.copy(_look).add(lookErr);
         camera.position.copy(_cam).add(camErr);
+        if (rail.w > 0) {
+            controls.target.lerp(rail.target, rail.w);
+            camera.position.lerp(rail.pos, rail.w);
+        }
         if (arrive.w > 0) {
             controls.target.lerp(arrive.target, arrive.w);
             camera.position.lerp(arrive.pos, arrive.w);

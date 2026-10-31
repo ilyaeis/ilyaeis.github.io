@@ -2,7 +2,8 @@
 // An endless, snaking tunnel of glowing helical strands and faint rings.
 // The centreline is analytic: a base axis that is a wide circular arc
 // (radius TURN: it starts at `origin` along `axis`, turns by TUNNEL_TURN
-// over the tunnel length, so the far end comes back near the start),
+// over the tunnel length, almost a full circle, so the far end comes back
+// behind the start: the apartment the comet leaves is also where it lands),
 // plus a sideways (x) and up (y) snake, sums of sines. In fast zones
 // (setZones: the stretches between stops, where the comet rushes) the snake
 // flattens to FAST_STRAIGHT, so the path is nearly straight at speed. Nothing
@@ -30,7 +31,7 @@ export const TUNNEL_RADIUS = 4.5;
 // Centreline: x = A1 sin(2πs/P1 + φ1) + A2 sin(2πs/P2 + φ2), y = B1 sin(2πs/Q1 + φ3) + B2 cos(2πs/Q2 + φ4).
 // Curvature ≤ ~0.055 /unit: at 12 u/s the heading turns ≤ ~40 deg/s.
 const AMP = [3.0, 0.6, 2.0, 0.5];
-export const TUNNEL_TURN = 4.4;          // rad the base axis turns over the tunnel length (~250 deg)
+export const TUNNEL_TURN = 2 * Math.PI - 0.5; // rad the base axis turns over the tunnel length (~331 deg): the exit comes back behind the start
 const FAST_STRAIGHT = 0.1;               // snake amplitude x this in the middle of a fast zone
 const MAX_ZONES = 8;
 const PERIOD = [60, 33, 50, 28];
@@ -244,7 +245,7 @@ const STREAK_VERTEX = /* glsl */`
 const origin = new THREE.Vector3();
 let RB = 1e6, sigma = 1;                 // base arc radius, turn direction
 const zones = [];                        // fast zones [{ c, h }]
-let lastS = 0;                           // sOf unwrapping (the arc can pass the half turn)
+let lastS = 0;                           // sOf unwrapping (the arc is almost a full circle: the start and the exit lie close)
 const LX = new THREE.Vector3(), LY = new THREE.Vector3(), LZ = new THREE.Vector3();
 const freq = PERIOD.map(p => 2 * Math.PI / p);
 const phase = [0, 0, 0, 0];
@@ -323,6 +324,10 @@ export function sOf(p) {
     lastS = s;
     return s;
 }
+// The start and the end of the near-full circle lie close, so a point
+// there has two arc parameters. sOf picks the one next to the last result;
+// set the reference before a flight into the tunnel start (s = 0).
+export function setUnwrapRef(s) { lastS = s; }
 // Distance from p to the base axis over s in [0, length] (for placement)
 export function axisDistance(p, length) {
     let d = Infinity;

@@ -320,7 +320,7 @@ body.panel-open .tap-prompt {
 
 .stop-panel.visible { transform: none; }
 
-/* Credit for the landing room (CC BY 4.0), shown only at the landing */
+/* Credit for the apartment splat (CC BY 4.0), shown at the apartment stops and the landing */
 .room-credit {
     position: fixed;
     left: 1rem;
@@ -340,4 +340,8 @@ body.panel-open .tap-prompt {
 @media (max-width: 699px) {
     .room-credit { left: 0; right: 0; max-width: none; text-align: center; font-size: 0.68rem; bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
     .tap-prompt { bottom: calc(3.4rem + env(safe-area-inset-bottom)); }
+}
+/* Bottom panel layout (not the side query): the credit would cover the panel text */
+@media (max-width: 699px), (orientation: portrait) {
+    body.panel-open .room-credit { display: none; }
 }

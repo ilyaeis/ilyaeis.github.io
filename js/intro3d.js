@@ -257,7 +257,10 @@ export function setRocketCharging() {
 }
 
 // Hidden inside the projects tunnel (the walls are see-through)
-export function setIntroVisible(v) { if (introAnchor) introAnchor.visible = v; }
+// Two switches: the warp (orchestrator) and the apartment (room.js: hidden indoors)
+let introOn = true, introRoomHidden = false;
+export function setIntroVisible(v) { introOn = v; if (introAnchor) introAnchor.visible = introOn && !introRoomHidden; }
+export function setIntroRoomHidden(h) { introRoomHidden = h; if (introAnchor) introAnchor.visible = introOn && !introRoomHidden; }
 
 export function hideRocket() {
     rocketMode = 'gone';
