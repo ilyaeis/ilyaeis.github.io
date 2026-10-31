@@ -31,44 +31,40 @@ const MILESTONES = [
         title: 'Riga State Classical Gymnasium',
         subtitle: 'Programming and Mathematics track · Riga',
         items: [
-            { text: 'Specialised track in programming and mathematics (today named "Programming + AI").' },
-            { text: 'Took part in the Latvian state mathematics olympiads.' },
-            { text: 'Completed the Small Mathematics University (Mazā matemātikas universitāte) at the University of Latvia.' },
-            { text: 'School projects in Programming I and II; one became the Offline Graphing Calculator (2023).' }
-        ]
+            { text: 'Latvian state mathematics olympiads; the Small Mathematics University.' },
+            { text: 'A school project became the Offline Graphing Calculator (2023).' }
+        ],
+        more: { href: 'resume.html#rvkg', label: 'details in the resume' }
     }},
     { label: 'RTU', sizeFactor: 0.7, seed: 73, panel: {
         title: 'Riga Technical University',
         subtitle: 'Professional Bachelor, Financial Engineering',
         dates: '2024 – 2028 (expected)',
         items: [
-            { text: 'Qualification: senior data analysis specialist. Maths, statistics and programming applied to finance.' },
-            { text: 'Coursework: mathematical analysis and algebra, probability and statistics, econometrics, time-series analysis, stochastic analysis, Monte Carlo methods, portfolio analysis, actuarial mathematics, data structures and algorithms, databases/SQL, computer networks, programming (Java, C++).' }
-        ]
+            { text: 'Maths, statistics and programming applied to finance.' },
+            { text: 'Econometrics, stochastic analysis, Monte Carlo methods, time series.' }
+        ],
+        more: { href: 'resume.html#rtu', label: 'details in the resume' }
     }},
     { label: 'AI TALENT', sizeFactor: 0.65, seed: 58, panel: {
         title: 'AI Talent Program',
-        subtitle: 'Ponder · Mākslīgā intelekta talantu programma',
+        subtitle: 'Ponder · selective, entry by test and interview',
         dates: 'Nov 2024 – Jan 2025',
         items: [
-            { text: 'Selective program for young people strong in IT and maths. Entry by logic test and interview.' },
-            { text: 'Intensive training in C++, Python, maths and AI development, with mentors from the industry.' },
-            { text: 'Theory of AI: its history, neural network architectures (CNNs, transformers, GANs, VAEs), computer vision and reinforcement learning.' },
-            { text: 'It led to my R&D Engineer role at Giraffe360.' }
+            { text: 'It led to my R&D Engineer role at Giraffe360.' },
+            { text: 'C++, Python and AI theory: CNNs, transformers, GANs, VAEs, reinforcement learning.' }
         ],
         more: { href: 'https://www.ponder.lv/mi-programma', label: 'ponder.lv' }
     }},
     { label: 'GIRAFFE360', sizeFactor: 0.55, seed: 17, panel: {
         title: 'Giraffe360',
-        subtitle: 'R&D Engineer · Riga',
+        subtitle: 'R&D Engineer · 3D reconstruction and computer vision',
         dates: '2025 – present',
         items: [
-            { text: '3D reconstruction and computer vision: 3DGS reconstruction from sparse panorama views.' },
-            { text: 'Benchmarking that measures every change, and continuous research that turns new papers into production code.' },
-            { text: 'Solved blurry windows, outdoor views and mirrors; in production since June 2026.' },
-            { text: 'Next: six stops inside a Gaussian splat of a real apartment, one per work area.' }
+            { text: 'Solved blurry windows and mirrors; in production since June 2026.' },
+            { text: '3DGS from sparse panoramas, benchmarking, continuous research.' }
         ],
-        more: { href: 'resume.html', label: 'full resume' }
+        more: { href: 'resume.html#giraffe360', label: 'details in the resume' }
     }},
     { label: 'BALANCER', sizeFactor: 0.6, seed: 105, panel: {
         title: 'load-balancing-experiments',
@@ -86,12 +82,10 @@ const MILESTONES = [
         subtitle: 'Offline workout tracker · Dart/Flutter · private',
         dates: '2026',
         items: [
-            { text: 'Log sets with live timers.' },
-            { text: 'Volume, load (ACWR), records and body measurements; custom formulas.' },
-            { text: 'JSON, CSV and PDF export; CI with golden-image tests.' },
-            { text: 'In daily use.' },
-            { text: 'Skills: mobile app development (Flutter/Dart), data modelling, testing and CI.' }
-        ]
+            { text: 'In daily use: live set timers, volume, load (ACWR), records.' },
+            { text: 'JSON, CSV and PDF export; CI with golden-image tests.' }
+        ],
+        more: { href: 'resume.html#flow', label: 'details in the resume' }
     }},
     { label: 'MONTE CARLO', sizeFactor: 0.65, seed: 112, panel: {
         title: 'Monte Carlo Methods in Finance',
@@ -119,10 +113,8 @@ const MILESTONES = [
         subtitle: 'RBS programming competition · 4th place',
         dates: '2023',
         items: [
-            { text: 'A graphing calculator that plots functions and does maths with no internet connection.' },
-            { text: 'Built with Iļja Volinskis at Riga State Classical Gymnasium.' },
-            { text: '4th place in the Riga Business School (RTU) programming competition for secondary school students: 27 entries, 10 finalists, final on 10 June 2023.' },
-            { text: 'Skills: algorithms for parsing and plotting maths, teamwork, presenting to a jury.' }
+            { text: '4th place of 27 entries, Riga Business School (RTU) competition.' },
+            { text: 'Plots functions and does maths offline; built with Iļja Volinskis.' }
         ],
         more: { href: 'https://rbs.lv/blog/2023/06/12/event-search-app-wins-programming-competition-for-high-school-students/', label: 'competition results' }
     }},
@@ -131,62 +123,57 @@ const MILESTONES = [
         subtitle: 'C++ · SFML',
         dates: '2022',
         items: [
-            { text: '16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control.' },
-            { text: 'Source: sort_visualization on GitHub.', href: 'https://github.com/ilyaeis/sort_visualization' },
-            { text: 'Skills: C++, algorithms and data structures, graphics (SFML). Every line written by hand, before AI tools.' }
+            { text: '16 sorting algorithms animated in five layouts, with speed control.' },
+            { text: 'Every line written by hand in C++, before AI tools.' }
         ],
-        more: { href: 'https://github.com/ilyaeis', label: 'all repositories' }
+        more: { href: 'https://github.com/ilyaeis/sort_visualization', label: 'github' }
     }},
     // Giraffe360 R&D (universe 'rnd'): one splat object per area (objects.js), in route order
     { label: 'SPLATTING', panel: {
         title: '3DGS reconstruction pipeline',
-        subtitle: 'Giraffe360 R&D · Python · PyTorch · CUDA',
+        subtitle: 'Sparse panorama views · Python · PyTorch · CUDA',
         items: [
-            { text: '3D Gaussian Splatting reconstruction from sparse panorama views: 360° captures of homes become navigable 3D scenes.' },
-            { text: 'Influence accumulation: I found the research, built, tested and shipped it (Jan 2026). It is still the team’s best densification method.' },
-            { text: 'Implemented Analytic-Splatting in gsplat at CUDA level (June 2026): exact per-pixel integration, less aliasing.' },
-            { text: 'Led the pipeline restructuring and created a 3DGS monorepo. The clearer code let me fix the long-open half-floor camera problem.' }
-        ]
+            { text: 'Influence accumulation: my densification method, shipped Jan 2026, still the team’s best.' },
+            { text: 'Analytic-Splatting in gsplat at CUDA level (June 2026).' }
+        ],
+        more: { href: 'resume.html#influence-accumulation', label: 'details in the resume' }
     }},
     { label: 'WINDOWS', panel: {
         title: 'Windows, outdoor views and mirrors',
         subtitle: 'The main long-standing quality problem · solved',
         items: [
-            { text: 'Root cause: a local depth regularizer. Where a pixel’s accumulated opacity was not yet 1 at the wall, it also pulled the Gaussians behind the wall or window on that pixel toward the wall depth. Outdoor views and reflections went flat.' },
-            { text: 'Fix: depth handled differently inside and outside the room, plus a training-time correction for the artifacts.' },
-            { text: '140+ controlled training runs, then 600+ more experiments. Shipped as the default on 1 June 2026 (Giraffe360 post).',
-              href: 'https://www.instagram.com/p/DZsNRB8o772/' },
-            { text: 'Led the team that built exterior splats and orbital outdoor videos.' }
-        ]
+            { text: 'Shipped 1 June 2026 after 140+, then 600+ experiments.' },
+            { text: 'Root cause: a depth regularizer flattened outdoor views onto the wall.' }
+        ],
+        more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post' }
     }},
     { label: 'BENCHMARKING', panel: {
         title: 'Benchmarking and evaluation',
         subtitle: 'GPU training · ClearML · Docker · GitLab CI',
         items: [
-            { text: 'Validation tools and ground-truth datasets (July 2026): quality is checked against known truth, not only no-reference metrics.' },
-            { text: 'An experiment runner (March 2026): every teammate can run and track training experiments on a local GPU, driven by an AI agent.' },
-            { text: 'Made diffusion-based artifact fixing (Difix, then NVIDIA Fixer) run on shared GPUs, so the team could evaluate it.' }
-        ]
+            { text: 'Validation tools that check quality against ground-truth datasets.' },
+            { text: 'Experiment runner: AI-agent-driven training runs on local GPUs.' }
+        ],
+        more: { href: 'resume.html#ground-truth', label: 'details in the resume' }
     }},
     { label: 'MESHES AND VIEWERS', panel: {
         title: 'Meshes and viewers',
         subtitle: 'Mesh generation · Rust · wgpu',
         items: [
-            { text: 'Mesh generation from splats, combined with Gaussian splats.' },
-            { text: 'A point-count reduction stage that keeps the major details, so every client device can run some level of detail (prototype).' },
-            { text: 'An embeddable Rust/wgpu splat viewer that any app can control (May 2026).' },
-            { text: 'A multi-view comparison tool: reconstructions side by side, from any viewpoint.' }
-        ]
+            { text: 'An embeddable Rust/wgpu splat viewer that any app can control.' },
+            { text: 'Mesh generation and point-count reduction for viewers.' }
+        ],
+        more: { href: 'resume.html#splat-viewer', label: 'details in the resume' }
     }},
     { label: 'MCP SERVER', panel: {
         title: 'MCP server, mentoring, ideas',
-        subtitle: 'Node.js · Model Context Protocol',
+        subtitle: 'MCP server for the team task board · Node.js',
         items: [
-            { text: 'An MCP server (June 2026) so AI agents and tools can read and write the team task board.' },
-            { text: 'Our depth estimates were poor. I mentored one junior engineer, and together we built a new depth algorithm (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. The whole team uses it now.' },
-            { text: 'Looped drone video: my hackathon idea, awarded a special mention. A colleague’s drone code was hard to extend, so I restructured the video pipeline to be easy to configure, built the loop on it and agreed the look with designers. Giraffe360 launched it in Oct 2026.',
-              href: 'https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/' }
-        ]
+            { text: 'Looped drone: my hackathon idea, launched by Giraffe360 in Oct 2026.',
+              href: 'https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/' },
+            { text: 'Mentored a junior engineer on a new depth algorithm, now used team-wide.' }
+        ],
+        more: { href: 'resume.html#mcp-server', label: 'details in the resume' }
     }},
     { label: 'TOUR NARRATION', panel: {
         title: 'Tour narration (an early task)',
@@ -194,7 +181,8 @@ const MILESTONES = [
         dates: 'Jul – Oct 2025',
         items: [
             { text: 'A small LLM service that wrote tour narration.' }
-        ]
+        ],
+        more: { href: 'resume.html#tour-narration', label: 'details in the resume' }
     }}
 ];
 
