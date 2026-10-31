@@ -317,6 +317,7 @@ const ROCKET_MORPH_DURATION = intro.CHARGE_DURATION;
 
 // DOM refs
 let tapPromptEl = null;
+let introLinksEl = null;   // "skip to work · resume" under the first prompt
 
 // ── Init ───────────────────────────────────────────────────────────
 export function init() {
@@ -358,7 +359,16 @@ export function init() {
     else if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
     else if (q.has('leg') && Number.isInteger(legQ) && legQ >= 1 && stops[legQ]) { jumpTo(legQ - 1); setupTravel(legQ, false); }
     else if (q.has('portal') && stops.some(st => st.portal)) jumpTo(stops.findIndex(st => st.portal));
-    else showTapPrompt();
+    else {
+        showTapPrompt();
+        // Skip to work: a real link (?go, by flight) to the first stop of the apartment
+        introLinksEl = document.querySelector('.intro-links');
+        const skip = introLinksEl?.querySelector('.intro-skip');
+        if (skip) {
+            skip.href = '?go=' + stops.find(st => st.universe === 'rnd').id + '&mode=fly';
+            introLinksEl.hidden = false;
+        }
+    }
     if (q.has('explore')) explore.enterExplore(true);   // dev: with ?go=<apartment stop or contact>
     const tQ = Number(q.get('t'));
     if (q.has('t') && tQ > 0 && tQ <= 30) {
@@ -435,7 +445,8 @@ function setInside(f) { setInsideFade(f); intro.setIntroVisible(f < 0.5); }
 function hasPanel(stop) { return stop.type === StopType.ROCK || stop.type === StopType.PROJECT || stop.type === StopType.OBJECT; }
 
 function showTapPrompt() { if (tapPromptEl) tapPromptEl.classList.add('visible'); }
-function hideTapPrompt() { if (tapPromptEl) tapPromptEl.classList.remove('visible'); }
+// (the intro links go with the first prompt: they never come back)
+function hideTapPrompt() { if (tapPromptEl) tapPromptEl.classList.remove('visible'); if (introLinksEl) introLinksEl.hidden = true; }
 
 function enterPhase(newPhase) {
     setPhase(newPhase);
@@ -1500,9 +1511,13 @@ function updateView(dt) {
 
     const delay = VIEW_TAP_DELAY[stop.type];
     if (phaseTime >= delay && portal.devAutoEnter(stop)) return;
-    if (phaseTime >= delay) showTapPrompt();
+    // A tap waits for the view delay and for the face-on glide to settle: an
+    // arrival from behind glides round the stop at up to FACE_ALIGN_MAX_TURN,
+    // and a departure then would reverse that turn in a snap (a drag ends the glide)
+    const ready = phaseTime >= delay && camAligned;
+    if (ready) showTapPrompt();
 
-    if (tapPending && phaseTime >= delay) {
+    if (tapPending && ready) {
         tapPending = false;
         hideTapPrompt();
 

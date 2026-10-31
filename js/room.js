@@ -2,13 +2,13 @@
 // CC BY 4.0, reconstructed with gsplat) with the six R&D splat objects
 // (objects.js) inside. Self-initialising. It listens for the 'journey:stop'
 // event (see stopPanel.js), loads Spark, the splat and the objects lazily a
-// few stops before the apartment, and fades them in as the camera comes
+// stop before the apartment, and fades them in as the camera comes
 // close. world.js places the apartment frame (`apartment`); this module
 // only renders into it, so the orchestrator and the camera need no changes.
 
 import * as THREE from 'three';
 import { scene, renderer, camera, bloomPass, isMobile, setStarVisibility } from './attractors.js';
-import { stops, apartment, getInsideFade, setRoomFade, StopType } from './world.js';
+import { apartment, getInsideFade, setRoomFade, StopType } from './world.js';
 
 // The apartment API for the add-ons (walk.js, depthTool.js): its frame
 // (position, quaternion, scale), room <-> world points and metres per unit
@@ -18,7 +18,10 @@ import { setIntroRoomHidden } from './intro3d.js';
 // ── Tuning ─────────────────────────────────────────────────────────
 const ROOM_URL = 'assets/room/apartment.sog';
 const ROOM_LITE_URL = 'assets/room/apartment-lite.sog';   // mobile
-const PREFETCH_STOPS_BEFORE = 3;     // start loading when entering the stop this many before the first apartment stop (RTU)
+// Start loading when the comet enters any stop outside these universes:
+// the traits do not load it (the first view stays light); the Giraffe360
+// rock, the stop before the apartment, does
+const NO_PREFETCH_UNIVERSES = ['intro'];
 // Fade by the camera distance outside the apartment box, in room units
 // (0 inside). From outside it reads as a dollhouse (the ceiling is cut),
 // so it shows from far: the comet sees it before it dives in.
@@ -38,9 +41,6 @@ const BLOOM_THRESHOLD_IN_ROOM = 0.75; // the HDR strokes (halo, text, comet) blo
 const OBJECT_SPLATS = isMobile ? 5000 : 16000;   // per object: fewer read soft up close
 
 const creditEl = document.querySelector('.room-credit');
-// stops[] is built by the orchestrator after this module loads, so the
-// apartment stops are looked up on first use (by universe, never by index).
-let firstRndIdx = -1;
 
 let bloomOutside = 0.1;               // read from the bloom pass on load
 let group = null;                     // the apartment frame
@@ -136,10 +136,8 @@ async function loadRoom() {
 }
 
 window.addEventListener('journey:stop', e => {
-    const { phase, index, universe, type } = e.detail;
-    if (firstRndIdx < 0) firstRndIdx = stops.findIndex(s => s.universe === 'rnd');
-    if (firstRndIdx < 0) return;
-    if (phase === 'enter' && index >= firstRndIdx - PREFETCH_STOPS_BEFORE) loadRoom();
+    const { phase, universe, type } = e.detail;
+    if (phase === 'enter' && !NO_PREFETCH_UNIVERSES.includes(universe)) loadRoom();
     // The credit shows at the apartment stops and the landing
     if (creditEl && (universe === 'rnd' || type === StopType.LANDING)) creditEl.hidden = phase !== 'enter';
 });

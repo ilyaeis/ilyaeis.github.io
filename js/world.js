@@ -210,9 +210,10 @@ const SCENERY_SPIN = 0.04;               // rad/s about local Y
 // leg i = flight into stops[i]; leg 0 is the intro corkscrew into the text,
 // leg 1 (text -> rock 1) has the first galaxy. Attractor k % ATTRACTORS.length is reused
 // when there are more legs than attractors.
-// Leg 5 (GIRAFFE360 -> the apartment window) has the last one. None
-// indoors, on the warp into the tunnel or inside it, or on the roof dive.
-const SCENERY_LEGS = [1, 2, 3, 4, 5];
+// One galaxy on each leg into a rock and on the dive into the apartment
+// (into its first object). None indoors, on the warp into the tunnel or
+// inside it, or on the roof dive.
+const SCENERY_LEGS = [];   // filled from ROUTE below
 
 // Projects tunnel (tunnel.js): entry point E = apartment window + e1 × TUNNEL_HOP.
 // Along s: the warp throat at 0, a rush, the first fly-by at TUNNEL_RUSH,
@@ -353,26 +354,26 @@ const HALO_FADE_TIME = 0.5;              // s: a ring fades in (out) as its stop
 const OBJECT_PAD = 0.15;                 // × height: framing room above and below the object
 const OBJECT_FRAME = 1.12;               // × the halo / object half width: framing room beside it (the fit)
 const PLACE_TRIES = 12;
+// The rocks after the apartment (education): placed once the apartment and
+// the tunnel exist, clear of both; the last one lines up behind the tunnel
+// throat, so the warp in needs no hairpin
+const AFTER_TRIES = 200;
 const MAX_PITCH = 0.55;                  // |y| of hop direction — keeps text upright
 
 // Overall outward drift of the journey
 export const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 
-// Visit order. Planar stops carry their own paletteIdx (into the
-// ATTRACTORS table) so every scene glows in a different color — the
-// first four milestone rocks are ONE scene and share a single palette.
+// Visit order: the work first (the Giraffe360 rock, then the apartment of
+// its R&D objects), then the education rocks, the projects tunnel and the
+// contact landing. Planar stops carry their own paletteIdx (into the
+// ATTRACTORS table) so every scene glows in a different color — the rocks
+// share one palette.
 // The text block is one stop; the comet traces it, spirals around it and
 // flies on without a tap (orchestrator).
 const ROUTE = [
     { id: 'traits',     universe: 'intro',      type: StopType.TEXT,    paletteIdx: 0,
       title: 'Traits', summary: 'Creative. Adaptive. Curious.' },
-    { id: 'rvkg',       universe: 'milestones', type: StopType.ROCK,    milestone: 0, paletteIdx: 1,
-      summary: 'Programming and mathematics track; state mathematics olympiads.' },
-    { id: 'rtu',        universe: 'milestones', type: StopType.ROCK,    milestone: 1, paletteIdx: 1,
-      summary: 'Professional Bachelor in Financial Engineering.' },
-    { id: 'ai-talent',  universe: 'milestones', type: StopType.ROCK,    milestone: 2, paletteIdx: 1,
-      summary: 'Ponder AI talent program.' },
-    { id: 'giraffe360', universe: 'milestones', type: StopType.ROCK,    milestone: 3, paletteIdx: 1,
+    { id: 'giraffe360', universe: 'work',       type: StopType.ROCK,    milestone: 3, paletteIdx: 1,
       summary: 'R&D engineer in 3D reconstruction and computer vision: 3DGS from sparse panorama views, benchmarking, research.' },
     { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 10, object: 'cherry', paletteIdx: 3,
       summary: '3DGS reconstruction from sparse panorama views; influence accumulation, Analytic-Splatting, the pipeline restructuring.' },
@@ -386,6 +387,12 @@ const ROUTE = [
       summary: 'MCP server for the team task board; mentoring on a new depth algorithm; the looped drone video.' },
     { id: 'tour-narration',  universe: 'rnd', type: StopType.OBJECT, milestone: 15, object: 'robot', paletteIdx: 3,
       summary: 'Earlier (Jul - Oct 2025): a small LLM service that wrote tour narration.' },
+    { id: 'rvkg',       universe: 'education',  type: StopType.ROCK,    milestone: 0, paletteIdx: 1,
+      summary: 'Programming and mathematics track; state mathematics olympiads.' },
+    { id: 'ai-talent',  universe: 'education',  type: StopType.ROCK,    milestone: 2, paletteIdx: 1,
+      summary: 'Ponder AI talent program.' },
+    { id: 'rtu',        universe: 'education',  type: StopType.ROCK,    milestone: 1, paletteIdx: 1,
+      summary: 'Professional Bachelor in Financial Engineering.' },
     { id: 'flow',       universe: 'projects',   type: StopType.PROJECT, milestone: 5, paletteIdx: 2,
       summary: 'Offline workout tracker app (Dart/Flutter).' },
     { id: 'calculator', universe: 'projects',   type: StopType.PROJECT, milestone: 8, paletteIdx: 2,
@@ -393,14 +400,18 @@ const ROUTE = [
     { id: 'sorting',    universe: 'projects',   type: StopType.PROJECT, milestone: 9, paletteIdx: 2,
       summary: 'Sorting algorithm visualizer (C++/SFML).' },
     { id: 'contact',    universe: 'contact',    type: StopType.LANDING, paletteIdx: 4,
-      title: 'Contact', summary: 'Get in touch by email, LinkedIn or GitHub.' },
+      title: 'Contact', summary: 'Get in touch by email, LinkedIn or GitHub.' }
 ];
+ROUTE.forEach((d, i) => {
+    if (d.type === StopType.ROCK || (d.type === StopType.OBJECT && ROUTE[i - 1].type !== StopType.OBJECT)) SCENERY_LEGS.push(i);
+});
 // Universes are names, not indexes. A new universe is a new entry here
 // plus ROUTE entries that use its id.
 export const UNIVERSES = [
     { id: 'intro',      title: 'Intro' },
-    { id: 'milestones', title: 'Milestones' },
+    { id: 'work',       title: 'Work' },
     { id: 'rnd',        title: 'Giraffe360 R&D' },
+    { id: 'education',  title: 'Education' },
     { id: 'projects',   title: 'Projects' },
     { id: 'contact',    title: 'Contact' },
 ];
@@ -551,6 +562,28 @@ function randomHopDir(out) {
     out.normalize();
     out.y = THREE.MathUtils.clamp(out.y, -MAX_PITCH, MAX_PITCH);
     return out.normalize();
+}
+
+// A rock after the apartment: clear of the tunnel axis (all of it, the
+// exit comes home too) and of the apartment. The last one before the tunnel
+// sits behind the throat: the best of the tries by the angle of its line
+// to the throat with the tunnel axis there.
+function placeAfterApartment(prev, placed, tight, last) {
+    const [hop0, hop1, sep] = tight ? [ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION] : [MIN_HOP, MAX_HOP, MIN_SEPARATION];
+    const T0 = tunnel.centreWorld(0, new THREE.Vector3()), e1 = tunnel.tangentWorld(0, new THREE.Vector3());
+    const c = new THREE.Vector3(), toThroat = new THREE.Vector3();
+    let best = null, bestScore = -Infinity;
+    for (let i = 0; i < AFTER_TRIES; i++) {
+        c.copy(prev).addScaledVector(randomHopDir(_dir), rand(hop0, hop1));
+        let clear = tunnel.axisDistance(c, tunnelExitS) / TUNNEL_CLEAR;
+        clear = Math.min(clear, (c.distanceTo(apartmentCentre) - apartmentRadius) / sep);
+        for (const p of placed) clear = Math.min(clear, c.distanceTo(p) / sep);
+        const score = clear >= 1 ? 10 + (last ? toThroat.subVectors(T0, c).normalize().dot(e1) : 0) : clear;
+        if (score > bestScore) { bestScore = score; best = c.clone(); }
+        if (score >= 10 && !last) break;
+    }
+    if (bestScore < 10) console.warn('rock after the apartment: not fully clear', bestScore.toFixed(2));
+    return best;
 }
 
 function placeNextCenter(prev, placed, hopMin, hopMax, separation, reject = null) {
@@ -1007,15 +1040,12 @@ function doorVias(name, sign) {
     const d = DOORS[name], a = d.axis.map(v => v * sign), lead = d.lead ?? DOOR_LEAD;
     return (lead ? [-lead, 0, lead] : [0]).map(k => via(d.p.map((v, i) => v + a[i] * k), a));
 }
-function windowVias(inward) {
-    if (inward) {
-        // dive in over the cut ceiling, heading the way the comet comes from GIRAFFE360
-        const h = apartment.entryDir;
-        const P = via([ENTRY_TOP[0] - h.x * ENTRY_BACK, ENTRY_TOP[1], ENTRY_TOP[2] - h.z * ENTRY_BACK], [h.x, -ENTRY_DIVE, h.z]);
-        // the line-up point is free (no direction): the flight bends onto the dive gradually
-        return [{ p: P.p.clone().addScaledVector(P.dir, -WINDOW_STANDOFF), dir: null }, P];
-    }
-    return [via(WALL_TOP, WALL_OUT)];
+function windowVias() {
+    // dive in over the cut ceiling, heading the way the comet comes from GIRAFFE360
+    const h = apartment.entryDir;
+    const P = via([ENTRY_TOP[0] - h.x * ENTRY_BACK, ENTRY_TOP[1], ENTRY_TOP[2] - h.z * ENTRY_BACK], [h.x, -ENTRY_DIVE, h.z]);
+    // the line-up point is free (no direction): the flight bends onto the dive gradually
+    return [{ p: P.p.clone().addScaledVector(P.dir, -WINDOW_STANDOFF), dir: null }, P];
 }
 // Out over the window wall, already turned towards `to` (the loop back to the first rock)
 function exitTowards(to) {
@@ -1027,15 +1057,14 @@ function exitTowards(to) {
 export function viasFor(from, dest) {
     const fromIn = from?.type === StopType.OBJECT || from?.type === StopType.LANDING;
     if (dest.type === StopType.OBJECT) {
-        if (from?.type !== StopType.OBJECT) return windowVias(true);           // from outside: in through the window
+        if (from?.type !== StopType.OBJECT) return windowVias();           // from outside: in through the window
         return OBJECT_SPOTS[dest.objectName].doors.flatMap(([n, sg]) => doorVias(n, sg));
     }
-    if (dest.type === StopType.PROJECT && from?.type === StopType.OBJECT) return windowVias(false);   // out over the window wall to the tunnel
     if (dest.type === StopType.LANDING) {
         // over the roof, then a dive through the cut ceiling (down and towards the windows)
         return [{ p: roomToWorld(...ROOM_ROOF), dir: roomDirToWorld(0, -1, -1) }];
     }
-    if (fromIn) return exitTowards(dest.center);                            // the landing loops back out over the window wall
+    if (fromIn) return exitTowards(dest.center);                            // out over the window wall: to the first education rock, and the landing loop back
     return [];
 }
 export function isIndoorFlight(from, dest) {
@@ -1069,6 +1098,7 @@ export function buildWorld(scene) {
     for (const p of landPts) { lx = Math.max(lx, Math.abs(p.x)); ly = Math.max(ly, Math.abs(p.y)); }
     const roomScale = fitDistance(lx * TEXT_SCALE, ly * TEXT_SCALE) / (LANDING_CAM_Z - LANDING_TEXT[2]);
     apartment.objects = [];
+    let afterApartment = false;   // rocks after it are placed clear of it and the tunnel
 
     for (const def of ROUTE) {
         // Rock → rock stays tight (the meteors are one scene);
@@ -1079,6 +1109,7 @@ export function buildWorld(scene) {
             if (prevDef?.type !== StopType.OBJECT) {
                 placeApartmentAndTunnel(prev, stops[stops.length - 1].normal, placed, tunnelExitS, roomScale);
                 placed.push(apartmentCentre.clone());
+                afterApartment = true;
             }
             const palette = ATTRACTORS[def.paletteIdx ?? 0].palette;
             const stop = { id: def.id, universe: def.universe, type: def.type, paletteIdx: def.paletteIdx ?? 0,
@@ -1099,6 +1130,9 @@ export function buildWorld(scene) {
             // In the living room, in front of the bay windows, facing the camera inside
             center = roomToWorld(...LANDING_TEXT);
             prev = center.clone().sub(apartment.winDir);
+        } else if (afterApartment) {
+            const last = ROUTE[ROUTE.indexOf(def) + 1]?.type !== StopType.ROCK;
+            center = placeAfterApartment(prev, placed, tight, last);
         } else {
             center = tight
                 ? placeNextCenter(prev, placed, ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION)

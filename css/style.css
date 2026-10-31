@@ -67,6 +67,30 @@ body {
     50% { opacity: 1; }
 }
 
+/* Intro only: "skip to work · resume" under the first prompt */
+.intro-links {
+    position: fixed;
+    bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    color: #666;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    z-index: 10;
+}
+.intro-links[hidden] { display: none; }
+.intro-links a {
+    display: inline-block;
+    padding: 0.75rem 0.4rem;   /* 44 px tap target */
+    color: #9a9a9a;
+    text-decoration: none;
+}
+.intro-links a:hover, .intro-links a:focus-visible { color: #fff; outline: none; text-decoration: underline; }
+
 /* Corner nav — persistent HTML links above the canvas */
 .site-nav {
     position: fixed;

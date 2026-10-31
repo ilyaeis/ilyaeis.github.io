@@ -51,7 +51,7 @@ import * as walk from './walk.js';
     // must not also advance the journey); .dimension = the open project app,
     // .room-tools = the apartment toolbar (depthTool.js), .walk-ui = the walk
     // mode buttons and HUD (walk.js)
-    const OVERLAYS = '.site-nav, .stop-panel, .dimension, .room-tools, .walk-ui';
+    const OVERLAYS = '.site-nav, .stop-panel, .dimension, .room-tools, .walk-ui, .intro-links';
 
     // Who gets the input: inputOwner() (input.js) is 'journey', 'portal'
     // (a project app: no input), 'walk' (walk.js) or 'tool' (depthTool.js)
@@ -140,6 +140,14 @@ import * as walk from './walk.js';
             e.preventDefault();
             onTap();
         }
+    });
+
+    // "skip to work" (orchestrator sets its ?go link): fly there without a reload
+    document.querySelector('.intro-skip')?.addEventListener('click', (e) => {
+        const id = new URL(e.currentTarget.href).searchParams.get('go');
+        if (!window.journey || !id) return;
+        e.preventDefault();
+        window.journey.goTo(id, { mode: 'fly' });
     });
 
     // Prevent any residual scrolling / bounce on mobile (nav links stay tappable)

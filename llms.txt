@@ -25,10 +25,7 @@ Each link below opens the page and lands at that stop. Ids are stable names; the
 Universe `intro`:
 - [Traits](https://ilyaeis.github.io/?go=traits): Creative. Adaptive. Curious.
 
-Universe `milestones`:
-- [Riga State Classical Gymnasium](https://ilyaeis.github.io/?go=rvkg): programming and mathematics track; state mathematics olympiads.
-- [Riga Technical University](https://ilyaeis.github.io/?go=rtu): Professional Bachelor in Financial Engineering.
-- [AI Talent Program](https://ilyaeis.github.io/?go=ai-talent): Ponder AI talent program.
+Universe `work`:
 - [Giraffe360](https://ilyaeis.github.io/?go=giraffe360): R&D engineer in 3D reconstruction and computer vision: 3DGS from sparse panorama views, benchmarking, research.
 
 Universe `rnd` (Giraffe360 R&D, inside a Gaussian splat of a real apartment):
@@ -38,6 +35,11 @@ Universe `rnd` (Giraffe360 R&D, inside a Gaussian splat of a real apartment):
 - [Meshes and viewers](https://ilyaeis.github.io/?go=mesh-generation): mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.
 - [MCP server, mentoring, ideas](https://ilyaeis.github.io/?go=task-board-mcp): MCP server for the team task board; mentoring on a new depth algorithm; the looped drone video.
 - [Tour narration](https://ilyaeis.github.io/?go=tour-narration): earlier (Jul - Oct 2025), a small LLM service that wrote tour narration.
+
+Universe `education`:
+- [Riga State Classical Gymnasium](https://ilyaeis.github.io/?go=rvkg): programming and mathematics track; state mathematics olympiads.
+- [AI Talent Program](https://ilyaeis.github.io/?go=ai-talent): Ponder AI talent program.
+- [Riga Technical University](https://ilyaeis.github.io/?go=rtu): Professional Bachelor in Financial Engineering.
 
 Universe `projects`:
 - [Flow](https://ilyaeis.github.io/?go=flow): offline workout tracker app (Dart/Flutter).

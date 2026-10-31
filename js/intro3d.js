@@ -93,7 +93,7 @@ function buildText(font) {
     }
 
     makeLine('Ilja Safronovs', NAME_SIZE, nameMat, 0.10);
-    makeLine('R&D engineer. student. builder.', TAGLINE_SIZE, tagMat, -0.06);
+    makeLine('3D reconstruction and computer vision · Giraffe360 · Riga', TAGLINE_SIZE, tagMat, -0.06);
 }
 
 // ── Build: icons (LinkedIn, GitHub) ────────────────────────────────
