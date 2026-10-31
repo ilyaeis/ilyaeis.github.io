@@ -27,7 +27,10 @@ export const Phase = {
     INTRO: 0,
     ROCKET_EXIT: 1,   // first tap: the rocket morphs into the comet in place
     TRAVEL: 2,
-    VIEW: 3
+    VIEW: 3,
+    PORTAL_IN: 4,     // the comet dives into a project's portal; the app overlay fades in
+    DIMENSION: 5,     // the app overlay is open (dimension.js); the main loop idles
+    PORTAL_OUT: 6     // back out of the portal, into VIEW
 };
 
 // ── State ──────────────────────────────────────────────────────────
@@ -304,6 +307,22 @@ const WARP_COMET = 1.2;              // extra comet intensity at the peak
 const WARP_FADE_PRE = 2.2 * TUNNEL_TIME_SCALE; // s: the worlds cross-fade from this long before the jump
 const WARP_FADE_POST = 0.4 * TUNNEL_TIME_SCALE; // ... to this long after it (reversed on the way out)
 
+// Portal: an app behind a project stop (panel.portal, dimension.js). The
+// comet dives through the viz centre, the camera dollies after it through
+// the viz plane, the warp flash peaks, and the app overlay fades in. The
+// main loop then idles (DIMENSION) until the overlay closes; PORTAL_OUT is
+// the same way back. Time-based (dt-free), smootherstep: no jolt.
+const PORTAL_TIME = 1.6;             // s: the dive in, and the way back out
+const PORTAL_DEPTH = 4;              // world units behind the viz plane: the comet's end point
+const PORTAL_CAM_DEPTH = 0.6;        // ... the camera's end point (just through the plane)
+const PORTAL_LOOK = 3;               // the camera looks this far ahead of itself, along the stop normal
+const PORTAL_PEAK = 1.2;             // s into the dive: the warp flash is full here (and stays full)
+const PORTAL_RISE = 0.8;             // s: the flash rises over this before the peak
+const PORTAL_SHOW = 0.6;             // flash strength at which the overlay starts to fade in
+const PORTAL_FALL = 0.9;             // s: on the way back the flash settles over this
+const PORTAL_FADE = 0.4;             // s: reduced motion: no flight, the overlay just fades
+const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
 // Rocket → comet morph duration (3D rocket — see intro3d.js)
 const ROCKET_MORPH_DURATION = intro.CHARGE_DURATION;
 
@@ -326,6 +345,13 @@ export function init() {
     controls.addEventListener('end', () => { userDragging = false; });
     baseFov = camera.fov;
     tunnel.setFlare(0, tunnelExitS);
+    // Portal requests from the DOM: the panel button; dimension.js reports
+    // the prefetch progress (it lights the rim) and the overlay's close
+    window.addEventListener('journey:portal-request', () => enterPortal(true));
+    window.addEventListener('journey:portal-exit', () => exitPortal());
+    window.addEventListener('journey:portal-progress', (e) => {
+        stops.find(st => st.id === e.detail?.id)?.viz?.rim?.setProgress(e.detail.p);
+    });
     const q = new URLSearchParams(location.search);
     const stopQ = Number(q.get('stop')), legQ = Number(q.get('leg'));
     const goTarget = q.has('go') ? stopById(q.get('go')) : null;
@@ -336,9 +362,15 @@ export function init() {
     }
     else if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
     else if (q.has('leg') && Number.isInteger(legQ) && legQ >= 1 && stops[legQ]) { jumpTo(legQ - 1); setupTravel(legQ, false); }
+    else if (q.has('portal') && stops.some(st => st.portal)) jumpTo(stops.findIndex(st => st.portal));
     else showTapPrompt();
+    // Dev (?portal=1): enter the stop's portal after the view delay; ?t then counts from the portal start
+    portalAuto = q.has('portal');
     const tQ = Number(q.get('t'));
-    if (q.has('t') && tQ > 0 && tQ <= 30) simulate(tQ);
+    if (q.has('t') && tQ > 0 && tQ <= 30) {
+        if (portalAuto) simulateUntil(() => phase === Phase.PORTAL_IN, 10);
+        simulate(tQ);
+    }
     frozen = q.has('freeze');
 }
 
@@ -347,6 +379,11 @@ export function init() {
 function simulate(seconds) {
     skipRender = true;
     for (let t = 0; t < seconds; t += 1 / 60) update(1 / 60);
+    skipRender = false;
+}
+function simulateUntil(done, maxSeconds) {
+    skipRender = true;
+    for (let t = 0; t < maxSeconds && !done(); t += 1 / 60) update(1 / 60);
     skipRender = false;
 }
 
@@ -365,7 +402,7 @@ export function devPath(n = 200) {
 }
 export function devState() {
     return { phase, phaseTime, stopIndex, stopType: stops[stopIndex]?.type ?? -1, worldPos, cometPos,
-             tunnelFlight: phase === Phase.TRAVEL && easeC2, headS };
+             tunnelFlight: phase === Phase.TRAVEL && easeC2, headS, portal: !!stops[stopIndex]?.portal };
 }
 
 // Tell the DOM (stopPanel.js) which stop the comet enters or leaves
@@ -428,7 +465,7 @@ function fitFor(stop) {
     }
     if (!hasPanel(stop)) return fitDistance(stop.halfW, stop.halfH);
     const [w, h] = cam.isPanelSideLayout() ? [ROCK_FIT_SIDE, 1] : [1, ROCK_FIT_BOTTOM];
-    const fit = fitDistance(stop.halfW, stop.halfH, w, h);
+    const fit = fitDistance(stop.fitHalfW ?? stop.halfW, stop.fitHalfH ?? stop.halfH, w, h);   // a portal stop takes in its rim
     return stop.type === StopType.OBJECT ? Math.min(fit, stop.fitMax) : fit;
 }
 
@@ -712,6 +749,7 @@ function stepFaceAlign(dt) {
 export function setupTravel(destIdx, withCorkscrew) {
     const dest = stops[destIdx];
     emitStop('leave'); // before stopIndex moves to the destination
+    stops[stopIndex]?.viz?.rim?.setHover(false);
 
     // Aim at the FIRST stroke point so the comet flies straight into the
     // start of the trajectory (no spoke through the center) and begins
@@ -964,7 +1002,7 @@ function applyCorkscrew(t, point) {
 
 // ── Update ─────────────────────────────────────────────────────────
 export function update(dt) {
-    if (isPaused()) return;
+    if (isPaused() || phase === Phase.DIMENSION) return;   // the app overlay covers the scene: idle
     if (frozen) { render(); return; }
     totalTime += dt;
     addJourneyTime(dt);
@@ -975,11 +1013,14 @@ export function update(dt) {
         case Phase.ROCKET_EXIT:    updateRocketExit(dt); break;
         case Phase.TRAVEL:         updateTravel(dt); break;
         case Phase.VIEW:           updateView(dt); break;
+        case Phase.PORTAL_IN:      updatePortal(dt, true); break;
+        case Phase.PORTAL_OUT:     updatePortal(dt, false); break;
     }
 
     // Tunnel window and nearby visualizations follow the viewer
     const here = stops[stopIndex];
-    headS = phase === Phase.VIEW && here?.tunnelS != null ? here.tunnelS : tunnel.sOf(cometPos);
+    const atStop = phase === Phase.VIEW || phase === Phase.PORTAL_IN || phase === Phase.PORTAL_OUT;
+    headS = atStop && here?.tunnelS != null ? here.tunnelS : tunnel.sOf(cometPos);
     tunnel.setView(headS);
     updateWorld(dt, headS);
 
@@ -1344,7 +1385,7 @@ function helixPos(stop, u, out) {
 // Lazy Lissajous loop around a planar stop, sized to its bounds.
 function loopPos(stop, u, out) {
     if (stop.type === StopType.TEXT) return helixPos(stop, u, out);
-    if (stop.type === StopType.PROJECT) return frameLoopPos(stop, u, out);
+    if (stop.type === StopType.PROJECT) return stop.rimR ? rimLoopPos(stop, u, out) : frameLoopPos(stop, u, out);
     if (stop.type === StopType.OBJECT) return ringLoopPos(stop, u, out);
     const w = Math.max(stop.halfW * 1.25, 0.4);
     const h = Math.max(stop.halfH * 1.6, 0.3);
@@ -1398,6 +1439,15 @@ function frameLoopPos(stop, u, out) {
         .addScaledVector(stop.normal, 0.2 * Math.sin(0.8 * u));
 }
 
+// Portal stops: the comet circles just outside the rim (clockwise, from the top)
+function rimLoopPos(stop, u, out) {
+    const R = stop.rimR + PROJECT_LOOP_PAD, a = Math.PI / 2 - u * PROJECT_LOOP_SPEED / R;
+    return out.copy(stop.center)
+        .addScaledVector(stop.right, R * Math.cos(a))
+        .addScaledVector(stop.up, R * Math.sin(a))
+        .addScaledVector(stop.normal, 0.2 * Math.sin(0.8 * u));
+}
+
 // The orbit the comet actually rides: the Lissajous plus a settle offset
 // that decays from the trajectory end (set when tracing finishes) so the
 // comet flies off the last stroke and eases onto the loop — instead of
@@ -1445,6 +1495,7 @@ function updateView(dt) {
     }
 
     const delay = VIEW_TAP_DELAY[stop.type];
+    if (portalAuto && stop.portal && phaseTime >= delay) { portalAuto = false; enterPortal(true); return; }
     if (phaseTime >= delay) showTapPrompt();
 
     if (tapPending && phaseTime >= delay) {
@@ -1454,6 +1505,132 @@ function updateView(dt) {
         const next = stopIndex === stops.length - 1 ? 1 : stopIndex + 1; // after the landing, back to the first rock
         setupTravel(next, false);
     }
+}
+
+// ── Portal ─────────────────────────────────────────────────────────
+let portalAuto = false;          // dev (?portal=1): enter after the view delay
+let portalShown = false;         // the overlay was told to fade in
+let portalW0 = 1;                // flash strength at the start of PORTAL_OUT
+let portalLeg = null;            // the comet's Bezier for this dive (in or out)
+const portalCamFrom = new THREE.Vector3(), portalLookFrom = new THREE.Vector3();
+const portalCamTo = new THREE.Vector3(), portalLookTo = new THREE.Vector3();
+const _pCam = new THREE.Vector3(), _pLook = new THREE.Vector3();
+
+function emitPortal(phaseName) {
+    const stop = stops[stopIndex];
+    window.dispatchEvent(new CustomEvent('journey:portal', {
+        detail: { phase: phaseName, id: stop.id, href: stop.portal.href, title: stop.portal.title ?? stop.id }
+    }));
+}
+
+// The rim's hit ring, while viewing a portal stop (after the view delay); main.js raycasts it
+export function getPortalHit() {
+    const stop = stops[stopIndex];
+    if (phase !== Phase.VIEW || !stop?.portal || phaseTime < VIEW_TAP_DELAY[stop.type]) return null;
+    return stop.viz.rim.hit;
+}
+export function setPortalHover(v) { stops[stopIndex]?.viz?.rim?.setHover(v && phase === Phase.VIEW); }
+
+// Enter the portal of the current stop. A hit on the rim waits for the view
+// delay (as a tap does); the panel button (byButton) does not.
+export function enterPortal(byButton = false) {
+    const stop = stops[stopIndex];
+    if (phase !== Phase.VIEW || !stop?.portal) return false;
+    if (!byButton && phaseTime < VIEW_TAP_DELAY[stop.type]) return false;
+    hideTapPrompt();
+    emitStop('leave');
+    stop.viz.rim.setHover(false);
+    portalShown = false;
+    emitPortal('enter');
+    // The comet curves into the viz centre and on through the plane
+    portalLeg = {
+        p0: cometPos.clone(),
+        p1: cometPos.clone().addScaledVector(cometDir, 0.8),
+        p2: stop.center.clone().addScaledVector(stop.normal, PORTAL_DEPTH * 0.25),
+        p3: stop.center.clone().addScaledVector(stop.normal, PORTAL_DEPTH)
+    };
+    // The camera dollies from where it is, through the viz plane, looking along the normal
+    portalCamFrom.copy(camera.position); portalLookFrom.copy(controls.target);
+    portalCamTo.copy(stop.center).addScaledVector(stop.normal, PORTAL_CAM_DEPTH);
+    portalLookTo.copy(portalCamTo).addScaledVector(stop.normal, PORTAL_LOOK);
+    startPortalCamera();
+    enterPhase(Phase.PORTAL_IN);
+    return true;
+}
+
+// Close the dimension (dimension.js: back button, Esc, browser Back): back out to VIEW
+export function exitPortal() {
+    if (phase !== Phase.DIMENSION && phase !== Phase.PORTAL_IN) return false;
+    const stop = stops[stopIndex];
+    portalW0 = phase === Phase.DIMENSION ? 1 : portalFlash(phaseTime);
+    portalLeg = {
+        p0: cometPos.clone(),
+        p1: cometPos.clone().addScaledVector(stop.normal, -PORTAL_DEPTH * 0.4),
+        p2: stop.center.clone().addScaledVector(stop.normal, 1),
+        p3: traceWorld(stop, 0, new THREE.Vector3())      // the viz centre: the re-trace starts there
+    };
+    portalCamFrom.copy(camera.position); portalLookFrom.copy(controls.target);
+    portalLookTo.copy(stop.center);
+    portalCamTo.copy(stop.center).addScaledVector(stop.normal, -fitFor(stop));
+    startPortalCamera();
+    cam.setScreenShift(hasPanel(stop));
+    enterPhase(Phase.PORTAL_OUT);
+    return true;
+}
+
+function startPortalCamera() {
+    if (reduceMotion) return;          // the camera stays; the overlay just fades
+    cam.setArrival(null, null, 0);
+    cam.setMode(cam.Mode.FOLLOW, controls);
+    cam.setRail(portalCamFrom, portalLookFrom, 1);
+    cam.setScreenShift(false);
+}
+
+// Flash strength on the way in: rises to the peak, then stays full (the overlay covers it)
+function portalFlash(t) { return THREE.MathUtils.smoothstep(t, PORTAL_PEAK - PORTAL_RISE, PORTAL_PEAK); }
+
+function updatePortal(dt, goingIn) {
+    const t = phaseTime + dt;
+    if (reduceMotion) {
+        if (goingIn && !portalShown) { portalShown = true; emitPortal('show'); }
+        if (t >= PORTAL_FADE) goingIn ? enterPhase(Phase.DIMENSION) : enterView();
+        return;
+    }
+    const x = Math.min(t / PORTAL_TIME, 1), prevX = Math.min(phaseTime / PORTAL_TIME, 1);
+    const ss = THREE.MathUtils.smootherstep;
+    const w = goingIn ? portalFlash(t) : portalW0 * (1 - THREE.MathUtils.smoothstep(t, 0, PORTAL_FALL));
+    // the comet: its leg, eased (it starts and ends at rest)
+    trail.pointIntensity = 1 + WARP_COMET * w;
+    const e0 = ss(prevX, 0, 1), e1 = ss(x, 0, 1);
+    for (let i = 1; i <= TRAVEL_POINTS_PER_FRAME; i++) {
+        legPoint(portalLeg, e0 + (e1 - e0) * i / TRAVEL_POINTS_PER_FRAME, _vec3);
+        pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
+    }
+    trail.pointIntensity = 1.0;
+    legPoint(portalLeg, e1, cometPos);
+    legPoint(portalLeg, Math.min(e1 + 0.01, 1), _vA);
+    legPoint(portalLeg, Math.max(e1 - 0.01, 0), _vB);
+    if (_vA.distanceToSquared(_vB) > 1e-10) cometDir.subVectors(_vA, _vB).normalize();
+    worldPos.copy(cometPos);
+    // the camera: a straight dolly (rail pose), smootherstep in time
+    _pCam.lerpVectors(portalCamFrom, portalCamTo, e1);
+    _pLook.lerpVectors(portalLookFrom, portalLookTo, e1);
+    cam.setRail(_pCam, _pLook, 1);
+    // the warp flash (as at the tunnel mouths)
+    setBloomBoost(w);
+    camera.fov = baseFov + WARP_FOV * w;
+    camera.updateProjectionMatrix();
+    tunnel.setRush(w);
+    tunnel.updateStreaks(dt, cometPos, cometDir, w);
+    if (goingIn && !portalShown && w >= PORTAL_SHOW) { portalShown = true; emitPortal('show'); }
+    if (x < 1) return;
+    if (goingIn) { enterPhase(Phase.DIMENSION); return; }
+    // back in VIEW: the flash is over; the panel and the re-trace come back
+    setBloomBoost(0);
+    camera.fov = baseFov; camera.updateProjectionMatrix();
+    tunnel.setRush(0); tunnel.updateStreaks(0, cometPos, cometDir, 0);
+    enterView();
+    stepFaceAlign(dt);
 }
 
 // ── Landing mail hit-plane ─────────────────────────────────────────

@@ -11,7 +11,16 @@ if (el) {
     const subtitle = el.querySelector('.stop-panel-subtitle');
     const list = el.querySelector('.stop-panel-items');
     const more = el.querySelector('.stop-panel-more');
+    const portal = el.querySelector('.stop-panel-portal');
     let hideTimer = 0;
+
+    // The portal link opens the app inside the journey (dimension.js); it
+    // is a real link, so a new tab or a middle click opens the app page
+    portal?.addEventListener('click', (e) => {
+        if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('journey:portal-request'));
+    });
 
     function fill(p) {
         dates.textContent = p.dates || '';
@@ -46,6 +55,13 @@ if (el) {
             } else {
                 more.removeAttribute('target');
                 more.removeAttribute('rel');
+            }
+        }
+        if (portal) {
+            portal.hidden = !p.portal;
+            if (p.portal) {
+                portal.href = p.portal.href;
+                portal.textContent = p.portal.label;
             }
         }
         list.scrollTop = 0;

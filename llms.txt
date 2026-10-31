@@ -14,6 +14,10 @@
 
 - [Portfolio](https://ilyaeis.github.io/): an interactive WebGL journey. It has no readable text for fetch tools. Use the resume files for the text.
 
+## Apps
+
+- [Sorting visualizer](https://ilyaeis.github.io/apps/sorting/): sort_visualization in the browser, 16 algorithms in five layouts. The algorithms are the original C++ compiled to WebAssembly; the drawing is a JavaScript port. In the journey it opens through a portal at the `sorting` stop.
+
 ## Journey (WebGL page)
 
 Each link below opens the page and lands at that stop. Ids are stable names; the order is not part of the contract.
@@ -38,7 +42,7 @@ Universe `rnd` (Giraffe360 R&D, inside a Gaussian splat of a real apartment):
 Universe `projects`:
 - [Flow](https://ilyaeis.github.io/?go=flow): offline workout tracker app (Dart/Flutter).
 - [Graphing calculator](https://ilyaeis.github.io/?go=calculator): offline graphing calculator; 4th place in a programming competition.
-- [Sorting visualizer](https://ilyaeis.github.io/?go=sorting): sorting algorithm visualizer (C++/SFML).
+- [Sorting visualizer](https://ilyaeis.github.io/?go=sorting): sorting algorithm visualizer (C++/SFML). Has a portal: the app at /apps/sorting/.
 - Seen between stops, not navigable: `balancer` (load-balancing lab, before Flow), `monte-carlo` (Monte Carlo finance, between Flow and the calculator), `neat` (NEAT neuroevolution, between the calculator and the sorting visualizer).
 
 Universe `contact`:
@@ -47,7 +51,8 @@ Universe `contact`:
 In a browser, `window.journey` (version 1) controls the page. All navigation calls return Promises.
 - `listUniverses()`, `listStops()`, `getStop(id)` (with the panel text), `current()`
 - `goTo(id, { mode: 'fly' | 'jump' })`, `next()`, `previous()`, `whenIdle()`, `resumeLinks()`
-- `goTo` returns `{ ok: true, stop }` or `{ ok: false, reason }`. Reasons: `unknown-stop`, `not-navigable`, `travelling` (await `whenIdle()` and retry).
+- `goTo` returns `{ ok: true, stop }` or `{ ok: false, reason }`. Reasons: `unknown-stop`, `not-navigable`, `travelling` (await `whenIdle()` and retry), `in-portal` (a project app is open; the visitor closes it).
+- `listStops()` gives `app` (the standalone page) for stops with a portal. `current().phase` is `portal-in`, `dimension` or `portal-out` while an app opens, is open, or closes.
 - `?go=<id>` lands at a stop at once. Add `&mode=fly` to arrive by flight (needs a real browser).
 - Browsers with WebMCP also expose the same as tools: `list_stops`, `get_current_stop`, `get_panel`, `go_to_stop`, `next_stop`, `previous_stop`, `get_resume_links`.
 

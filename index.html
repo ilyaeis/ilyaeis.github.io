@@ -148,7 +148,8 @@
             <li><a href="https://github.com/ilyaeis/RTU_program_parser">RTU_program_parser</a> — timetable scraper (Python, Selenium, pandas)</li>
             <li><a href="https://github.com/ilyaeis/Snake_plus_Maze_Path_algorithm_gen_2">Snake_plus_Maze_Path_algorithm_gen_2</a> — maze generation and path-finding (Python, Pygame)</li>
             <li><a href="https://github.com/ilyaeis/bezier-curve-js">bezier-curve-js</a> — interactive Bezier-curve tool (JavaScript)</li>
-            <li><a href="https://github.com/ilyaeis/sort_visualization">sort_visualization</a> — sorting algorithm visualizer (C++, SFML)</li>
+            <li><a href="https://github.com/ilyaeis/sort_visualization">sort_visualization</a> — sorting algorithm visualizer (C++, SFML);
+                <a href="apps/sorting/">run it in the browser</a> (the original algorithms compiled to WebAssembly)</li>
         </ul>
         <h2>Get in touch</h2>
         <p>
@@ -176,9 +177,21 @@
         <p class="stop-panel-subtitle"></p>
         <ul class="stop-panel-items"></ul>
         <a class="stop-panel-more" href="resume.html"></a>
+        <a class="stop-panel-portal" href="apps/sorting/" hidden></a>
     </aside>
 
+    <!-- A project app opened through a portal (js/dimension.js) -->
+    <div class="dimension" role="dialog" aria-modal="true" aria-labelledby="dimension-title" hidden>
+        <div class="dimension-bar">
+            <button class="dimension-back" type="button">&larr; back to the journey</button>
+            <span class="dimension-title" id="dimension-title"></span>
+            <a class="dimension-tab" href="apps/sorting/" target="_blank" rel="noopener">new tab</a>
+        </div>
+        <p class="dimension-status">loading&hellip;</p>
+    </div>
+
     <script type="module" src="js/stopPanel.js"></script>
+    <script type="module" src="js/dimension.js"></script>
     <script type="module" src="js/agentApi.js"></script>
     <script type="module" src="js/room.js"></script>
     <script type="module" src="js/main.js"></script>

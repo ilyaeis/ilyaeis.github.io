@@ -7,6 +7,8 @@ per-frame log, draws graphs and prints spikes that break the thresholds.
     python3 -m http.server 8000            # in the repo root
     python3 analysis/camera_smoothness.py OUT_DIR [--label NAME] [--dt 30 60 144 jitter]
     python3 analysis/camera_smoothness.py OUT_DIR --compare before after
+    python3 analysis/camera_smoothness.py OUT_DIR --label portal --params dim=1
+        (extra camlog.html params: dim=S enters the first portal, stays S s, comes back)
 
 Thresholds ("smooth" = no metric goes above its limit):
   rot speed  <= 90 deg/s   Whole camera orientation (view direction and roll),
@@ -33,7 +35,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-PHASE_NAMES = {0: 'INTRO', 1: 'ROCKET_EXIT', 2: 'TRAVEL', 3: 'VIEW'}
+PHASE_NAMES = {0: 'INTRO', 1: 'ROCKET_EXIT', 2: 'TRAVEL', 3: 'VIEW', 4: 'PORTAL_IN', 5: 'DIMENSION', 6: 'PORTAL_OUT'}
 LIMITS = {  # metric: (limit, unit)
     'rot_speed': (90, 'deg/s'),
     'rot_accel': (400, 'deg/s2'),
@@ -47,10 +49,10 @@ JERK_WIN = 0.05  # s
 TUNNEL_LIMITS = {'cam_speed': 120, 'look_speed': 120, 'cam_accel': 160, 'cam_jerk': 1600}
 
 
-def run_chrome(url, dt):
+def run_chrome(url, dt, params=''):
     out = subprocess.run(
         ['google-chrome', '--headless=new', '--disable-gpu', '--window-size=1280,800',
-         '--virtual-time-budget=20000', '--dump-dom', f'{url}/dev/camlog.html?dt={dt}'],
+         '--virtual-time-budget=20000', '--dump-dom', f'{url}/dev/camlog.html?dt={dt}' + (f'&{params}' if params else '')],
         capture_output=True, text=True, timeout=600).stdout
     m = re.search(r'<pre id="out">(.*?)</pre>', out, re.S)
     if not m or not m.group(1).strip():
@@ -205,6 +207,7 @@ def main():
     ap.add_argument('--label', default='run')
     ap.add_argument('--dt', nargs='+', default=['30', '60', '144', 'jitter'])
     ap.add_argument('--url', default='http://localhost:8000')
+    ap.add_argument('--params', default='', help='extra camlog.html query, e.g. dim=1')
     ap.add_argument('--compare', nargs=2, metavar=('A', 'B'), help='plot two saved labels over each other')
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
@@ -222,7 +225,7 @@ def main():
 
     total = 0
     for dt in a.dt:
-        log = run_chrome(a.url, dt)
+        log = run_chrome(a.url, dt, a.params)
         json.dump(log, open(log_path(a.label, dt), 'w'))
         m = metrics(log)
         total += summary(f'{a.label} dt={dt}', m)

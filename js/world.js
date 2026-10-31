@@ -126,7 +126,12 @@ const MILESTONES = [
             { text: '16 sorting algorithms animated in five layouts, with speed control.' },
             { text: 'Every line written by hand in C++, before AI tools.' }
         ],
-        more: { href: 'https://github.com/ilyaeis/sort_visualization', label: 'github' }
+        more: { href: 'https://github.com/ilyaeis/sort_visualization', label: 'github' },
+        // The app behind the portal (dimension.js): its page, and the files
+        // fetched on arrival at the stop (their progress lights the rim)
+        portal: { href: 'apps/sorting/', label: 'enter the visualizer', title: 'Sorting visualizer',
+                  preload: ['apps/sorting/', 'apps/sorting/app.js', 'apps/sorting/drawer.js', 'apps/sorting/worker.js',
+                            'apps/sorting/wasm/sortvis.js', 'apps/sorting/wasm/sortvis.wasm', 'apps/sorting/Ruda-Medium.woff2'] }
     }},
     // Giraffe360 R&D (universe 'rnd'): one splat object per area (objects.js), in route order
     { label: 'SPLATTING', panel: {
@@ -409,6 +414,8 @@ export const catalog = [
         title: d.title ?? MILESTONES[d.milestone].panel.title,
         summary: d.summary,
         panel: d.milestone !== undefined ? MILESTONES[d.milestone].panel : null,
+        portal: d.milestone !== undefined && MILESTONES[d.milestone].panel.portal
+            ? { href: MILESTONES[d.milestone].panel.portal.href, label: MILESTONES[d.milestone].panel.portal.label } : null,
         navigable: true
     })),
     ...FLYBYS.map(fb => {
@@ -1102,7 +1109,7 @@ export function buildWorld(scene) {
         const palette = ATTRACTORS[paletteIdx].palette;
         let viz = null;
         if (def.type === StopType.PROJECT) {
-            viz = buildProjectViz(MILESTONES[def.milestone].label);
+            viz = buildProjectViz(MILESTONES[def.milestone].label, { portal: !!MILESTONES[def.milestone].panel.portal });
             def.vizHalfW = viz.halfW; def.vizHalfH = viz.halfH;
             viz.group.position.copy(center);
             viz.group.quaternion.setFromRotationMatrix(
@@ -1126,6 +1133,13 @@ export function buildWorld(scene) {
             ...built
         };
         if (def.type === StopType.PROJECT) stop.line.material = getStopMaterial('inside');
+        if (viz?.rim) {
+            // A portal stop: the camera fit takes in the rim (fitHalfW/H), the comet loops round it
+            stop.portal = stop.panel.portal;
+            stop.rimR = viz.rim.outerR;
+            stop.fitHalfW = Math.max(stop.halfW, viz.rim.outerR);
+            stop.fitHalfH = Math.max(stop.halfH, viz.rim.outerR);
+        }
         if (def.type === StopType.LANDING) { ownMaterial(stop.line); stop.focusVis = 0; }
         scene.add(stop.line);
         stops.push(stop);
