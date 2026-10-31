@@ -162,7 +162,7 @@ const TRAVEL_LONG_SPEED = 14.0;      // u/s mean cap for very long hops (the lan
 const TRAVEL_POINTS_PER_FRAME = 30;  // comet substeps along the path
 const CAM_PATH_WINDOW = 0.2;         // s: half-width of the path smoothing the camera follows
 const CAM_PATH_SAMPLES = 9;          // path samples per frame for that smoothing
-const TRAVEL_ARC_SAMPLES = 1024;     // arc-length table samples per leg (even speed, no jump at leg joins; fine, so the camera jerk stays low at high frame rates)
+const TRAVEL_ARC_SAMPLES = 2048;     // arc-length table samples per leg (even speed, no jump at leg joins; fine, so the camera jerk stays low at high frame rates)
 const TUNNEL_ARC_SAMPLES = 1024;     // tunnel and spiral legs are long and curved: a finer table keeps the speed smooth
 const LAUNCH_FLASH = 0.8;            // extra HDR intensity leaving the intro
 
@@ -220,6 +220,7 @@ const VIEW_TAP_DELAY = {
 // Object stops (the apartment): the comet traces the halo ring once, then
 // rides it, slowing from the trace pace to the loop pace (no speed jump)
 const OBJECT_TRACE_DURATION = 3.0;   // s for the ring trace (one turn)
+const OBJECT_TRACE_INTENSITY = 0.9;  // the traced ring is a subtle accent indoors (no bloom)
 const OBJECT_LOOP_PERIOD = 8.0;      // s per turn once settled
 const OBJECT_LOOP_EASE = 1.5;        // s: time constant of that slow-down
 const OBJECT_LOOP_BOB = 0.05;        // × ring radius: gentle up and down (twice per turn)
@@ -253,6 +254,7 @@ const RAIL_IN = [2.4, 4.6];
 const RAIL_IN_RATE = 36;
 const LIFT = 0.1;                    // room units: leaving an object, the comet first crosses this far above its top ...
 const LIFT_AHEAD = 0.35;             // ... and this far (room units) towards where it goes next (a gentle climb, not a jump up)
+const LIFT_SKIP = 0.4;               // room units: no lift when the next via is this much higher than the object top
 
 // Projects tunnel (tunnel.js). Flights inside it follow the centreline.
 const TUNNEL_DEPART = 8;             // s after a project stop where the departure joins the centreline
@@ -739,9 +741,12 @@ export function setupTravel(destIdx, withCorkscrew) {
     }
     if (from?.type === StopType.OBJECT) {
         // leave over the top of the object: the chase camera then passes above it, not through it
+        // (not when the next via is far above anyway: the extra bend makes the climb jerky)
         const next = vias.length ? vias[0].p : _targetPos;
-        const h = _vC.subVectors(next, from.center).setY(0).normalize();
-        vias.unshift({ p: from.center.clone().addScaledVector(h, LIFT_AHEAD * apartment.scale).setY(from.topY + LIFT * apartment.scale), dir: null });
+        if (next.y - from.topY < LIFT_SKIP * apartment.scale) {
+            const h = _vC.subVectors(next, from.center).setY(0).normalize();
+            vias.unshift({ p: from.center.clone().addScaledVector(h, LIFT_AHEAD * apartment.scale).setY(from.topY + LIFT * apartment.scale), dir: null });
+        }
     }
     if (inTunnel || toTunnel) buildTunnelLegs(from, dest, inTunnel, toTunnel, vias);
     else buildOpenLegs(vias);
@@ -1301,7 +1306,7 @@ function tracePlanar(stop, dt, duration = TRACE_DURATION, maxPerFrame = TRACE_MA
     for (let i = 0; i < budget && traceCursor < n - 1; i++) {
         traceCursor++;
         const p = stop.points2d[traceCursor];
-        trail.pointIntensity = p.c === 1 ? TRACE_STROKE_INTENSITY : TRACE_LINK_INTENSITY;
+        trail.pointIntensity = stop.type === StopType.OBJECT ? OBJECT_TRACE_INTENSITY : p.c === 1 ? TRACE_STROKE_INTENSITY : TRACE_LINK_INTENSITY;
         planePointToWorld(_vec3, stop.center, stop.right, stop.up, stop.scale, p);
         pushPointWorld(trail, _vec3.x, _vec3.y, _vec3.z);
     }

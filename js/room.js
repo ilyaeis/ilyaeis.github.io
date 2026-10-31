@@ -26,7 +26,10 @@ const INDOOR_FADE = [0.6, 0.05];     // outside distance where that fade starts 
 // The bright room must not drown the glowing strokes. Dim the splat colors,
 // and raise the bloom threshold while the room shows (strokes are HDR > 1).
 const ROOM_BRIGHTNESS = 0.42;
-const OBJECT_BRIGHTNESS = 0.68;      // the objects (baked light) stand out from the room, but stay under the bloom threshold
+// The objects have baked white light; the room is lit by warm lamps and is
+// dimmed. Tint and dim the objects the same way, so they sit in the scene
+// (× each spot's `light` from world.js OBJECT_SPOTS: lamps near or not)
+const OBJECT_LIGHT = [0.44, 0.37, 0.29];
 const BLOOM_THRESHOLD_IN_ROOM = 0.75; // the HDR strokes (halo, text, comet) bloom, the white objects do not
 const OBJECT_SPLATS = isMobile ? 5000 : 16000;   // per object: fewer read soft up close
 
@@ -98,10 +101,14 @@ async function loadRoom() {
             holder.rotation.y = o.yaw;
             holder.scale.setScalar(o.scale);
             const m = buildObject(o.name, { count: OBJECT_SPLATS, rng: mulberry32(11 + i) });
-            m.recolor = new THREE.Color(OBJECT_BRIGHTNESS, OBJECT_BRIGHTNESS, OBJECT_BRIGHTNESS);
-            const shadow = contactShadow(...(FOOT[o.name] ?? [0.3, 0.3]));
-            holder.add(m, shadow);
-            meshes.push(m, shadow, ...(m.userData.fans ?? []));
+            m.recolor = new THREE.Color(...OBJECT_LIGHT.map(c => c * (o.light ?? 1)));
+            holder.add(m);
+            meshes.push(m, ...(m.userData.fans ?? []));
+            if (FOOT[o.name]) {                    // (the wall board has none)
+                const shadow = contactShadow(...FOOT[o.name]);
+                holder.add(shadow);
+                meshes.push(shadow);
+            }
             objects.push(m);
             g.add(holder);
         });

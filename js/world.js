@@ -290,36 +290,51 @@ const DOORS = {
     BED_IN: { p: [-0.78, -0.06, 1.20], axis: [0.2, 0, 1], lead: 0 },  // passage / bedroom
     BC: { p: [0.34, -0.14, 1.37], axis: [1, 0, 0] },     // bedroom / corridor
     LC: { p: [0.50, -0.14, 0.90], axis: [0, 0, 1] },     // corridor / living
+    // living room lane round the sofa (the LH door opens just behind it):
+    // west of the sofa, then between the coffee table and the armchair
+    LW1: { p: [-0.62, -0.12, 0.30], axis: [0.55, 0, -0.84], lead: 0 },
+    LW2: { p: [-0.30, -0.12, -0.12], axis: [0.96, 0, -0.29], lead: 0 },
 };
 // Object stops: base on the floor at (x, z). The VIEW camera looks from
 // `cam` (room units; only its direction counts, the distance is the fit,
 // capped at fitMax room units so a portrait fit stays inside the walls).
 // `doors`: the doorways from the previous object, with the crossing sign.
 export const OBJECT_SCALE = 0.25;        // object height ≈ 0.25 room units ≈ 0.9 m
-// Optional: `y` = base height (default: the floor), `scale` (default OBJECT_SCALE).
+// Optional: `y` = base height (default: the floor), `scale` (default OBJECT_SCALE),
+// `light` (× the object brightness in room.js: lamps near or not), `haloTilt` (deg).
 // The tour: living room -> hall (in by LH, out by CH) -> bedroom -> corridor
 // -> living room. Each VIEW camera looks within ~90° of the way the comet
 // leaves next, so no flight has to turn the camera round.
 const OBJECT_SPOTS = {
-    cherry: { x: -0.62, z: 0.15, cam: [-0.10, -0.17, 0.12], fitMax: 0.6, doors: [] },                    // living room, before the fireplace
-    vase:   { x: -1.92, z: 1.12, y: -0.206, scale: 0.16, cam: [-1.88, -0.04, 0.78], fitMax: 0.5, doors: [['LH', -1]] }, // kitchen-diner, on the dining table
-    gpu:    { x: -1.45, z: 0.82, cam: [-1.86, -0.15, 0.66], fitMax: 0.66, doors: [] },                    // kitchen-diner, before the two doorways
-    chair:  { x: -0.55, z: 1.72, cam: [-0.88, -0.12, 1.42], fitMax: 0.5, doors: [['CH', 1], ['BED_IN', 1]] }, // bedroom, at the foot of the bed
-    board:  { x: 0.05, z: 1.30, cam: [-0.35, -0.08, 1.33], fitMax: 0.66, doors: [] },                     // bedroom, before the door to the corridor
-    robot:  { x: 0.42, z: -0.03, cam: [0.42, -0.17, 0.40], fitMax: 0.6, doors: [['BC', 1], ['LC', -1]] }, // living room, before the bay window (out of the landing view)
+    // living room: on the coffee table (top y -0.296), 17 cm tall
+    cherry: { x: -0.06, z: 0.13, y: -0.296, scale: 0.045, cam: [-0.04, -0.12, -0.10], fitMax: 0.5, doors: [] },
+    // kitchen-diner: on the dining table (cloth y -0.20), 35 cm tall
+    vase:   { x: -1.92, z: 1.12, y: -0.20, scale: 0.095, cam: [-1.88, -0.10, 0.82], fitMax: 0.5, doors: [['LW1', -1], ['LH', -1]], light: 0.85 },
+    // living room: on the desk by the east wall, next to the printer box, 30 cm long
+    gpu:    { x: 0.72, z: 0.20, y: -0.18, scale: 0.067, cam: [0.35, -0.12, 0.20], fitMax: 0.5, doors: [['LH', 1], ['LW1', 1], ['LW2', 1]] },
+    // kitchen-diner: pulled out at the corner of the dining table, 91 cm tall
+    chair:  { x: -1.66, z: 0.97, cam: [-1.30, -0.12, 0.72], fitMax: 0.6, doors: [['LW2', -1], ['LW1', -1], ['LH', -1]], light: 0.75 },
+    // hall: hung on the wall above the sofa (wall z = 0.124 x + 0.439, so the
+    // camera looks along the wall normal), panel 1.15-1.85 m above the floor, 1 m wide
+    board:  { x: -2.04, z: 0.245, y: -0.163, scale: 0.24, cam: [-2.114, -0.012, 0.840], fitMax: 0.66, doors: [], haloTilt: 90, light: 1.15 },
+    // living room: on the floor with the toys by the bay window, 30 cm tall
+    robot:  { x: 0.42, z: -0.18, scale: 0.083, cam: [0.25, -0.25, 0.12], fitMax: 0.5, doors: [['LH', 1], ['LW1', 1], ['LW2', 1]] },
 };
-// Object bounds (local units, objects.js): half width and height
+// Object bounds (local units, objects.js): half width, height, and the
+// height where the content starts (`bottom`: the board's panel)
 const OBJECT_SIZE = {
     cherry: { hw: 0.4, h: 1.04 }, robot: { hw: 0.4, h: 1.0 }, vase: { hw: 0.4, h: 1.02 },
-    chair: { hw: 0.25, h: 1.0 }, board: { hw: 0.58, h: 1.0 }, gpu: { hw: 0.62, h: 0.64 },
+    chair: { hw: 0.25, h: 1.0 }, board: { hw: 0.58, h: 0.72, bottom: 0.27 }, gpu: { hw: 0.62, h: 0.64 },
 };
 // Halo ring round each object (Saturn style), radius in local units. The
 // ring plane leans HALO_TILT up from the view direction, so it reads as a
-// thin ellipse round the object's middle and never cuts through it.
+// thin ellipse round the object's middle and never cuts through it. A
+// subtle accent: HALO_INTENSITY stays under the bloom threshold indoors.
 const HALO_R = { cherry: 0.6, robot: 0.5, vase: 0.52, chair: 0.5, board: 0.75, gpu: 0.72 };
 const HALO_TILT = THREE.MathUtils.degToRad(15);
 const HALO_POINTS = 120;
-const HALO_DIM_ALPHA = 0.3;              // dim until the comet traces it
+const HALO_DIM_ALPHA = 0.2;              // dim until the comet traces it
+const HALO_INTENSITY = 0.8;              // colour × this (the text strokes use STROKE_INTENSITY 1.5)
 const HALO_FADE_TIME = 0.5;              // s: a ring fades in (out) as its stop becomes (stops being) the focus
 const OBJECT_PAD = 0.15;                 // × height: framing room above and below the object
 const OBJECT_FRAME = 1.12;               // × the halo / object half width: framing room beside it (the fit)
@@ -913,15 +928,17 @@ function buildObjectStop(def, palette) {
     const s = apartment.scale;
     const k = spot.scale ?? OBJECT_SCALE, base = spot.y ?? ROOM_FLOOR;
     const H = size.h * k * s;                                     // world units
-    const center = roomToWorld(spot.x, base + size.h * k / 2, spot.z);
+    const center = roomToWorld(spot.x, base + ((size.bottom ?? 0) + size.h / 2) * k, spot.z);
     const camPos = roomToWorld(...spot.cam);
     const normal = center.clone().sub(camPos).normalize();
     const right = new THREE.Vector3().crossVectors(normal, new THREE.Vector3(0, 1, 0)).normalize();
-    const up = normal.clone().multiplyScalar(Math.cos(HALO_TILT)).addScaledVector(new THREE.Vector3(0, 1, 0), Math.sin(HALO_TILT)).normalize();
+    // (the wall board: haloTilt 90°, the ring lies in the board plane, round it)
+    const tilt = spot.haloTilt !== undefined ? THREE.MathUtils.degToRad(spot.haloTilt) : HALO_TILT;
+    const up = normal.clone().multiplyScalar(Math.cos(tilt)).addScaledVector(new THREE.Vector3(0, 1, 0), Math.sin(tilt)).normalize();
     // the object faces the camera: its front (+Z local) along -normal, in room yaw
     const back = worldToRoom(camPos.clone()).sub(worldToRoom(center.clone()));
     const yaw = Math.atan2(back.x, back.z);
-    apartment.objects.push({ name: def.object, x: spot.x, y: base, z: spot.z, yaw, scale: k });
+    apartment.objects.push({ name: def.object, x: spot.x, y: base, z: spot.z, yaw, scale: k, light: spot.light ?? 1 });
 
     const R = HALO_R[def.object] * k * s;
     const points = [];
@@ -935,7 +952,7 @@ function buildObjectStop(def, palette) {
             planePointToWorld(_vec3, center, right, up, 1, points[k]);
             segPos.push(_vec3.x, _vec3.y, _vec3.z);
             const col = getPaletteColor(palette, k / (points.length - 1));
-            segCol.push(col.r * STROKE_INTENSITY, col.g * STROKE_INTENSITY, col.b * STROKE_INTENSITY);
+            segCol.push(col.r * HALO_INTENSITY, col.g * HALO_INTENSITY, col.b * HALO_INTENSITY);
             segAlpha.push(HALO_DIM_ALPHA);
             segIdx.push(k);
         }

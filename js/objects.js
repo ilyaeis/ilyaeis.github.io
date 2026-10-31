@@ -640,10 +640,8 @@ function board(count, rng) {
     parts.push({ area: 0, fixed: 2, emit(S) { S.ball(av, 0.011, avc); S.ball(av.clone().add(V3(0, 0, 0.002)), 0.006, avc.map(x => x * 1.5)); } });
     if (cd.ci === 2) parts.push(wire({ curve: poly([at(0.1, -0.22), at(0.16, -0.32), at(0.27, -0.08)]), r: 0.0048, fixed: 12, emissive: true, color: () => [0.08, 0.45, 0.18] }));
   }
-  // easel legs, marker tray, markers
-  const legC = [0.34, 0.36, 0.4], legM = { amb: 0.4, dif: 0.6, spec: 0.5, shin: 30 };
-  for (const sx of [-1, 1]) parts.push(wire({ curve: t => V3(sx * (0.44 + 0.05 * t), 0.31 * (1 - t), 0.02 + 0.05 * t), r: 0.011, fixed: 40, color: () => legC, mat: legM }));
-  parts.push(wire({ curve: t => V3(0, 0.8 * (1 - t), -0.03 - 0.28 * t), r: 0.01, fixed: 60, color: () => legC, mat: legM }));
+  // marker tray and markers (the board hangs on a wall: no easel legs)
+  const legM = { amb: 0.4, dif: 0.6, spec: 0.5, shin: 30 };
   parts.push(roundBox({ c: V3(0, 0.29, 0.025), h: V3(0.42, 0.007, 0.03), rad: 0.005, color: () => [0.66, 0.69, 0.74], mat: legM, w: 0.8 }));
   [[-0.22, [0.1, 0.4, 0.9]], [-0.1, [0.9, 0.2, 0.25]], [0.24, [0.15, 0.6, 0.3]]].forEach(([x, c]) =>
     parts.push(tube({ curve: t => V3(x - 0.045 + t * 0.09, 0.306, 0.03), radius: 0.009, color: (p) => (p.x > x + 0.03 ? [0.95, 0.95, 0.95] : c), mat: { spec: 0.4 }, w: 3 })));
@@ -746,10 +744,10 @@ export function buildObject(name, { count = 4000, rng = mulberry32(7) } = {}) {
   const mesh = b(count, rng);
   mesh.name = name;
   const baseY = mesh.rotation.y;
-  // idle: slow sway; fans spin on the GPU
+  // idle: the objects stand on real surfaces, so they stay put; the toy
+  // robot turns a little, and the GPU fans spin
   mesh.userData.idle = (t) => {
-    mesh.rotation.y = baseY + 0.35 * Math.sin(t * 0.45);
-    if (name === 'robot' || name === 'cherry') mesh.position.y = (mesh.userData.baseY ?? 0) + 0.012 * Math.sin(t * 1.6);
+    if (name === 'robot') mesh.rotation.y = baseY + 0.25 * Math.sin(t * 0.45);
     if (mesh.userData.fans) mesh.userData.fans.forEach((f, i) => { f.rotation.z = -t * (3 + i * 0.4); });
   };
   return mesh;
@@ -757,7 +755,8 @@ export function buildObject(name, { count = 4000, rng = mulberry32(7) } = {}) {
 
 // Soft dark ellipse under an object (local units), so it sits on the floor.
 // FOOT: half axes (x, z) of each object's footprint.
-export const FOOT = { cherry: [0.4, 0.25], robot: [0.3, 0.2], vase: [0.32, 0.32], chair: [0.3, 0.3], board: [0.55, 0.25], gpu: [0.6, 0.18] };
+// The board hangs on a wall: no shadow.
+export const FOOT = { cherry: [0.4, 0.25], robot: [0.3, 0.2], vase: [0.32, 0.32], chair: [0.3, 0.3], board: null, gpu: [0.6, 0.18] };
 export function contactShadow(rx, rz) {
   const ps = new PackedSplats(), q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
   const col = new THREE.Color(0.03, 0.02, 0.015), p = new THREE.Vector3(), sc = new THREE.Vector3();
