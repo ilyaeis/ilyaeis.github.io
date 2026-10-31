@@ -266,8 +266,11 @@ const LIFT_SKIP = 0.4;               // room units: no lift when the next via is
 // Projects tunnel (tunnel.js). Flights inside it follow the centreline.
 const TUNNEL_DEPART = 8;             // s after a project stop where the departure joins the centreline
 const ARRIVE_BLEND = 0.3;            // share of the flight time over which the camera blends into the VIEW pose (time-based, so dt-free)
+const ARRIVE_BLEND_DIVE = 0.36;      // ... on the dive into the apartment (the view turns down onto the first object)
 const ARRIVE_TIME = 2.6 * TUNNEL_TIME_SCALE; // tunnel stops: blend over the last this many seconds
 const ARRIVE_MIN_DOT = 0.3;          // ... only if the arrival heading is this aligned with the stop's facing
+const ARRIVE_LAG = 0.5;              // s: the chase heading trails the path about this much (camera.js TURN_TIME)
+const ARRIVE_SWING = THREE.MathUtils.degToRad(20); // open-space flights into a rock or the traits end at most this far off the stop's facing
 const FOLLOW_EASE = 0.3;             // path share over which the chase distance eases to the destination fit
 const JOIN_HEADING_MIX = 1.0;        // departure into the tunnel: share of the live heading in the first control arm
 const TUNNEL_LAND = 6;               // the last units of s blend from the centreline onto the label start
@@ -802,6 +805,7 @@ export function setupTravel(destIdx, withCorkscrew) {
     }
     if (inTunnel || toTunnel) buildTunnelLegs(from, dest, inTunnel, toTunnel, vias);
     else buildOpenLegs(vias);
+    if (!inTunnel && (dest.type === StopType.ROCK || dest.type === StopType.TEXT)) faceArrival(travelLegs[travelLegs.length - 1], dest);
 
     // Time proportional to chord length
     let total = 0;
@@ -851,11 +855,39 @@ export function setupTravel(destIdx, withCorkscrew) {
     // from behind, a straight blend would swing the camera through the stop
     // (the face-align glide in VIEW goes round the side instead)
     arriveBlend = travelTangent(0.999, _vA).dot(dest.normal) > ARRIVE_MIN_DOT;
+    // Into a rock or the traits: the chase view at the start of the blend
+    // must face the stop too (the heading lags the path by ~ARRIVE_LAG s), or
+    // the blend turns it too fast; the VIEW glide then goes round at its capped pace
+    if (arriveBlend && !inTunnel && (dest.type === StopType.ROCK || dest.type === StopType.TEXT)) {
+        for (let x = 1 - ARRIVE_BLEND - ARRIVE_LAG / travelDuration; x < 1; x += 0.02) {
+            if (travelTangent(travelEase(Math.max(x, 0)), _vA).dot(dest.normal) < ARRIVE_MIN_DOT) { arriveBlend = false; break; }
+        }
+    }
     cam.setFollowDistance(followFrom);
     // A fly-by is framed centred: the panel shift comes back after it
     shiftBack = !flyby;
     cam.setScreenShift(hasPanel(dest) && !flyby);
     enterPhase(Phase.TRAVEL);
+}
+
+// The last leg into a rock (or the traits) arrives along the stop's facing,
+// at most ARRIVE_SWING off it. A hover departure (Thales point) or a galaxy
+// via can bring the comet in from the side; the chase camera then trails at
+// that angle, and the arrival blend (into the face-on view) has to turn the
+// view fast (up to 137 deg/s). The arm keeps its length. A leg that comes
+// from behind the stop (the loop back to the first rock) stays as it is: the
+// VIEW glide goes round the side (an arrival from the front would need a hairpin).
+const _qArr = new THREE.Quaternion(), _qId = new THREE.Quaternion();
+function faceArrival(leg, dest) {
+    if (_vC.subVectors(leg.p3, leg.p0).normalize().dot(dest.normal) < ARRIVE_MIN_DOT) return;
+    const arm = leg.p2.distanceTo(leg.p3);
+    _vC.subVectors(leg.p2, leg.p3).normalize();           // the arrival arm, pointing back
+    _vD.copy(dest.normal).negate();                        // back towards the VIEW camera
+    const a = _vC.angleTo(_vD);
+    if (a <= ARRIVE_SWING) return;
+    _qArr.setFromUnitVectors(_vD, _vC);
+    _qId.identity().slerp(_qArr, ARRIVE_SWING / a);
+    leg.p2.copy(leg.p3).addScaledVector(_vD.applyQuaternion(_qId), arm);
 }
 
 // Path share where leg k ends (the warp jump point)
@@ -981,8 +1013,11 @@ function buildOpenLegs(vias = []) {
     if (via) {
         const viaPos = galaxyViaPoint(via, _targetPos);
         const leg1 = buildFirstLeg(viaPos);
-        // Depart the via along leg1's arrival tangent — smooth join
-        _vec3.subVectors(leg1.p3, leg1.p2).normalize();
+        // Cross the via along the mean of the ways in and out (a random
+        // crossing made a tight S-bend there: acceleration spikes mid-flight),
+        // and depart it along the same direction — smooth join
+        _vec3.subVectors(viaPos, cometPos).normalize().add(_vA.subVectors(_targetPos, viaPos).normalize()).normalize();
+        leg1.p2.copy(viaPos).addScaledVector(_vec3, -VIA_PULL * leg1.p0.distanceTo(viaPos));
         travelLegs.push(leg1, buildLeg(viaPos, _vec3, _targetPos, true));
     } else {
         travelLegs.push(buildFirstLeg(_targetPos));
@@ -1190,7 +1225,8 @@ function updateTravel(dt) {
         // in the tunnel: over the last ARRIVE_TIME s (the flights are long; the rush is over by then)
         cam.setArrival(null, null, THREE.MathUtils.smootherstep(phaseTime + dt, travelDuration - ARRIVE_TIME, travelDuration));
     } else {
-        cam.setArrival(null, null, THREE.MathUtils.smootherstep(x, 1 - ARRIVE_BLEND, 1));
+        const share = dest.type === StopType.OBJECT ? ARRIVE_BLEND_DIVE : ARRIVE_BLEND;   // (indoor flights: the rail below)
+        cam.setArrival(null, null, THREE.MathUtils.smootherstep(x, 1 - share, 1));
     }
     if (indoor) {
         const L = travelWeightedLen, s = apartment.scale;

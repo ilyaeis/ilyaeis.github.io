@@ -249,6 +249,7 @@ const ROCK_HOP_MIN = 32;                 // rock → rock (same scene)
 const ROCK_HOP_MAX = 40;
 const MIN_SEPARATION = 26;
 const ROCK_SEPARATION = 22;              // rocks may sit near each other
+const TEXT_EXIT_MIN_DOT = 0.2;           // the hop after the traits: at least this aligned with the helix exit
 
 const TEXT_DIM_ALPHA = 0.25;            // the text block starts dim; lit as the comet traces it (1.0 = always lit)
 
@@ -355,9 +356,9 @@ const OBJECT_PAD = 0.15;                 // × height: framing room above and be
 const OBJECT_FRAME = 1.12;               // × the halo / object half width: framing room beside it (the fit)
 const PLACE_TRIES = 12;
 // The rocks after the apartment (education): placed once the apartment and
-// the tunnel exist, clear of both; the last one lines up behind the tunnel
-// throat, so the warp in needs no hairpin
-const AFTER_TRIES = 200;
+// the tunnel exist, clear of both, as one chain that turns smoothly back to
+// the tunnel throat (placeAfterApartment)
+const AFTER_TRIES = 1500;
 const MAX_PITCH = 0.55;                  // |y| of hop direction — keeps text upright
 
 // Overall outward drift of the journey
@@ -560,29 +561,58 @@ function randomHopDir(out) {
     out.y += rand(-1.1, 1.1);
     out.z += rand(-2.2, 2.2);
     out.normalize();
-    out.y = THREE.MathUtils.clamp(out.y, -MAX_PITCH, MAX_PITCH);
-    return out.normalize();
+    // clamp the pitch, keeping the length 1 (scaling y alone and normalising
+    // again lets a near-vertical kick through)
+    if (Math.abs(out.y) > MAX_PITCH) {
+        const h = Math.hypot(out.x, out.z), k = h > 1e-6 ? Math.sqrt(1 - MAX_PITCH * MAX_PITCH) / h : 0;
+        out.set(out.x * k, Math.sign(out.y) * MAX_PITCH, out.z * k);
+        if (h <= 1e-6) out.set(Math.sqrt(1 - MAX_PITCH * MAX_PITCH), Math.sign(out.y) * MAX_PITCH, 0);
+    }
+    return out;
 }
 
-// A rock after the apartment: clear of the tunnel axis (all of it, the
-// exit comes home too) and of the apartment. The last one before the tunnel
-// sits behind the throat: the best of the tries by the angle of its line
-// to the throat with the tunnel axis there.
-function placeAfterApartment(prev, placed, tight, last) {
-    const [hop0, hop1, sep] = tight ? [ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION] : [MIN_HOP, MAX_HOP, MIN_SEPARATION];
+// The rocks after the apartment (education), placed together as one chain
+// from `prev` (the apartment) to the tunnel throat: each clear of the tunnel
+// axis (all of it, the exit comes home too), of the apartment and of the
+// other stops. The chain leaves the window (`fwd`) and must come back to
+// the throat, behind it and along the tunnel axis (no hairpin into the
+// warp), so it turns round somewhere: the best of the tries spreads that
+// turn over all its corners (the smallest largest turn). Each rock faces
+// its hop, so a corner is a turn at a departure; a sharp one makes the
+// comet loop back past the camera (speed dips, a whipping view).
+// tight[k]: rock k hops from a rock (the tight rock scene).
+function placeAfterApartment(prev, placed, tight, fwd) {
     const T0 = tunnel.centreWorld(0, new THREE.Vector3()), e1 = tunnel.tangentWorld(0, new THREE.Vector3());
-    const c = new THREE.Vector3(), toThroat = new THREE.Vector3();
+    const chain = tight.map(() => new THREE.Vector3()), dir = new THREE.Vector3(), d0 = new THREE.Vector3();
+    const toThroat = new THREE.Vector3();
     let best = null, bestScore = -Infinity;
     for (let i = 0; i < AFTER_TRIES; i++) {
-        c.copy(prev).addScaledVector(randomHopDir(_dir), rand(hop0, hop1));
-        let clear = tunnel.axisDistance(c, tunnelExitS) / TUNNEL_CLEAR;
-        clear = Math.min(clear, (c.distanceTo(apartmentCentre) - apartmentRadius) / sep);
-        for (const p of placed) clear = Math.min(clear, c.distanceTo(p) / sep);
-        const score = clear >= 1 ? 10 + (last ? toThroat.subVectors(T0, c).normalize().dot(e1) : 0) : clear;
-        if (score > bestScore) { bestScore = score; best = c.clone(); }
-        if (score >= 10 && !last) break;
+        let p = prev, maxTurn = 0, sumTurn = 0;
+        d0.copy(fwd);
+        for (let k = 0; k < chain.length; k++) {
+            randomHopDir(dir);
+            const [hop0, hop1] = tight[k] ? [ROCK_HOP_MIN, ROCK_HOP_MAX] : [MIN_HOP, MAX_HOP];
+            chain[k].copy(p).addScaledVector(dir, rand(hop0, hop1));
+            const a = d0.angleTo(dir);
+            maxTurn = Math.max(maxTurn, a); sumTurn += a;
+            d0.copy(dir); p = chain[k];
+        }
+        toThroat.subVectors(T0, p).normalize();
+        for (const a of [d0.angleTo(toThroat), toThroat.angleTo(e1)]) { maxTurn = Math.max(maxTurn, a); sumTurn += a; }
+        const turnScore = 10 - maxTurn - 0.25 * sumTurn;
+        if (turnScore <= bestScore) continue;            // a clear chain could not beat the best: skip the clearance
+        let clear = Infinity;
+        chain.forEach((c, k) => {
+            const sep = tight[k] ? ROCK_SEPARATION : MIN_SEPARATION;
+            clear = Math.min(clear, tunnel.axisDistance(c, tunnelExitS) / TUNNEL_CLEAR,
+                             (c.distanceTo(apartmentCentre) - apartmentRadius) / sep);
+            for (const q of placed) clear = Math.min(clear, c.distanceTo(q) / sep);
+            for (let j = 0; j < k; j++) clear = Math.min(clear, c.distanceTo(chain[j]) / sep);
+        });
+        const score = clear >= 1 ? turnScore : clear;
+        if (score > bestScore) { bestScore = score; best = chain.map(c => c.clone()); }
     }
-    if (bestScore < 10) console.warn('rock after the apartment: not fully clear', bestScore.toFixed(2));
+    if (bestScore < 1) console.warn('rocks after the apartment: not fully clear', bestScore.toFixed(2));
     return best;
 }
 
@@ -1099,6 +1129,7 @@ export function buildWorld(scene) {
     const roomScale = fitDistance(lx * TEXT_SCALE, ly * TEXT_SCALE) / (LANDING_CAM_Z - LANDING_TEXT[2]);
     apartment.objects = [];
     let afterApartment = false;   // rocks after it are placed clear of it and the tunnel
+    let afterChain = [];          // ... as one chain (placeAfterApartment)
 
     for (const def of ROUTE) {
         // Rock → rock stays tight (the meteors are one scene);
@@ -1131,8 +1162,20 @@ export function buildWorld(scene) {
             center = roomToWorld(...LANDING_TEXT);
             prev = center.clone().sub(apartment.winDir);
         } else if (afterApartment) {
-            const last = ROUTE[ROUTE.indexOf(def) + 1]?.type !== StopType.ROCK;
-            center = placeAfterApartment(prev, placed, tight, last);
+            if (!afterChain.length) {
+                // this rock and the rocks right after it, as one chain (out over the window wall)
+                const i0 = ROUTE.indexOf(def), tightK = [];
+                for (let i = i0; ROUTE[i]?.type === StopType.ROCK; i++) tightK.push(ROUTE[i - 1].type === StopType.ROCK);
+                afterChain = placeAfterApartment(prev, placed, tightK, apartment.winDir);
+            }
+            center = afterChain.shift();
+        } else if (prevDef?.type === StopType.TEXT) {
+            // The comet leaves the traits helix sideways, along -right
+            // (orchestrator helixPos): no hop behind that, or the first leg
+            // makes a hairpin (a cusp: the camera speed dips, acceleration spikes)
+            const exit = stops[stops.length - 1].right.clone().negate(), h = new THREE.Vector3();
+            center = placeNextCenter(prev, placed, MIN_HOP, MAX_HOP, MIN_SEPARATION,
+                c => h.subVectors(c, prev).normalize().dot(exit) < TEXT_EXIT_MIN_DOT);
         } else {
             center = tight
                 ? placeNextCenter(prev, placed, ROCK_HOP_MIN, ROCK_HOP_MAX, ROCK_SEPARATION)
