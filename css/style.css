@@ -108,7 +108,8 @@ body {
     color: #888;
 }
 
-.site-nav a {
+.site-nav a,
+.site-nav .sound-toggle {
     color: inherit;
     text-decoration: none;
     display: inline-flex;
@@ -121,10 +122,22 @@ body {
 }
 
 .site-nav a:hover,
-.site-nav a:focus-visible {
+.site-nav a:focus-visible,
+.site-nav .sound-toggle:hover,
+.site-nav .sound-toggle:focus-visible {
     color: #e0e0e0;
     outline: 1px solid #888;
 }
+
+/* The music button (js/music.js): looks like the links; struck through when off */
+.site-nav .sound-toggle {
+    font: inherit;
+    letter-spacing: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+.site-nav .sound-toggle[aria-pressed="false"] { text-decoration: line-through; }
 
 /* Shown only when JavaScript is off */
 .fallback {
@@ -527,7 +540,8 @@ body.panel-open .tap-prompt {
     .walk-hud .walk-btn { padding: 0 0.7rem; font-size: 0.75rem; letter-spacing: 0.04em; }
     .walk-count { font-size: 0.85rem; letter-spacing: 0.04em; }
     /* the nav shares the row: no gaps between its links (the tap targets stay 44 px) */
-    body[data-input="walk"] .site-nav a { margin-left: 0; }
+    body[data-input="walk"] .site-nav a,
+    body[data-input="walk"] .site-nav .sound-toggle { margin-left: 0; }
     .walk-back-long { display: none; }
 }
 .walk-count {

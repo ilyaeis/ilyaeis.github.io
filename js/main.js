@@ -12,6 +12,7 @@ import {
     onTap,
     skipTheWalk,
     getMailPlane,
+    getAudioState,
     CONTACT_EMAIL
 } from './orchestrator.js';
 import { getPortalHit, enterPortal, setPortalHover } from './portal.js';
@@ -23,6 +24,7 @@ import {
     GITHUB_URL
 } from './intro3d.js';
 import * as walk from './walk.js';
+import * as music from './music.js';
 
 (function () {
     'use strict';
@@ -101,6 +103,7 @@ import * as walk from './walk.js';
         if (!p || p.id !== e.pointerId) return;
         pointerDownPos = null;   // also when released over an overlay, so walk mode never sticks
         if (e.target.closest(OVERLAYS)) return;
+        music.start();           // the first tap is the user gesture that may start sound
         const owner = inputOwner();
         if (owner === 'walk') {
             if (!p.drag) walk.onTap(e.clientX, e.clientY);
@@ -128,6 +131,7 @@ import * as walk from './walk.js';
     document.addEventListener('keydown', (e) => {
         const owner = inputOwner();
         if (owner === 'portal' || e.target.closest?.('.dimension')) return;
+        if (e.key === 'Enter' || e.key === ' ') music.start();
         if (owner === 'walk') {
             const k = e.key.toLowerCase();
             if (WALK_KEYS.includes(k) && !e.target.closest('input,textarea') && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -152,6 +156,7 @@ import * as walk from './walk.js';
         if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
         e.preventDefault();
         skipTheWalk();
+        music.start();
     });
 
     // Prevent any residual scrolling / bounce on mobile (nav links stay tappable)
@@ -169,6 +174,7 @@ import * as walk from './walk.js';
 
         // Update orchestrator (handles attractor + camera + compositing)
         updateOrchestrator(dt);
+        music.update(getAudioState());
 
         requestAnimationFrame(loop);
     }

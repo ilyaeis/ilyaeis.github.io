@@ -632,6 +632,7 @@ function collect() {
     if (!selected || collected.has(selected.id)) return;
     collected.add(selected.id);
     save();
+    window.dispatchEvent(new CustomEvent('walk:collect'));   // music.js: a chime
     updateHud();
     if (objectStops().every(s => collected.has(s.id))) allFound();
     else showCollect(selected);
