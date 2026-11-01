@@ -136,7 +136,7 @@ const MILESTONES = [
         subtitle: 'Our custom pipeline · in production June 2026 · PyTorch · CUDA',
         items: [
             { text: 'Built the pipeline; splat quality rose a lot over the year.' },
-            { text: 'Replaced the first densification with my influence-accumulation method.' }
+            { text: 'Influence-based densification, building on Taming 3DGS (Mallick et al., 2024).' }
         ],
         more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post: the result' }
     }},
@@ -175,7 +175,7 @@ const MILESTONES = [
               href: 'https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/' },
             { text: 'AI agents and tools read and write the board through it; colleagues use it.' }
         ],
-        more: { href: 'resume.html#mcp-server', label: 'details in the resume' }
+        more: { href: 'resume.html#ground-truth', label: 'details in the resume' }
     }},
     // The depth room (bedroom2, js/depthRoom.js). Honest: the colours are this
     // public scene's own depth, not the output of the method in the second item

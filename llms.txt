@@ -1,6 +1,6 @@
 # Ilja Safronovs
 
-> R&D Engineer (3D reconstruction and computer vision: Gaussian splatting pipelines, benchmarking, continuous research) at Giraffe360, and Financial Engineering student at Riga Technical University, Riga, Latvia. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
+> R&D Engineer in 3D reconstruction (Gaussian splatting, some mesh work) at Giraffe360, Riga, Latvia. Also depth models, 3D camera paths, LLM APIs and developer tools. Studies Financial Engineering at Riga Technical University. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
 
 ## Resume
 

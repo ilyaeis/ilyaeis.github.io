@@ -6,7 +6,7 @@
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
     <title>Ilja Safronovs — Resume</title>
-    <meta name="description" content="Resume of Ilja Safronovs — R&amp;D Engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking, continuous research. Financial Engineering student at RTU.">
+    <meta name="description" content="Resume of Ilja Safronovs — R&amp;D Engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking, continuous research.">
     <meta name="author" content="Ilja Safronovs">
     <meta name="theme-color" content="#0a0a0a">
     <meta name="color-scheme" content="dark light">
@@ -35,13 +35,13 @@
         "@context": "https://schema.org",
         "@type": "ProfilePage",
         "dateCreated": "2025-01-01",
-        "dateModified": "2026-10-31",
+        "dateModified": "2026-11-01",
         "mainEntity": {
             "@type": "Person",
             "@id": "https://ilyaeis.github.io/#me",
             "name": "Ilja Safronovs",
             "alternateName": "ilyaeis",
-            "description": "R&D Engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking systems and continuous research. Financial Engineering student at Riga Technical University.",
+            "description": "R&D Engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking systems and continuous research.",
             "url": "https://ilyaeis.github.io/",
             "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
             "email": "ilya.safronos@gmail.com",
@@ -115,7 +115,7 @@
             <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me"><span class="screen">LinkedIn</span><span class="print">linkedin.com/in/iļja-safronovs-eis</span></a>
             <span class="print">ilyaeis.github.io</span>
         </p>
-        <p class="summary">I work on 3D reconstruction and computer vision: Gaussian splatting pipelines, benchmarking systems that measure every change, and continuous research that turns the best new papers into production code. Financial Engineering student at RTU.</p>
+        <p class="summary">I work on 3D reconstruction: Gaussian splatting, and some mesh work. At Giraffe360 I build our splat pipeline from sparse panoramas and implement published methods in PyTorch and CUDA. I also work on depth models, 3D camera paths, LLM APIs and tools that help a team build faster.</p>
     </header>
 
     <section>
@@ -127,77 +127,42 @@
             </div>
             <div class="items">
                 <div class="item-row">
-                    <details class="item">
-                        <summary><span class="hl">Built our custom 3DGS pipeline from sparse panoramas.<span class="print"> instagram.com/p/DZsNRB8o772</span></span></summary>
-                        <div class="why">I built it and led the research from early 2026. I replaced the first densification with my influence-accumulation method. When the team moved to a different method, I ported it and kept improving quality, up a lot this year.</div>
+                    <details id="windows-mirrors" class="item">
+                        <summary><span class="hl">Fixed blurry windows and mirrors in sparse-panorama 3DGS; the default since 1 June 2026.<span class="print"> instagram.com/p/DZsNRB8o772</span></span></summary>
+                        <div class="why">Outdoor views through the windows are fixed too. I ran 140+ controlled training runs, then 600+ experiments over a month to cut haze, floaters and flicker. <span class="more-text">The best setup became the default on 1 June 2026. Giraffe360 showed the result publicly (post).</span></div>
                     </details>
                     <a class="post screen" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post ↗</a>
                 </div>
+                <details id="influence-accumulation" class="item">
+                    <summary><span class="hl">Built our custom 3DGS pipeline from sparse panoramas, with published methods in CUDA.</span></summary>
+                    <div class="why">I built the pipeline that turns sparse panorama views into 3D Gaussian splats. Jan 2026: influence-based densification, building on Taming 3DGS (Mallick et al., 2024). June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes. <span class="more-text">My densification measures how much each Gaussian adds to the rendered images and moves the least useful ones to better places. When the team moved to a new training approach, I ported it there, and it is still used. Analytic-Splatting integrates each Gaussian over the pixel area, which reduces aliasing; I used it in a downsampling algorithm. I also made training faster by measuring and cutting GPU idle time.</span></div>
+                </details>
                 <div class="item-row">
                     <details class="item">
-                        <summary><span class="hl">Solved blurry windows and mirrors in sparse-panorama 3DGS.<span class="print"> instagram.com/p/DZsNRB8o772</span></span></summary>
-                        <div class="why">Fixed blurry windows, outdoor views and mirrors; in production since June 2026. <span class="more-text">This was the main long-standing quality problem, and I found its root cause myself. I ran 140+ controlled training runs first, then a month-long campaign of 600+ experiments to cut haze, floaters and flicker. The winning setup shipped as the default on June 1, 2026, and Giraffe360 showcased it publicly.</span></div>
-                    </details>
-                    <a class="post screen" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post ↗</a>
-                </div>
-                <div class="item-row">
-                    <details class="item">
-                        <summary><span class="hl">Shipped the looped drone video, from idea to production.<span class="print"> instagram.com/giraffe360/reel/Dd9ODBVIHhE</span></span></summary>
-                        <div class="why">I proposed it, restructured the video pipeline so it is easy to extend, then built the loop on it; agreed the look with designers; launched Oct 2026. <span class="more-text">I built the camera-path algorithm. It was one of my ideas awarded at the internal hackathon in Feb 2026 (special mention).</span></div>
+                        <summary><span class="hl">Shipped two 3D video features: orbital exterior videos and the looped drone.<span class="print"> instagram.com/giraffe360/reel/Dd9ODBVIHhE</span></span></summary>
+                        <div class="why">I led the exterior work: first results in 2 weeks, in production in 3. The looped drone was my hackathon idea (Feb 2026, special mention). I built its camera-path algorithm, and it launched in Oct 2026. <span class="more-text">For the exterior, I built the toolkit that orients, selects and crops the outdoor splat. For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed a camera-path bug in rooms on a different floor level, for all video types, and prototyped a fly-in video intro.</span></div>
                     </details>
                     <a class="post screen" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">Giraffe360 post ↗</a>
                 </div>
-                <details class="item">
-                    <summary><span class="hl">Led the team that built outdoor splats and orbital videos.</span></summary>
-                    <div class="why">2 weeks to show first results, 3 weeks to push good ones to production. I led the team. <span class="more-text">I built the toolkit that prepares the exterior splats: it rotates the scene to the correct orientation, selects the largest fragment and crops it. A per-frame outdoor-view video pipeline then renders the orbital video around the property.</span></div>
-                </details>
-                <details id="influence-accumulation" class="item">
-                    <summary><span class="hl">Influence accumulation: my densification method, still in the team’s pipeline.</span></summary>
-                    <div class="why">I found the research, implemented and tested it in Jan 2026. It is still used in the team’s pipeline. <span class="more-text">It measures how much each Gaussian contributes to the image during training and relocates the least useful ones, instead of adding new detail everywhere. This improves quality while keeping the model efficient. I implemented it partly with AI-assisted coding, and when the team moved to a new training approach, I ported it there.</span></div>
-                </details>
-                <details class="item">
-                    <summary><span class="hl">Implemented Analytic-Splatting in gsplat at CUDA level.</span></summary>
-                    <div class="why">June 2026: exact per-pixel Gaussian integration, which reduces aliasing. <span class="more-text">I wrote both the computation and its training part, and used it in a downsampling algorithm. I also sped up training by measuring and reducing GPU idle time.</span></div>
+                <details id="depth-method" class="item">
+                    <summary><span class="hl">Mentored a junior engineer on a new depth method; the whole team uses it.</span></summary>
+                    <div class="why">Mostly his work: minima matching plus OMNI-DC to densify LiDAR depth. <span class="more-text">Over time, teammates came to me with their pipeline questions.</span></div>
                 </details>
                 <details id="ground-truth" class="item">
-                    <summary><span class="hl">Built tools to measure 3DGS quality against known ground truth.</span></summary>
-                    <div class="why">Validation tools and ground-truth datasets (July 2026) to check quality against known truth. <span class="more-text">Before, quality was checked only with no-reference metrics. In March 2026 I also built an experiment runner, so every teammate can run and track training experiments on a local GPU, driven by an AI agent.</span></div>
+                    <summary><span class="hl">Built team tools: quality checks, an agent-driven experiment runner, an MCP server.</span></summary>
+                    <div class="why">July 2026: ground-truth datasets and validation tools for splat quality. March 2026: an experiment runner, so every teammate can run and track training on a local GPU through an AI agent. June 2026: an MCP server (Node.js), so AI agents can read and write the team task board; colleagues use it. <span class="more-text">I also led the pipeline restructuring into one 3DGS monorepo (July 2026), with less duplicated code. In my own time I built a harness for coding agents: a master session plans and checks the work, and worker sessions run in their own git worktrees (private repo).</span></div>
                 </details>
             </div>
             <details class="group">
-                <summary>More about this role (9 points)</summary>
+                <summary>More about this role (3 points)</summary>
                 <div class="items">
-                    <details id="depth-method" class="item">
-                        <summary><span class="hl">Mentored a junior engineer; together we replaced our depth algorithm.</span></summary>
-                        <div class="why">Our depth estimates were poor. I mentored one junior engineer, and together we built a new depth algorithm (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. <span class="more-text">Depth is now good, and the whole team uses the new method. Over time, teammates came to me with their pipeline questions.</span></div>
-                    </details>
-                    <details class="item">
-                        <summary><span class="hl">Led the pipeline restructuring and created a 3DGS monorepo.</span></summary>
-                        <div class="why">Led the restructuring (July 2026) and created a monorepo for all 3DGS extensions and client apps: duplication removed, defects fixed. <span class="more-text">Cleaning up the drone camera path exposed three hidden defects: for example, the camera jerked away when two highlighted features sat close together, and its tilt could drift outside the allowed range. The cleanup also let me fix a long-standing camera-path bug: in rooms higher or lower than the rest of the storey, the camera sat too low and showed the floor. The fix shipped for all video types.</span></div>
-                    </details>
                     <details id="splat-viewer" class="item">
                         <summary><span class="hl">Built an embeddable Rust/wgpu splat viewer and a comparison tool.</span></summary>
-                        <div class="why">Rust/wgpu viewer (May 2026) that any app can embed and control, plus a multi-view comparison tool (Jan 2026). <span class="more-text">In July 2026 I added single-view PLY comparison to the new viewer: folder browsing, live scene swapping and combining several scenes. It also renders ordinary point-cloud PLY files. The comparison tool loads reconstructions from experiment-tracking tasks and opens each in its own window with optional camera sync, so teams can compare from any viewpoint, not only through video.</span></div>
+                        <div class="why">A Rust/wgpu viewer (May 2026) that any app can embed and control, and a multi-view comparison tool (Jan 2026). <span class="more-text">The viewer also swaps and combines PLY scenes live, and renders point clouds. The comparison tool opens each reconstruction in its own window, with optional camera sync.</span></div>
                     </details>
                     <details class="item">
-                        <summary><span class="hl">Prototyped two new video concepts: correct mirror reflections and a fly-in intro.</span></summary>
-                        <div class="why">Two working prototypes (June 2026): correct reflections in mirrors, and a fly-in video intro. <span class="more-text">The fly-in shot starts high above the property with the ceilings removed and all rooms visible, then descends and blends into an eye-level walkthrough of the real splat.</span></div>
-                    </details>
-                    <details class="item">
-                        <summary><span class="hl">Worked on mesh generation and point-count reduction for viewers.</span></summary>
-                        <div class="why">Mesh generation from splats, combined with Gaussian splats; a point-count reduction stage (May 2026) for viewers. <span class="more-text">The reduction stage cuts the number of splats while keeping the major details. Viewers and compressed scene files need it, so that every client device can run at least some level of detail. It is a prototype on a separate branch.</span></div>
-                    </details>
-                    <details class="item">
-                        <summary><span class="hl">Made diffusion-based artifact fixing runnable on shared GPUs.</span></summary>
-                        <div class="why">Made a diffusion-based artifact-fixing tool (Difix, then NVIDIA Fixer) run remotely on shared GPUs in Feb 2026. <span class="more-text">Before, it ran out of memory on every local machine, so nobody on the team could evaluate it. Running it on shared GPUs turned it from a black box into something the team can test.</span></div>
-                    </details>
-                    <details class="item">
-                        <summary><span class="hl">Three hackathon ideas recognized; the looped drone shipped.</span></summary>
-                        <div class="why">Internal hackathon, Feb 2026: three of my ideas recognized, two with special mentions. <span class="more-text">One of them, a looped drone in each room (special mention), then became a shipped feature.</span></div>
-                    </details>
-                    <details id="mcp-server" class="item">
-                        <summary><span class="hl">Built an MCP server for the team task board.</span></summary>
-                        <div class="why">An MCP server (June 2026, Node.js) so AI agents and tools can read and write the team task board. <span class="more-text">It covers projects, tasks and decisions, with authentication and a one-time setup, and colleagues use it. I also added a compact graph view of the task tree with detailed cards (assignee, status, age, project members).</span></div>
+                        <summary><span class="hl">Prototypes: mirror reflections, meshes from splats and lighter splats.</span></summary>
+                        <div class="why">Working prototypes: correct reflections in mirrors (June 2026), mesh generation from splats, and a stage that cuts the splat count for viewers (May 2026). <span class="more-text">I also made a diffusion-based artifact fixer (Difix, then NVIDIA Fixer) run on shared GPUs, so the team could test it.</span></div>
                     </details>
                     <details id="tour-narration" class="item">
                         <summary><span class="hl">Earlier: a small LLM service that wrote tour narration.</span></summary>

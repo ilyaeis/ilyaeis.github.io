@@ -648,6 +648,8 @@ dl.skills dd { color: var(--fg); }
         color: var(--fg-strong);
     }
     details.item > summary::before { display: none; }
+    /* Only the main headlines are bold; "More" items are regular. */
+    details.group details.item > summary { font-weight: 400; }
     .item > summary .print { font-weight: 400; font-size: 9pt; color: var(--muted); }
     .why { padding: 0; margin-top: 1pt; font-size: 9pt; line-height: 1.38; color: var(--muted); }
     .why .meta { font-size: 9pt; }
