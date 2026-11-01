@@ -1,6 +1,6 @@
 # Ilja Safronovs
 
-> R&D Engineer in 3D reconstruction and computer vision at Giraffe360, Riga, Latvia: mainly Gaussian splatting from sparse panoramas (PyTorch, CUDA), and a bit of meshes. In production: the windows and mirrors fix, my densification changes, the exterior orbital videos and the looped drone. Also depth models, 3D camera paths, LLM APIs and developer tools. Studies Financial Engineering at Riga Technical University. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
+> R&D Engineer in 3D reconstruction and AI automation at Giraffe360, Riga, Latvia: mainly Gaussian splatting from sparse panoramas (PyTorch, CUDA), and a bit of meshes. In production: the windows and mirrors fix, my densification changes, the exterior orbital videos and the looped drone. AI automation: an experiment runner driven by AI agents, an MCP server for the team task board and a coding-agent harness. Also depth models, 3D camera paths and LLM APIs. Studies Financial Engineering at Riga Technical University. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
 
 ## Resume
 
@@ -24,7 +24,7 @@ Each link below opens the page and lands at that stop. Ids are stable names; the
 
 Universe `rnd` (Giraffe360 R&D, inside a Gaussian splat of a real apartment). The walk (the tour) visits the first four in this order; "Next object" walks to the next one not collected yet:
 - [Windows, outdoor views and mirrors](https://ilyaeis.github.io/?go=windows-mirrors): solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.
-- [3DGS reconstruction pipeline](https://ilyaeis.github.io/?go=splatting): Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification, Analytic-Splatting, the pipeline restructuring. (`?go=giraffe360` lands here too.)
+- [3DGS reconstruction pipeline](https://ilyaeis.github.io/?go=splatting): Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification (building on Taming 3DGS, Mallick et al., 2024), Analytic-Splatting, the pipeline restructuring. (`?go=giraffe360` lands here too.)
 - [Meshes and viewers](https://ilyaeis.github.io/?go=mesh-generation): mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.
 - [Benchmarking and evaluation](https://ilyaeis.github.io/?go=benchmarking): validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.
 

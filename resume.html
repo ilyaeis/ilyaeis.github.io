@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
-    <title>Ilja Safronovs — Resume · 3D Reconstruction &amp; Computer Vision Engineer</title>
-    <meta name="description" content="Resume of Ilja Safronovs, R&amp;D engineer in 3D reconstruction and computer vision at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas, PyTorch and CUDA.">
+    <title>Ilja Safronovs — Resume · R&amp;D Engineer: 3D Reconstruction &amp; AI Automation</title>
+    <meta name="description" content="Resume of Ilja Safronovs, R&amp;D engineer in 3D reconstruction and AI automation at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA) and AI-agent tools for the team.">
     <meta name="author" content="Ilja Safronovs">
     <meta name="theme-color" content="#0a0a0a">
     <meta name="color-scheme" content="dark light">
@@ -20,13 +20,13 @@
     <!-- Social previews -->
     <meta property="og:type" content="profile">
     <meta property="og:url" content="https://ilyaeis.github.io/resume.html">
-    <meta property="og:title" content="Ilja Safronovs — 3D Reconstruction &amp; Computer Vision Engineer · Resume">
-    <meta property="og:description" content="R&amp;D engineer in 3D reconstruction and computer vision at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas, PyTorch and CUDA.">
-    <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=2">
+    <meta property="og:title" content="Ilja Safronovs — R&amp;D Engineer: 3D Reconstruction &amp; AI Automation · Resume">
+    <meta property="og:description" content="R&amp;D engineer in 3D reconstruction and AI automation at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA) and AI-agent tools for the team.">
+    <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=3">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content="https://ilyaeis.github.io/assets/og-image.png?v=2">
+    <meta name="twitter:image" content="https://ilyaeis.github.io/assets/og-image.png?v=3">
 
     <!-- Dates are year-only where the month is unknown. They appear here, in the
          JSON-LD, resume.md, resume.json and js/world.js. Add months in all of them. -->
@@ -41,11 +41,11 @@
             "@id": "https://ilyaeis.github.io/#me",
             "name": "Ilja Safronovs",
             "alternateName": "ilyaeis",
-            "description": "R&D engineer in 3D reconstruction and computer vision at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas, PyTorch and CUDA.",
+            "description": "R&D engineer in 3D reconstruction and AI automation at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA) and AI-agent tools for the team.",
             "url": "https://ilyaeis.github.io/",
             "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
             "email": "ilya.safronos@gmail.com",
-            "jobTitle": "R&D Engineer, 3D reconstruction & computer vision",
+            "jobTitle": "R&D Engineer, 3D reconstruction & AI automation",
             "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
             "knowsLanguage": ["lv", "en", "ru"],
             "alumniOf": [
@@ -106,7 +106,7 @@
             </button>
             <div class="who">
                 <h1>Ilja Safronovs</h1>
-                <p class="title">R&amp;D Engineer — 3D reconstruction (Gaussian splatting) <span class="sep">·</span> Giraffe360 <span class="sep">·</span> Riga, Latvia</p>
+                <p class="title">R&amp;D Engineer — 3D reconstruction <span class="sep">·</span> AI automation <span class="sep">·</span> Giraffe360 <span class="sep">·</span> Riga, Latvia</p>
             </div>
         </div>
         <p class="contact">
@@ -115,7 +115,7 @@
             <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me"><span class="screen">LinkedIn</span><span class="print">linkedin.com/in/iļja-safronovs-eis</span></a>
             <span class="print">ilyaeis.github.io</span>
         </p>
-        <p class="summary">I work on 3D reconstruction and computer vision: mainly Gaussian splatting, and a bit of meshes. At Giraffe360 I build our splat pipeline from sparse panoramas and implement published methods in PyTorch and CUDA. In production: the windows and mirrors fix, my densification changes, the exterior orbital videos and the looped drone. I also work on depth models, 3D camera paths, LLM APIs and tools that help a team build faster.</p>
+        <p class="summary">I work on 3D reconstruction and AI automation. In 3D: mainly Gaussian splatting, and a bit of meshes. At Giraffe360 I build our splat pipeline from sparse panoramas and implement published methods in PyTorch and CUDA. In production: the windows and mirrors fix, my densification changes, the exterior orbital videos and the looped drone. On the automation side I build tools that help the team build faster: an experiment runner driven by AI agents, an MCP server for the team task board and a coding-agent harness. I also work on depth models, 3D camera paths and LLM APIs.</p>
     </header>
 
     <section>
@@ -135,7 +135,7 @@
                 </div>
                 <details id="influence-accumulation" class="item">
                     <summary><span class="hl">Built our 3DGS pipeline from sparse panoramas, with my own densification and CUDA kernels.</span></summary>
-                    <div class="why">The pipeline turns sparse panorama views into 3D Gaussian splats. Jan 2026: my influence-accumulation densification. June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes. <span class="more-text">My densification measures how much each Gaussian adds to the rendered images and moves the least useful ones to better places. When the team moved to a new training approach, I ported it there, and it is still used. Analytic-Splatting integrates each Gaussian over the pixel area, which reduces aliasing; I used it in a downsampling step. I also made training faster by measuring and cutting GPU idle time.</span></div>
+                    <div class="why">The pipeline turns sparse panorama views into 3D Gaussian splats. Jan 2026: my influence-accumulation densification, building on Taming 3DGS (Mallick et al., 2024). June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes. <span class="more-text">My densification measures how much each Gaussian adds to the rendered images and moves the least useful ones to better places. When the team moved to a new training approach, I ported it there, and it is still used. Analytic-Splatting integrates each Gaussian over the pixel area, which reduces aliasing; I used it in a downsampling step. I also made training faster by measuring and cutting GPU idle time.</span></div>
                 </details>
                 <div class="item-row">
                     <details class="item">

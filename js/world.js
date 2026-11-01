@@ -61,7 +61,7 @@ const MILESTONES = [
         subtitle: 'Our custom pipeline · in production June 2026 · PyTorch · CUDA',
         items: [
             { text: 'Built the pipeline; splat quality rose a lot over the year.' },
-            { text: 'My influence-accumulation densification; Analytic-Splatting (Liang et al., 2024) in CUDA.' }
+            { text: 'My influence-accumulation densification, building on Taming 3DGS (Mallick et al., 2024); Analytic-Splatting (Liang et al., 2024) in CUDA.' }
         ],
         more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post: the result' }
     }},
@@ -72,7 +72,11 @@ const MILESTONES = [
             { text: 'Shipped 1 June 2026 after 140+, then 600+ experiments.' },
             { text: 'Fixed blurry windows, outdoor views and mirrors.' }
         ],
-        more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post: window and mirror renders before / after' }
+        // Click-to-load: nothing from instagram.com loads before the click (stopPanel.js)
+        embed: { src: 'https://www.instagram.com/p/DZsNRB8o772/embed/captioned/',
+                 label: 'Show the Giraffe360 post (before / after)',
+                 title: 'Giraffe360 Instagram post: window and mirror renders, before / after' },
+        more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post: open on Instagram' }
     }},
     { label: 'BENCHMARKING', panel: {
         title: 'Benchmarking and evaluation',
@@ -237,7 +241,7 @@ const ROUTE = [
     { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 4, object: 'vase', paletteIdx: 3,
       summary: 'Solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.' },
     { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 3, object: 'cherry', paletteIdx: 3,
-      summary: 'Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification, Analytic-Splatting, the pipeline restructuring.' },
+      summary: 'Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification (building on Taming 3DGS, Mallick et al., 2024), Analytic-Splatting, the pipeline restructuring.' },
     { id: 'mesh-generation', universe: 'rnd', type: StopType.OBJECT, milestone: 6, object: 'chair', paletteIdx: 3,
       summary: 'Mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.' },
     { id: 'benchmarking',    universe: 'rnd', type: StopType.OBJECT, milestone: 5, object: 'gpu', paletteIdx: 3,

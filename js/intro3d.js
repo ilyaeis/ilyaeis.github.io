@@ -108,7 +108,7 @@ function buildText(font) {
     // The long tagline in its own task (each line is a long extrusion on a
     // slow phone); it is small, so fewer curve and bevel steps do not show.
     // The text fades in, so the second line never pops.
-    setTimeout(() => makeLine('3D reconstruction and computer vision · Giraffe360 · Riga', TAGLINE_SIZE, tagMat, -0.06, 4, 1), 0);
+    setTimeout(() => makeLine('3D reconstruction · AI automation · Giraffe360 · Riga', TAGLINE_SIZE, tagMat, -0.06, 4, 1), 0);
 }
 
 // ── Build: icons (LinkedIn, GitHub) ────────────────────────────────

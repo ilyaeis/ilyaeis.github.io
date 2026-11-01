@@ -369,6 +369,44 @@ body.panel-open .tap-prompt {
 
 .stop-panel.visible { transform: none; }
 
+/* Click-to-load post (panel.embed, js/stopPanel.js): button, then the iframe.
+   It sits in the list, so it scrolls with the items. */
+.stop-panel-items li.stop-panel-embed { padding-left: 0; border-left: 0; }
+.stop-panel-embed-btn {
+    min-height: 2.75rem;
+    padding: 0.55rem 1rem;
+    background: rgba(10, 10, 10, 0.6);
+    border: 1px solid #666;
+    border-radius: 999px;
+    color: #e0e0e0;
+    font: inherit;
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+}
+.stop-panel-embed-btn:hover,
+.stop-panel-embed-btn:focus-visible { color: #fff; border-color: #bbb; outline: 1px solid #888; outline-offset: 2px; }
+/* The post: header, 4:5 media, caption. No embed.js, so the height is fixed from the width */
+.stop-panel-embed-box { container-type: inline-size; max-width: 400px; }
+.stop-panel-embed-box iframe {
+    display: block;
+    width: 100%;
+    height: 760px;
+    height: calc(125cqw + 270px);
+    border: 0;
+    border-radius: 6px;
+    background: #fff;
+}
+/* Bottom layout (phones): more room for the post */
+.stop-panel.embed-open { max-height: 88vh; max-height: 88dvh; }
+/* Side layout: the tall post fills the panel; start below the nav and the walk HUD */
+@media (min-width: 700px) and (orientation: landscape) {
+    .stop-panel.embed-open { max-height: none; justify-content: flex-start; padding-top: 7rem; }
+}
+@media (min-width: 700px) and (orientation: landscape) and (max-height: 500px) {
+    .stop-panel.embed-open { padding-top: 3.4rem; }
+}
+
 /* Portal link in the panel (panel.portal): opens the project app (js/dimension.js) */
 .stop-panel a.stop-panel-portal {
     display: inline-block;

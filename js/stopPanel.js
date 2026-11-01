@@ -22,6 +22,34 @@ if (el) {
         window.dispatchEvent(new CustomEvent('journey:portal-request'));
     });
 
+    // Click-to-load embed (panel.embed): a button first; only the click
+    // inserts the iframe, so nothing from the embed host loads before it.
+    // Only https://www.instagram.com/ embeds are allowed.
+    function embedItem(emb) {
+        const li = document.createElement('li');
+        li.className = 'stop-panel-embed';
+        if (!/^https:\/\/www\.instagram\.com\//.test(emb.src)) return li;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'stop-panel-embed-btn';
+        btn.textContent = emb.label;
+        btn.addEventListener('click', () => {
+            const frame = document.createElement('iframe');
+            frame.src = emb.src;
+            frame.title = emb.title || emb.label;
+            frame.setAttribute('allowfullscreen', '');
+            frame.referrerPolicy = 'strict-origin-when-cross-origin';
+            const box = document.createElement('div');
+            box.className = 'stop-panel-embed-box';
+            box.appendChild(frame);
+            btn.replaceWith(box);
+            el.classList.add('embed-open');
+            frame.focus();
+        });
+        li.appendChild(btn);
+        return li;
+    }
+
     function fill(p) {
         dates.textContent = p.dates || '';
         dates.hidden = !p.dates;
@@ -44,6 +72,8 @@ if (el) {
             }
             list.appendChild(li);
         }
+        if (p.embed) list.appendChild(embedItem(p.embed));
+        el.classList.remove('embed-open');
 
         more.hidden = !p.more;
         if (p.more) {
