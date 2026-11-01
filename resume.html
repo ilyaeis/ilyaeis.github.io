@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
-    <title>Ilja Safronovs — Resume</title>
-    <meta name="description" content="Resume of Ilja Safronovs — R&amp;D Engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking, continuous research.">
+    <title>Ilja Safronovs — Resume · 3D Reconstruction &amp; Computer Vision Engineer</title>
+    <meta name="description" content="Resume of Ilja Safronovs, R&amp;D engineer in 3D reconstruction and computer vision at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas, PyTorch and CUDA.">
     <meta name="author" content="Ilja Safronovs">
     <meta name="theme-color" content="#0a0a0a">
     <meta name="color-scheme" content="dark light">
@@ -20,8 +20,8 @@
     <!-- Social previews -->
     <meta property="og:type" content="profile">
     <meta property="og:url" content="https://ilyaeis.github.io/resume.html">
-    <meta property="og:title" content="Ilja Safronovs — Resume">
-    <meta property="og:description" content="R&amp;D Engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking, continuous research.">
+    <meta property="og:title" content="Ilja Safronovs — 3D Reconstruction &amp; Computer Vision Engineer · Resume">
+    <meta property="og:description" content="R&amp;D engineer in 3D reconstruction and computer vision at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas, PyTorch and CUDA.">
     <meta property="og:image" content="https://ilyaeis.github.io/assets/photo/headshot.jpg">
     <meta property="og:image:width" content="512">
     <meta property="og:image:height" content="512">
@@ -41,7 +41,7 @@
             "@id": "https://ilyaeis.github.io/#me",
             "name": "Ilja Safronovs",
             "alternateName": "ilyaeis",
-            "description": "R&D Engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking systems and continuous research.",
+            "description": "R&D engineer in 3D reconstruction and computer vision at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas, PyTorch and CUDA.",
             "url": "https://ilyaeis.github.io/",
             "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
             "email": "ilya.safronos@gmail.com",
@@ -76,7 +76,7 @@
                     "recognizedBy": { "@type": "Organization", "name": "Ponder" }
                 }
             ],
-            "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "Benchmarking", "Mesh Generation", "PyTorch", "CUDA", "Python", "C++", "Dart", "Flutter", "JavaScript", "Financial Engineering", "Monte Carlo methods", "GARCH", "Value at Risk"],
+            "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "Depth Estimation", "Mesh Generation", "PyTorch", "CUDA", "Python", "C++", "Dart", "Flutter", "JavaScript", "Financial Engineering", "Monte Carlo methods", "GARCH", "Value at Risk"],
             "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
         }
     }
@@ -106,7 +106,7 @@
             </button>
             <div class="who">
                 <h1>Ilja Safronovs</h1>
-                <p class="title">R&amp;D Engineer — 3D reconstruction &amp; computer vision <span class="sep">·</span> Giraffe360 <span class="sep">·</span> Riga, Latvia</p>
+                <p class="title">R&amp;D Engineer — 3D reconstruction (Gaussian splatting) <span class="sep">·</span> Giraffe360 <span class="sep">·</span> Riga, Latvia</p>
             </div>
         </div>
         <p class="contact">
@@ -115,7 +115,7 @@
             <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me"><span class="screen">LinkedIn</span><span class="print">linkedin.com/in/iļja-safronovs-eis</span></a>
             <span class="print">ilyaeis.github.io</span>
         </p>
-        <p class="summary">I work on 3D reconstruction: Gaussian splatting, and some mesh work. At Giraffe360 I build our splat pipeline from sparse panoramas and implement published methods in PyTorch and CUDA. I also work on depth models, 3D camera paths, LLM APIs and tools that help a team build faster.</p>
+        <p class="summary">I work on 3D reconstruction and computer vision: mainly Gaussian splatting, and a bit of meshes. At Giraffe360 I build our splat pipeline from sparse panoramas and implement published methods in PyTorch and CUDA. Two of my results are in production: the windows and mirrors fix and the exterior orbital videos. I also work on depth models, 3D camera paths, LLM APIs and tools that help a team build faster.</p>
     </header>
 
     <section>
@@ -128,19 +128,19 @@
             <div class="items">
                 <div class="item-row">
                     <details id="windows-mirrors" class="item">
-                        <summary><span class="hl">Fixed blurry windows and mirrors in sparse-panorama 3DGS; the default since 1 June 2026.<span class="print"> instagram.com/p/DZsNRB8o772</span></span></summary>
-                        <div class="why">Outdoor views through the windows are fixed too. I ran 140+ controlled training runs, then 600+ experiments over a month to cut haze, floaters and flicker. <span class="more-text">The best setup became the default on 1 June 2026. Giraffe360 showed the result publicly (post).</span></div>
+                        <summary><span class="hl">Fixed blurry windows, outdoor views and mirrors in sparse-panorama 3DGS; the production default since 1 June 2026.<span class="print"> instagram.com/p/DZsNRB8o772</span></span></summary>
+                        <div class="why">I ran 140+ controlled training runs, then 600+ experiments over one month to cut haze, floaters and flicker. <span class="more-text">The best setup became the default on 1 June 2026. Giraffe360 showed the result in a public post.</span></div>
                     </details>
                     <a class="post screen" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post ↗</a>
                 </div>
                 <details id="influence-accumulation" class="item">
-                    <summary><span class="hl">Built our custom 3DGS pipeline from sparse panoramas, with published methods in CUDA.</span></summary>
-                    <div class="why">I built the pipeline that turns sparse panorama views into 3D Gaussian splats. Jan 2026: influence-based densification, building on Taming 3DGS (Mallick et al., 2024). June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes. <span class="more-text">My densification measures how much each Gaussian adds to the rendered images and moves the least useful ones to better places. When the team moved to a new training approach, I ported it there, and it is still used. Analytic-Splatting integrates each Gaussian over the pixel area, which reduces aliasing; I used it in a downsampling algorithm. I also made training faster by measuring and cutting GPU idle time.</span></div>
+                    <summary><span class="hl">Built our 3DGS pipeline from sparse panoramas, with my own densification and CUDA kernels.</span></summary>
+                    <div class="why">The pipeline turns sparse panorama views into 3D Gaussian splats. Jan 2026: my influence-accumulation densification. June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes. <span class="more-text">My densification measures how much each Gaussian adds to the rendered images and moves the least useful ones to better places. When the team moved to a new training approach, I ported it there, and it is still used. Analytic-Splatting integrates each Gaussian over the pixel area, which reduces aliasing; I used it in a downsampling step. I also made training faster by measuring and cutting GPU idle time.</span></div>
                 </details>
                 <div class="item-row">
                     <details class="item">
-                        <summary><span class="hl">Shipped two 3D video features: orbital exterior videos and the looped drone.<span class="print"> instagram.com/giraffe360/reel/Dd9ODBVIHhE</span></span></summary>
-                        <div class="why">I led the exterior work: first results in 2 weeks, in production in 3. The looped drone was my hackathon idea (Feb 2026, special mention). I built its camera-path algorithm, and it launched in Oct 2026. <span class="more-text">For the exterior, I built the toolkit that orients, selects and crops the outdoor splat. For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed a camera-path bug in rooms on a different floor level, for all video types, and prototyped a fly-in video intro.</span></div>
+                        <summary><span class="hl">Shipped two 3D video features: exterior orbital videos and the looped drone (Oct 2026).<span class="print"> instagram.com/giraffe360/reel/Dd9ODBVIHhE</span></span></summary>
+                        <div class="why">I led the exterior work. I built the toolkit that orients, selects and crops the outdoor splat, and a per-frame video pipeline; it makes the orbital view in production. The looped drone was my hackathon idea (Feb 2026, special mention); I built its camera-path algorithm. <span class="more-text">For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed a camera-path bug in rooms on a different floor level, for all video types.</span></div>
                     </details>
                     <a class="post screen" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">Giraffe360 post ↗</a>
                 </div>
@@ -149,24 +149,28 @@
                     <div class="why">Mostly his work: minima matching plus OMNI-DC to densify LiDAR depth. <span class="more-text">Over time, teammates came to me with their pipeline questions.</span></div>
                 </details>
                 <details id="ground-truth" class="item">
-                    <summary><span class="hl">Built team tools: quality checks, an agent-driven experiment runner, an MCP server.</span></summary>
-                    <div class="why">July 2026: ground-truth datasets and validation tools for splat quality. March 2026: an experiment runner, so every teammate can run and track training on a local GPU through an AI agent. June 2026: an MCP server (Node.js), so AI agents can read and write the team task board; colleagues use it. <span class="more-text">I also led the pipeline restructuring into one 3DGS monorepo (July 2026), with less duplicated code. In my own time I built a harness for coding agents: a master session plans and checks the work, and worker sessions run in their own git worktrees (private repo).</span></div>
+                    <summary><span class="hl">Built tools that help the team build faster: quality checks, an experiment runner, one monorepo.</span></summary>
+                    <div class="why">July 2026: ground-truth datasets and validation tools for splat quality. March 2026: an experiment runner, so every teammate can run and track training on a local GPU through an AI agent. <span class="more-text">July 2026: I led the pipeline restructuring into one 3DGS monorepo, with less duplicated code.</span></div>
                 </details>
             </div>
             <details class="group">
-                <summary>More about this role (3 points)</summary>
+                <summary>More about this role (4 points)</summary>
                 <div class="items">
                     <details id="splat-viewer" class="item">
                         <summary><span class="hl">Built an embeddable Rust/wgpu splat viewer and a comparison tool.</span></summary>
                         <div class="why">A Rust/wgpu viewer (May 2026) that any app can embed and control, and a multi-view comparison tool (Jan 2026). <span class="more-text">The viewer also swaps and combines PLY scenes live, and renders point clouds. The comparison tool opens each reconstruction in its own window, with optional camera sync.</span></div>
                     </details>
                     <details class="item">
-                        <summary><span class="hl">Prototypes: mirror reflections, meshes from splats and lighter splats.</span></summary>
-                        <div class="why">Working prototypes: correct reflections in mirrors (June 2026), mesh generation from splats, and a stage that cuts the splat count for viewers (May 2026). <span class="more-text">I also made a diffusion-based artifact fixer (Difix, then NVIDIA Fixer) run on shared GPUs, so the team could test it.</span></div>
+                        <summary><span class="hl">Prototypes: mirror reflections, meshes from splats, lighter splats, a fly-in video intro.</span></summary>
+                        <div class="why">Working prototypes: correct reflections in mirrors (June 2026), mesh generation from splats, a stage that cuts the splat count for viewers (May 2026), and a fly-in video intro. <span class="more-text">I also made a diffusion-based artifact fixer (Difix, then NVIDIA Fixer) run on shared GPUs, so the team could test it.</span></div>
+                    </details>
+                    <details id="agent-tools" class="item">
+                        <summary><span class="hl">Agent tools: an MCP server for the team task board, and a coding-agent harness.</span></summary>
+                        <div class="why">June 2026: an MCP server (Node.js), so AI agents can read and write the team task board; colleagues use it. <span class="more-text">In my own time I built a harness for coding agents: a master session plans and checks the work, and worker sessions run in their own git worktrees (private repo).</span></div>
                     </details>
                     <details id="tour-narration" class="item">
-                        <summary><span class="hl">Earlier: a small LLM service that wrote tour narration.</span></summary>
-                        <div class="why">Jul–Oct 2025: a small LLM service that wrote tour narration (OpenAI API, AWS, S3).</div>
+                        <summary><span class="hl">Jul–Oct 2025: a small LLM service that wrote tour narration.</span></summary>
+                        <div class="why">It used the OpenAI API and AWS S3.</div>
                     </details>
                 </div>
                 <p class="note">Giraffe360 makes cameras and software for real-estate virtual tours.</p>
@@ -182,8 +186,8 @@
                 <p class="meta"><time datetime="2024">2024</time> – <time datetime="2028">2028</time> (expected)</p>
             </div>
             <details class="item">
-                <summary><span class="hl">Maths, statistics and programming applied to finance.</span></summary>
-                <div class="why"><p>Qualification: senior data analysis specialist. Maths, statistics and programming applied to finance.</p><p>Coursework: mathematical analysis and algebra, probability and statistics, econometrics, time-series analysis, stochastic analysis, Monte Carlo methods, portfolio analysis, actuarial mathematics, data structures and algorithms, databases/SQL, computer networks, programming (Java, C++).</p></div>
+                <summary><span class="hl">Probability, statistics, stochastic analysis, Monte Carlo methods, algorithms, databases.</span></summary>
+                <div class="why"><p>Qualification: senior data analysis specialist. Other coursework: mathematical analysis and algebra, econometrics, time-series analysis, portfolio analysis, actuarial mathematics, computer networks, programming (Java, C++).</p></div>
             </details>
         </div>
 
@@ -194,8 +198,8 @@
             </div>
             <p class="sub">Mākslīgā intelekta talantu programma</p>
             <details class="item">
-                <summary><span class="hl">Selective program in C++, Python, maths and AI.</span></summary>
-                <div class="why"><p>Selective program: C++, Python, maths and AI development with industry mentors. Theory of AI: its history, neural network architectures (CNNs, transformers, GANs, VAEs), computer vision and reinforcement learning. Led to the Giraffe360 role.</p></div>
+                <summary><span class="hl">C++, Python, maths and AI with industry mentors; it led to the Giraffe360 role.</span></summary>
+                <div class="why"><p>A selective program. Theory of AI: its history, neural network architectures (CNNs, transformers, GANs, VAEs), computer vision and reinforcement learning.</p></div>
             </details>
         </div>
 
@@ -206,7 +210,7 @@
             <p class="sub">Rīgas Valsts klasiskā ģimnāzija</p>
             <details class="item">
                 <summary><span class="hl">State mathematics olympiads and the Small Mathematics University.</span></summary>
-                <div class="why"><p>Specialised track in programming and mathematics (today named “Programming + AI”). Latvian state mathematics olympiads; completed the Small Mathematics University (Mazā matemātikas universitāte) at the University of Latvia.</p></div>
+                <div class="why"><p>Specialised track in programming and mathematics. Latvian state mathematics olympiads; completed the Small Mathematics University (Mazā matemātikas universitāte) at the University of Latvia.</p></div>
             </details>
         </div>
     </section>
@@ -214,30 +218,34 @@
     <section>
         <h2>Projects</h2>
         <div class="items print-brief">
-            <details class="item">
-                <summary><span class="hl">load-balancing-experiments — seven experiments on DNS, queueing and load balancing.</span></summary>
-                <div class="why">Seven reproducible experiments for an RTU networks project: DNS round robin and anycast measured from Riga, a queueing simulation of load-balancing policies (“power of two choices”), consistent / rendezvous / Maglev hashing, a mini load balancer with health checks, packet capture. <span class="meta">(2026, Python)</span> <a href="https://github.com/ilyaeis/load-balancing-experiments">Code on GitHub ↗</a></div>
+            <details id="portfolio-site" class="item">
+                <summary><span class="hl">Portfolio site: a walkable Gaussian splat of a real flat that I trained (gsplat, 730k splats).</span></summary>
+                <div class="why">I trained the public Zip-NeRF “london” scene (Barron et al., 2023, CC BY 4.0) with gsplat MCMC: 30k steps in about 18 min on one RTX 3090, 28.3 dB PSNR on held-out views. The web gets 730k splats, and phones get a 350k lite model. The visitor walks the flat and finds objects that stand for my R&amp;D work. Then a timeline graph, and a tunnel where my projects run as live visualizations. <span class="meta">(2025–26, three.js, Spark, no build step)</span> <a href="./">This site ↗</a></div>
             </details>
-            <details id="flow" class="item">
-                <summary><span class="hl">flow — offline workout tracker in Dart/Flutter, in daily use.</span></summary>
-                <div class="why">Log sets with live timers; analysis of volume, load (ACWR), records and body measurements; custom formulas, JSON/CSV/PDF export, CI with golden-image tests. In daily use. <span class="meta">(2026, Dart/Flutter, private)</span></div>
+            <details class="item">
+                <summary><span class="hl">sort_visualization — 16 sorting algorithms in C++/SFML; runs in the browser (WebAssembly).</span></summary>
+                <div class="why">16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control. The browser version runs the original algorithms, compiled to WebAssembly. <span class="meta">(2022, C++/SFML)</span> <a href="apps/sorting/">Run it ↗</a> <a href="https://github.com/ilyaeis/sort_visualization">Code on GitHub ↗</a></div>
+            </details>
+            <details class="item">
+                <summary><span class="hl">Offline Graphing Calculator — 4th place of 27 in a school competition.</span></summary>
+                <div class="why">Graphing calculator that works offline; 4th place of 27 entries in the Riga Business School (RTU) programming competition for secondary school students (10 Jun 2023). <span class="meta">(2023, with Iļja Volinskis)</span></div>
             </details>
             <details class="item">
                 <summary><span class="hl">monte-carlo-finance — option pricing, volatility and risk models in Python.</span></summary>
                 <div class="why">Monte Carlo option pricing with variance reduction (up to 1,900x), GARCH volatility, VaR backtests with the Kupiec test, efficient frontier from 30,000 portfolios and CAPM; a study project from RTU courses. <span class="meta">(2026, Python)</span> <a href="https://github.com/ilyaeis/monte-carlo-finance">Code on GitHub ↗</a></div>
             </details>
             <details class="item">
-                <summary><span class="hl">Portfolio journey — this tap-driven WebGL site in three.js.</span></summary>
-                <div class="why">A tap-driven WebGL world: RK4-integrated strange attractors, a single-stroke vector font, bloom, one continuous comet trail. No build step. <span class="meta">(2025–26, three.js)</span> <a href="./">This site ↗</a></div>
-            </details>
-            <details class="item">
-                <summary><span class="hl">Offline Graphing Calculator — 4th place of 27 in a school competition.</span></summary>
-                <div class="why">Graphing calculator that works offline; 4th place of 27 entries in the Riga Business School (RTU) programming competition for secondary school students (10 Jun 2023). <span class="meta">(2023, with Iļja Volinskis)</span></div>
+                <summary><span class="hl">load-balancing-experiments — seven experiments on DNS, queueing and load balancing.</span></summary>
+                <div class="why">Seven reproducible experiments for an RTU networks project: DNS round robin and anycast measured from Riga, a queueing simulation of load-balancing policies (“power of two choices”), consistent / rendezvous / Maglev hashing, a mini load balancer with health checks, packet capture. <span class="meta">(2026, Python)</span> <a href="https://github.com/ilyaeis/load-balancing-experiments">Code on GitHub ↗</a></div>
             </details>
         </div>
         <details class="group print-brief">
             <summary>More projects (6)</summary>
             <div class="items">
+                <details id="flow" class="item">
+                    <summary><span class="hl">flow — offline workout tracker in Dart/Flutter, with CI and golden-image tests.</span></summary>
+                    <div class="why">Log sets with live timers; analysis of volume, load (ACWR), records and body measurements; custom formulas, JSON/CSV/PDF export, CI with golden-image tests. <span class="meta">(2026, Dart/Flutter, private)</span></div>
+                </details>
                 <details class="item">
                     <summary><span class="hl">crypto-quant-lab — 59 backtested trading-rule versions on 6 coins.</span></summary>
                     <div class="why">59 backtested versions of drift and volatility-targeting rules on 6 coins with a 1% fee. The source was recovered from Python 3.12 bytecode, and all 153 functions were verified. <span class="meta">(2026, Python)</span> <a href="https://github.com/ilyaeis/crypto-quant-lab">Code on GitHub ↗</a></div>
@@ -258,10 +266,6 @@
                     <summary><span class="hl">bezier-curve-js — interactive Bezier-curve drawing tool.</span></summary>
                     <div class="why">Interactive Bezier-curve drawing tool. <span class="meta">(2023, JavaScript)</span> <a href="https://github.com/ilyaeis/bezier-curve-js">Code on GitHub ↗</a></div>
                 </details>
-                <details class="item">
-                    <summary><span class="hl">sort_visualization — 16 sorting algorithms animated in C++/SFML.</span></summary>
-                    <div class="why">16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control. <span class="meta">(2022, C++/SFML)</span> <a href="https://github.com/ilyaeis/sort_visualization">Code on GitHub ↗</a></div>
-                </details>
             </div>
         </details>
     </section>
@@ -269,11 +273,11 @@
     <section>
         <h2>Skills</h2>
         <dl class="skills">
-            <div><dt>3D &amp; vision</dt><dd>Gaussian splatting, 3D reconstruction, computer vision, depth estimation, anti-aliasing, mesh generation, diffusion-based artifact fixing, PyTorch, CUDA kernels</dd></div>
-            <div><dt>Research</dt><dd>Paper-to-production, benchmarking and evaluation</dd></div>
+            <div><dt>3D &amp; vision</dt><dd>3D Gaussian splatting (gsplat, CUDA kernels), 3D reconstruction from sparse views, computer vision, depth densification, mesh generation, 3D camera paths, splat viewers (Rust/wgpu, three.js/Spark), PyTorch</dd></div>
+            <div><dt>Research</dt><dd>Reading and implementing papers, controlled experiments, ground-truth evaluation</dd></div>
             <div><dt>Languages</dt><dd>Python, C++, Dart/Flutter, JavaScript, Java, SQL</dd></div>
             <div><dt>Tools</dt><dd>Linux, Docker, Git/GitLab CI, AWS S3, Pygame, Selenium, pandas</dd></div>
-            <div><dt>Other</dt><dd>OpenAI API / LLM prompting, neuroevolution (NEAT), three.js/WebGL</dd></div>
+            <div><dt>Other</dt><dd>LLM APIs, agent tools (MCP), three.js/WebGL</dd></div>
             <div><dt>Spoken</dt><dd>Latvian, English, Russian</dd></div>
         </dl>
     </section>

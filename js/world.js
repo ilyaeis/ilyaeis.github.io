@@ -59,7 +59,7 @@ const MILESTONES = [
         dates: '2025 – present',
         items: [
             { text: 'Solved blurry windows and mirrors; in production since June 2026.' },
-            { text: '3DGS from sparse panoramas, benchmarking, continuous research.' }
+            { text: '3DGS pipeline from sparse panoramas, in PyTorch and CUDA.' }
         ],
         more: { href: 'resume.html#giraffe360', label: 'details in the resume' }
     }},
@@ -136,13 +136,13 @@ const MILESTONES = [
         subtitle: 'Our custom pipeline · in production June 2026 · PyTorch · CUDA',
         items: [
             { text: 'Built the pipeline; splat quality rose a lot over the year.' },
-            { text: 'Influence-based densification, building on Taming 3DGS (Mallick et al., 2024).' }
+            { text: 'My influence-accumulation densification; Analytic-Splatting (Liang et al., 2024) in CUDA.' }
         ],
         more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post: the result' }
     }},
     { label: 'WINDOWS', panel: {
         title: 'Windows, outdoor views and mirrors',
-        subtitle: 'The main long-standing quality problem · solved',
+        subtitle: 'Sparse-panorama 3DGS · production default since 1 June 2026',
         items: [
             { text: 'Shipped 1 June 2026 after 140+, then 600+ experiments.' },
             { text: 'Fixed blurry windows, outdoor views and mirrors.' }

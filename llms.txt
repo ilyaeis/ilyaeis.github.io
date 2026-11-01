@@ -1,6 +1,6 @@
 # Ilja Safronovs
 
-> R&D Engineer in 3D reconstruction (Gaussian splatting, some mesh work) at Giraffe360, Riga, Latvia. Also depth models, 3D camera paths, LLM APIs and developer tools. Studies Financial Engineering at Riga Technical University. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
+> R&D Engineer in 3D reconstruction and computer vision at Giraffe360, Riga, Latvia: mainly Gaussian splatting from sparse panoramas (PyTorch, CUDA), and a bit of meshes. Two results in production: the windows and mirrors fix and the exterior orbital videos. Also depth models, 3D camera paths, LLM APIs and developer tools. Studies Financial Engineering at Riga Technical University. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
 
 ## Resume
 
@@ -12,7 +12,7 @@
 
 ## Portfolio
 
-- [Portfolio](https://ilyaeis.github.io/): an interactive WebGL journey. It starts inside a Gaussian splat of a real flat: the visitor walks it and finds six objects (my R&D work at Giraffe360), or skips the flat; then the comet flies on to a timeline graph (school, AI Talent, university, Giraffe360) and a tunnel of projects. It has no readable text for fetch tools. Use the resume files for the text.
+- [Portfolio](https://ilyaeis.github.io/): an interactive WebGL journey. It starts inside a Gaussian splat of a real flat that I trained with gsplat (public Zip-NeRF "london" scene): the visitor walks it and finds six objects (my R&D work at Giraffe360), or skips the flat; then the comet flies on to a timeline graph (school, AI Talent, university, Giraffe360) and a tunnel of projects. It has no readable text for fetch tools. Use the resume files for the text.
 
 ## Apps
 
@@ -34,7 +34,7 @@ Universes `education` and `work` (one timeline graph, four frames; a link lands 
 - [Riga State Classical Gymnasium](https://ilyaeis.github.io/?go=rvkg): programming and mathematics track; state mathematics olympiads. The first frame also shows my traits: curious, creative, adaptive (`?go=traits` lands here too).
 - [AI Talent Program](https://ilyaeis.github.io/?go=ai-talent): Ponder AI talent program.
 - [Riga Technical University](https://ilyaeis.github.io/?go=rtu): Professional Bachelor in Financial Engineering.
-- [Giraffe360](https://ilyaeis.github.io/?go=giraffe360) (universe `work`): R&D engineer in 3D reconstruction and computer vision: 3DGS from sparse panorama views, benchmarking, research.
+- [Giraffe360](https://ilyaeis.github.io/?go=giraffe360) (universe `work`): R&D engineer in 3D reconstruction and computer vision: 3DGS from sparse panorama views, PyTorch and CUDA.
 
 Universe `projects`:
 - [Flow](https://ilyaeis.github.io/?go=flow): offline workout tracker app (Dart/Flutter).
