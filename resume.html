@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
-    <title>Ilja Safronovs — Resume · R&amp;D Engineer: 3D Reconstruction &amp; AI Automation</title>
-    <meta name="description" content="Resume of Ilja Safronovs, R&amp;D engineer in 3D reconstruction and AI automation at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA) and AI-agent tools for the team.">
+    <title>Ilja Safronovs — Resume · R&amp;D Engineer / 3D Reconstruction</title>
+    <meta name="description" content="Resume of Ilja Safronovs, R&amp;D engineer in 3D reconstruction at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA).">
     <meta name="author" content="Ilja Safronovs">
     <meta name="theme-color" content="#0a0a0a">
     <meta name="color-scheme" content="dark light">
@@ -20,8 +20,8 @@
     <!-- Social previews -->
     <meta property="og:type" content="profile">
     <meta property="og:url" content="https://ilyaeis.github.io/resume.html">
-    <meta property="og:title" content="Ilja Safronovs — R&amp;D Engineer: 3D Reconstruction &amp; AI Automation · Resume">
-    <meta property="og:description" content="R&amp;D engineer in 3D reconstruction and AI automation at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA) and AI-agent tools for the team.">
+    <meta property="og:title" content="Ilja Safronovs — R&amp;D Engineer / 3D Reconstruction · Resume">
+    <meta property="og:description" content="R&amp;D engineer in 3D reconstruction at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA).">
     <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=3">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -41,11 +41,11 @@
             "@id": "https://ilyaeis.github.io/#me",
             "name": "Ilja Safronovs",
             "alternateName": "ilyaeis",
-            "description": "R&D engineer in 3D reconstruction and AI automation at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA) and AI-agent tools for the team.",
+            "description": "R&D engineer in 3D reconstruction at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA).",
             "url": "https://ilyaeis.github.io/",
             "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
             "email": "ilya.safronos@gmail.com",
-            "jobTitle": "R&D Engineer, 3D reconstruction & AI automation",
+            "jobTitle": "R&D Engineer, 3D reconstruction",
             "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
             "knowsLanguage": ["lv", "en", "ru"],
             "alumniOf": [
@@ -106,7 +106,8 @@
             </button>
             <div class="who">
                 <h1>Ilja Safronovs</h1>
-                <p class="title">R&amp;D Engineer — 3D reconstruction <span class="sep">·</span> AI automation <span class="sep">·</span> Giraffe360 <span class="sep">·</span> Riga, Latvia</p>
+                <p class="title">R&amp;D Engineer / 3D reconstruction <span class="sep">·</span> Giraffe360 <span class="sep">·</span> Riga, Latvia</p>
+                <p class="pitch">I find why 3D reconstructions look wrong, and I ship the fix.</p>
             </div>
         </div>
         <p class="contact">
@@ -115,7 +116,7 @@
             <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me"><span class="screen">LinkedIn</span><span class="print">linkedin.com/in/iļja-safronovs-eis</span></a>
             <span class="print">ilyaeis.github.io</span>
         </p>
-        <p class="summary">I build 3D Gaussian splatting reconstruction from sparse panoramas at Giraffe360 (PyTorch, CUDA), and AI-agent tools for the team. Four of my results are in production: the windows and mirrors fix, my densification, the exterior orbital videos and the looped drone. For the team I built an agent-driven experiment runner and an MCP server for the task board.</p>
+        <p class="summary">I work on 3D Gaussian splatting from sparse panoramas at Giraffe360 (PyTorch, CUDA). I find the root cause, test fixes in controlled training runs, and ship the best one. I mentored a junior engineer, then led a team of three engineers on a new 3D reconstruction feature, now in production. I want to grow toward leading a team.</p>
     </header>
 
     <section>
@@ -128,25 +129,29 @@
             <div class="items">
                 <div class="item-row">
                     <details id="windows-mirrors" class="item">
-                        <summary><span class="hl">Fixed blurry windows, outdoor views and mirrors in sparse-panorama 3DGS; the production default since 1 June 2026.<span class="print"> instagram.com/p/DZsNRB8o772</span></span></summary>
-                        <div class="why">I ran 140+ controlled training runs, then 600+ experiments over one month to cut haze, floaters and flicker. <span class="more-text">The best setup became the default on 1 June 2026. Giraffe360 showed the result in a public post.</span></div>
+                        <summary><span class="hl">Fixed blurry windows, outdoor views and mirrors in Giraffe360’s 3D videos for PRO camera projects; in production since June 2026.<span class="print"> instagram.com/p/DZsNRB8o772</span></span></summary>
+                        <div class="why">I found the root cause, then tested fixes in controlled training runs to cut haze, floaters and flicker. <span class="more-text">The best setup became the default in June 2026. It builds on the team’s earlier window masks. Giraffe360 showed the result in a public post.</span></div>
                     </details>
                     <a class="post screen" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post ↗</a>
                 </div>
                 <details id="influence-accumulation" class="item">
-                    <summary><span class="hl">Built the sparse-panorama 3DGS training pipeline; my densification runs in production.</span></summary>
-                    <div class="why">The pipeline turns sparse panorama views into 3D Gaussian splats. Jan 2026: influence-accumulation densification, building on Taming 3DGS (Mallick et al., 2024): it measures how much each Gaussian adds to the rendered images and moves the least useful ones; I ported it to the team’s new training approach, and it is still used. June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes, used in a downsampling step. <span class="more-text">I also cut GPU idle time in training.</span></div>
+                    <summary><span class="hl">My Gaussian pruning and relocation rules, built on Taming 3DGS, are production defaults.</span></summary>
+                    <div class="why">Jan–Jul 2026, in our sparse-panorama 3DGS pipeline: influence-based pruning and relocation, building on Taming 3DGS (Mallick et al., 2024) and the team’s influence tracking. It measures how much each Gaussian adds to the rendered images, then removes or moves the least useful ones. June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes, used in a downsampling step. <span class="more-text">I also cut GPU idle time in training.</span></div>
                 </details>
                 <div class="item-row">
-                    <details class="item">
-                        <summary><span class="hl">Shipped two 3D video features: exterior orbital videos and the looped drone (Oct 2026).<span class="print"> instagram.com/giraffe360/reel/Dd9ODBVIHhE</span></span></summary>
-                        <div class="why">Exterior: I built the toolkit that orients, selects and crops the outdoor splat, and the per-frame outdoor video pipeline; it makes the orbital view in production. Looped drone: my hackathon idea (Feb 2026, special mention; 3 of my ideas were recognised out of 51); I built its camera-path algorithm. <span class="more-text">For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed the camera height in rooms on a half floor, for all video types.</span></div>
+                    <details id="looped-drone" class="item">
+                        <summary><span class="hl">Turned my hackathon idea, a looped drone flight per room, into a shipped video product; built the exterior orbital videos (Oct 2026).<span class="print"> instagram.com/giraffe360/reel/Dd9ODBVIHhE</span></span></summary>
+                        <div class="why">Looped drone: a special mention at the Feb 2026 hackathon (3 of my ideas were recognised out of 51); I built its camera-path algorithm. Exterior orbital videos: I built the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline. <span class="more-text">For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed the camera height in rooms on a half floor, for all video types.</span></div>
                     </details>
                     <a class="post screen" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">Giraffe360 post ↗</a>
                 </div>
+                <details id="team" class="item">
+                    <summary><span class="hl">Led a team of three engineers on a new 3D reconstruction feature, now in production (Oct 2026).</span></summary>
+                    <div class="why">I wrote most of the code, reviewed and merged the others’ work, and cut the release. <span class="more-text">Since September 2026 I also cut our 3D pipeline’s releases. I want to grow toward leading a team.</span></div>
+                </details>
                 <details id="depth-method" class="item">
-                    <summary><span class="hl">Mentored a junior engineer on a new depth method; the whole team uses it.</span></summary>
-                    <div class="why">Mostly his work, on denser LiDAR depth. <span class="more-text">Over time, teammates came to me with their pipeline questions.</span></div>
+                    <summary><span class="hl">Mentored a junior engineer on a new depth method; it is now in production.</span></summary>
+                    <div class="why">Mostly his work, on denser LiDAR depth; our splat training has used it since October 2026. <span class="more-text">Over time, teammates came to me with their pipeline questions.</span></div>
                 </details>
                 <details id="ai-automation" class="item">
                     <summary><span class="hl">AI automation: an agent-driven experiment runner, an MCP server for the team task board, a coding-agent harness.</span></summary>

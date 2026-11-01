@@ -1,6 +1,6 @@
 # Ilja Safronovs
 
-> R&D Engineer in 3D reconstruction and AI automation at Giraffe360, Riga, Latvia. Builds 3D Gaussian splatting reconstruction from sparse panoramas (PyTorch, CUDA), and AI-agent tools for the team. In production: the windows and mirrors fix, his densification, the exterior orbital videos and the looped drone. AI automation: an agent-driven experiment runner, an MCP server for the team task board and a coding-agent harness. Studies Financial Engineering at Riga Technical University. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
+> R&D Engineer / 3D reconstruction at Giraffe360, Riga, Latvia. He finds why 3D reconstructions look wrong, and ships the fix. He works on 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA). In production: the windows and mirrors fix (3D videos for PRO camera projects, since June 2026), his Gaussian pruning and relocation rules (production defaults), the looped drone and the exterior orbital videos. He mentored a junior engineer, then led a team of three engineers on a new 3D reconstruction feature, now in production. AI automation: an agent-driven experiment runner, an MCP server for the team task board and a coding-agent harness. Studies Financial Engineering at Riga Technical University. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
 
 ## Resume
 
@@ -23,14 +23,14 @@
 Each link below opens the page and lands at that stop. Ids are stable names; the order is not part of the contract. The page starts in the flat (universe `rnd`), in walk mode after the intro; a link to an `rnd` object starts walk mode at that object, its panel open.
 
 Universe `rnd` (Giraffe360 R&D, inside a Gaussian splat of a real apartment). The walk (the tour) visits the first four in this order; "Next object" walks to the next one not collected yet:
-- [Windows, outdoor views and mirrors](https://ilyaeis.github.io/?go=windows-mirrors): solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.
+- [Windows, outdoor views and mirrors](https://ilyaeis.github.io/?go=windows-mirrors): fixed blurry windows, outdoor views and mirrors in 3D videos for PRO camera projects (in production since June 2026); the exterior orbital videos.
 - [Meshes and viewers](https://ilyaeis.github.io/?go=mesh-generation): mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.
-- [3DGS reconstruction pipeline](https://ilyaeis.github.io/?go=splatting): Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification (building on Taming 3DGS, Mallick et al., 2024), Analytic-Splatting, the pipeline restructuring. (`?go=giraffe360` lands here too.)
+- [3DGS reconstruction pipeline](https://ilyaeis.github.io/?go=splatting): Our custom 3DGS reconstruction pipeline from sparse panorama views; his Gaussian pruning and relocation rules (production defaults, built on Taming 3DGS, Mallick et al., 2024), Analytic-Splatting, the pipeline restructuring. (`?go=giraffe360` lands here too.)
 - [Benchmarking and evaluation](https://ilyaeis.github.io/?go=benchmarking): validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.
 
 Two more `rnd` stops, out of the tour (reached only by these links or the agent API):
 - [MCP server and ideas](https://ilyaeis.github.io/?go=task-board-mcp): MCP server for the team task board; the looped drone video.
-- [Depth room](https://ilyaeis.github.io/?go=depth-room): a bedroom drawn as depth (colour = distance from your eye); mentoring a junior on a new depth method, now used team-wide.
+- [Depth room](https://ilyaeis.github.io/?go=depth-room): a bedroom drawn as depth (colour = distance from your eye); mentoring a junior on a new depth method, now in production.
 
 Universe `projects` (the tunnel):
 - [Sorting visualizer](https://ilyaeis.github.io/?go=sorting): sorting algorithm visualizer (C++/SFML). Has a portal: the app at /apps/sorting/.

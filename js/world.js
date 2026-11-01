@@ -60,17 +60,17 @@ const MILESTONES = [
         title: '3DGS reconstruction from sparse panorama views',
         subtitle: 'Our custom pipeline · in production June 2026 · PyTorch · CUDA',
         items: [
-            { text: 'Built the pipeline; splat quality rose a lot over the year.' },
-            { text: 'My influence-accumulation densification, building on Taming 3DGS (Mallick et al., 2024); Analytic-Splatting (Liang et al., 2024) in CUDA.' }
+            { text: 'My Gaussian pruning and relocation rules, built on Taming 3DGS (Mallick et al., 2024), are production defaults.' },
+            { text: 'Led a team of three engineers on a new 3D reconstruction feature, now in production.' }
         ],
         more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post: the result' }
     }},
     { label: 'WINDOWS', panel: {
         title: 'Windows, outdoor views and mirrors',
-        subtitle: 'Sparse-panorama 3DGS · production default since 1 June 2026',
+        subtitle: 'Sparse-panorama 3DGS · in production since June 2026',
         items: [
-            { text: 'Shipped 1 June 2026 after 140+, then 600+ experiments.' },
-            { text: 'Fixed blurry windows, outdoor views and mirrors.' }
+            { text: "Fixed blurry windows, outdoor views and mirrors in Giraffe360's 3D videos for PRO camera projects." },
+            { text: 'I found the root cause, then tested fixes in controlled training runs.' }
         ],
         // Click-to-load: nothing from instagram.com loads before the click (stopPanel.js)
         embed: { src: 'https://www.instagram.com/p/DZsNRB8o772/embed/captioned/',
@@ -113,7 +113,7 @@ const MILESTONES = [
         subtitle: 'This room is drawn as depth: colour = distance from your eye',
         items: [
             { text: "The colours are this public scene's own depth, not my method's output." },
-            { text: 'At Giraffe360 I mentored a junior on a new depth method. Mostly his work; the whole team uses it now.' }
+            { text: 'At Giraffe360 I mentored a junior on a new depth method. Mostly his work; it is now in production.' }
         ],
         more: { href: 'resume.html#depth-method', label: 'details in the resume' }
     }}
@@ -239,18 +239,18 @@ const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 // paletteIdx (into the ATTRACTORS table).
 const ROUTE = [
     { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 4, object: 'vase', paletteIdx: 3,
-      summary: 'Solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.' },
+      summary: 'Fixed blurry windows, outdoor views and mirrors in 3D videos for PRO camera projects (in production since June 2026); the exterior orbital videos.' },
     { id: 'mesh-generation', universe: 'rnd', type: StopType.OBJECT, milestone: 6, object: 'chair', paletteIdx: 3,
       summary: 'Mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.' },
     { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 3, object: 'cherry', paletteIdx: 3,
-      summary: 'Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification (building on Taming 3DGS, Mallick et al., 2024), Analytic-Splatting, the pipeline restructuring.' },
+      summary: 'Our custom 3DGS reconstruction pipeline from sparse panorama views; my Gaussian pruning and relocation rules (production defaults, built on Taming 3DGS, Mallick et al., 2024), Analytic-Splatting, the pipeline restructuring.' },
     { id: 'benchmarking',    universe: 'rnd', type: StopType.OBJECT, milestone: 5, object: 'gpu', paletteIdx: 3,
       summary: 'Validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.' },
     { id: 'task-board-mcp',  universe: 'rnd', type: StopType.OBJECT, milestone: 7, object: 'board', paletteIdx: 3, tour: false,
       summary: 'MCP server for the team task board; the looped drone video.' },
     // a whole room (no splat object): walk in and it shows as depth (js/depthRoom.js)
     { id: 'depth-room',      universe: 'rnd', type: StopType.OBJECT, milestone: 8, room: 'bedroom2', paletteIdx: 3, tour: false,
-      summary: 'A bedroom drawn as depth (colour = distance from your eye); mentoring a junior on a new depth method, now used team-wide.' },
+      summary: 'A bedroom drawn as depth (colour = distance from your eye); mentoring a junior on a new depth method, now in production.' },
     { id: 'sorting',    universe: 'projects',   type: StopType.PROJECT, milestone: 2, paletteIdx: 2,
       summary: 'Sorting algorithm visualizer (C++/SFML).' },
     { id: 'calculator', universe: 'projects',   type: StopType.PROJECT, milestone: 1, paletteIdx: 2,

@@ -224,6 +224,13 @@ h1 {
 
 .sep { color: var(--muted); margin: 0 0.15em; }
 
+.pitch {
+    margin-top: 0.35rem;
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: var(--fg-strong);
+}
+
 .contact {
     margin-top: 0.6rem;
     display: flex;
@@ -573,6 +580,11 @@ dl.skills dd { color: var(--fg); }
         margin-top: 2pt;
         font-size: 10.5pt;
         color: var(--fg);
+    }
+
+    .pitch {
+        margin-top: 2pt;
+        font-size: 10.5pt;
     }
 
     .identity { gap: 4mm; }

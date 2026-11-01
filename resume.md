@@ -2,11 +2,13 @@
 
 ![Iļja Safronovs](https://ilyaeis.github.io/assets/photo/headshot.jpg)
 
-R&D Engineer — 3D reconstruction · AI automation · Giraffe360 · Riga, Latvia
+R&D Engineer / 3D reconstruction · Giraffe360 · Riga, Latvia
+
+**I find why 3D reconstructions look wrong, and I ship the fix.**
 
 ilya.safronos@gmail.com · [GitHub](https://github.com/ilyaeis) · [LinkedIn](https://www.linkedin.com/in/i%C4%BCja-safronovs-eis)
 
-I build 3D Gaussian splatting reconstruction from sparse panoramas at Giraffe360 (PyTorch, CUDA), and AI-agent tools for the team. Four of my results are in production: the windows and mirrors fix, my densification, the exterior orbital videos and the looped drone. For the team I built an agent-driven experiment runner and an MCP server for the task board.
+I work on 3D Gaussian splatting from sparse panoramas at Giraffe360 (PyTorch, CUDA). I find the root cause, test fixes in controlled training runs, and ship the best one. I mentored a junior engineer, then led a team of three engineers on a new 3D reconstruction feature, now in production. I want to grow toward leading a team.
 
 ## Experience
 
@@ -14,14 +16,16 @@ I build 3D Gaussian splatting reconstruction from sparse panoramas at Giraffe360
 
 Riga · 2025 – present. Giraffe360 makes cameras and software for real-estate virtual tours.
 
-- **Fixed blurry windows, outdoor views and mirrors in sparse-panorama 3DGS; the production default since 1 June 2026.** [Giraffe360 post](https://www.instagram.com/p/DZsNRB8o772/)
-  I ran 140+ controlled training runs, then 600+ experiments over one month to cut haze, floaters and flicker. The best setup became the default on 1 June 2026. Giraffe360 showed the result in a public post.
-- **Built the sparse-panorama 3DGS training pipeline; my densification runs in production.**
-  The pipeline turns sparse panorama views into 3D Gaussian splats. Jan 2026: influence-accumulation densification, building on Taming 3DGS (Mallick et al., 2024): it measures how much each Gaussian adds to the rendered images and moves the least useful ones; I ported it to the team’s new training approach, and it is still used. June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes, used in a downsampling step. I also cut GPU idle time in training.
-- **Shipped two 3D video features: exterior orbital videos and the looped drone (Oct 2026).** [Giraffe360 post](https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)
-  Exterior: I built the toolkit that orients, selects and crops the outdoor splat, and the per-frame outdoor video pipeline; it makes the orbital view in production. Looped drone: my hackathon idea (Feb 2026, special mention; 3 of my ideas were recognised out of 51); I built its camera-path algorithm. For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed the camera height in rooms on a half floor, for all video types.
-- **Mentored a junior engineer on a new depth method; the whole team uses it.**
-  Mostly his work, on denser LiDAR depth. Over time, teammates came to me with their pipeline questions.
+- **Fixed blurry windows, outdoor views and mirrors in Giraffe360’s 3D videos for PRO camera projects; in production since June 2026.** [Giraffe360 post](https://www.instagram.com/p/DZsNRB8o772/)
+  I found the root cause, then tested fixes in controlled training runs to cut haze, floaters and flicker. The best setup became the default in June 2026. It builds on the team’s earlier window masks. Giraffe360 showed the result in a public post.
+- **My Gaussian pruning and relocation rules, built on Taming 3DGS, are production defaults.**
+  Jan–Jul 2026, in our sparse-panorama 3DGS pipeline: influence-based pruning and relocation, building on Taming 3DGS (Mallick et al., 2024) and the team’s influence tracking. It measures how much each Gaussian adds to the rendered images, then removes or moves the least useful ones. June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes, used in a downsampling step. I also cut GPU idle time in training.
+- **Turned my hackathon idea, a looped drone flight per room, into a shipped video product; built the exterior orbital videos (Oct 2026).** [Giraffe360 post](https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)
+  Looped drone: a special mention at the Feb 2026 hackathon (3 of my ideas were recognised out of 51); I built its camera-path algorithm. Exterior orbital videos: I built the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline. For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed the camera height in rooms on a half floor, for all video types.
+- **Led a team of three engineers on a new 3D reconstruction feature, now in production (Oct 2026).**
+  I wrote most of the code, reviewed and merged the others’ work, and cut the release. Since September 2026 I also cut our 3D pipeline’s releases. I want to grow toward leading a team.
+- **Mentored a junior engineer on a new depth method; it is now in production.**
+  Mostly his work, on denser LiDAR depth; our splat training has used it since October 2026. Over time, teammates came to me with their pipeline questions.
 - **AI automation: an agent-driven experiment runner, an MCP server for the team task board, a coding-agent harness.**
   March 2026: an experiment runner, so every teammate can run and track training on a local GPU through an AI agent. June 2026: an MCP server (Node.js), so AI agents can read and write the team task board, with authentication; colleagues use it. In my own time: a harness for coding agents; a master session plans and checks the work, and worker sessions run in their own git worktrees (private repo).
 

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
-    <title>Ilja Safronovs — R&amp;D Engineer: 3D Reconstruction &amp; AI Automation</title>
-    <meta name="description" content="Ilja Safronovs, R&amp;D engineer in 3D reconstruction and AI automation at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA) and AI-agent tools for the team. The portfolio is a Gaussian splat of a real flat that I trained; plain resume at /resume.html.">
+    <title>Ilja Safronovs — R&amp;D Engineer / 3D Reconstruction</title>
+    <meta name="description" content="Ilja Safronovs, R&amp;D engineer in 3D reconstruction at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA). The portfolio is a Gaussian splat of a real flat that I trained; plain resume at /resume.html.">
     <meta name="author" content="Ilja Safronovs">
     <meta name="theme-color" content="#0a0a0a">
     <meta name="agent-api" content="window.journey v1; tools also via document.modelContext; docs: /llms.txt#journey">
@@ -16,8 +16,8 @@
     <!-- Social previews -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://ilyaeis.github.io/">
-    <meta property="og:title" content="Ilja Safronovs — R&amp;D Engineer: 3D Reconstruction &amp; AI Automation">
-    <meta property="og:description" content="R&amp;D engineer in 3D reconstruction and AI automation at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA) and AI-agent tools for the team. Walk a Gaussian splat of a real flat that I trained.">
+    <meta property="og:title" content="Ilja Safronovs — R&amp;D Engineer / 3D Reconstruction">
+    <meta property="og:description" content="R&amp;D engineer in 3D reconstruction at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA). Walk a Gaussian splat of a real flat that I trained.">
     <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=3">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -34,7 +34,8 @@
         "url": "https://ilyaeis.github.io/",
         "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
         "email": "ilya.safronos@gmail.com",
-        "jobTitle": "R&D Engineer, 3D reconstruction & AI automation",
+        "jobTitle": "R&D Engineer, 3D reconstruction",
+        "description": "R&D engineer in 3D reconstruction at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA).",
         "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
         "alumniOf": { "@type": "CollegeOrUniversity", "name": "Riga Technical University" },
         "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
@@ -97,7 +98,8 @@
          content is for crawlers, link previews and screen readers (its links
          are out of the Tab order: Tab reaches the visible controls) -->
     <header class="visually-hidden">
-        <h1>Ilja Safronovs — 3D reconstruction · AI automation · Giraffe360 · Riga</h1>
+        <h1>Ilja Safronovs — R&amp;D Engineer / 3D reconstruction · Giraffe360 · Riga</h1>
+        <p>I find why 3D reconstructions look wrong, and I ship the fix.</p>
         <p>This portfolio is an interactive
            WebGL journey. It starts inside a 3D Gaussian splat of a real
            apartment that I trained with gsplat from the public Zip-NeRF
@@ -130,18 +132,21 @@
         <h2>R&amp;D at Giraffe360 (the apartment stops)</h2>
         <ul>
             <li>Windows, outdoor views and mirrors: fixed blurry windows, outdoor
-                views and mirrors after 140+ controlled training runs, then 600+
-                more experiments; shipped on 1 June 2026
+                views and mirrors in Giraffe360's 3D videos for PRO camera
+                projects; in production since June 2026. I found the root cause
+                and tested fixes in controlled training runs
                 (<a tabindex="-1" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post (before / after renders)</a>).
-                Built the exterior splat toolkit and the orbital outdoor videos.</li>
-            <li>3DGS reconstruction pipeline: I built our custom pipeline for 3D
-                Gaussian Splatting reconstruction from sparse panorama views, in
-                production since 1 June 2026, with splat quality much improved over
-                the year (<a tabindex="-1" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post (before / after renders)</a>);
-                I replaced the first densification with my influence-accumulation
-                densification (Jan 2026; it builds on Taming 3DGS, Mallick et al., 2024), which is still used in the team’s pipeline; Analytic-Splatting (Liang et al.,
-                2024) in gsplat, with my CUDA forward and backward passes (June 2026);
-                led the pipeline restructuring into one 3DGS monorepo</li>
+                Built the toolkit behind the exterior orbital videos.</li>
+            <li>3DGS reconstruction pipeline: I work on our custom pipeline for 3D
+                Gaussian Splatting reconstruction from sparse panorama views, with
+                splat quality much improved over the year
+                (<a tabindex="-1" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post (before / after renders)</a>);
+                my Gaussian pruning and relocation rules (influence-based, built on
+                Taming 3DGS, Mallick et al., 2024) are production defaults;
+                Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA
+                forward and backward passes (June 2026); led the pipeline
+                restructuring into one 3DGS monorepo; led a team of three engineers
+                on a new 3D reconstruction feature, now in production</li>
             <li>Meshes and viewers: mesh generation from splats; a point-count
                 reduction stage; an embeddable Rust/wgpu splat viewer; a multi-view
                 comparison tool</li>
@@ -155,7 +160,7 @@
             <li>Depth: one bedroom of the flat is drawn as depth (colour =
                 distance from your eye, the public scene's own depth). Mentored one
                 junior engineer on a new depth method (mostly his work, on denser
-                LiDAR depth), now used by the whole team</li>
+                LiDAR depth), now in production</li>
         </ul>
         <h2>Education</h2>
         <ul>
