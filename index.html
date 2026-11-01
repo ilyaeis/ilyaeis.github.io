@@ -6,7 +6,7 @@
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
     <title>Ilja Safronovs — Portfolio</title>
-    <meta name="description" content="Ilja Safronovs — R&amp;D engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking, continuous research. Financial Engineering student at Riga Technical University. Interactive WebGL portfolio; plain resume at /resume.html.">
+    <meta name="description" content="Ilja Safronovs — R&amp;D engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking, continuous research. Interactive WebGL portfolio; plain resume at /resume.html.">
     <meta name="author" content="Ilja Safronovs">
     <meta name="theme-color" content="#0a0a0a">
     <meta name="agent-api" content="window.journey v1; tools also via document.modelContext; docs: /llms.txt#journey">
@@ -130,11 +130,12 @@
                 Gaussian Splatting reconstruction from sparse panorama views, in
                 production since 1 June 2026, with splat quality much improved over
                 the year (<a tabindex="-1" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post</a>);
-                I replaced the first densification with my influence-accumulation
-                method (Jan 2026), which is still used in the team’s pipeline;
-                Analytic-Splatting in gsplat at CUDA level (June 2026);
+                I replaced the first densification with my influence-based method
+                (Jan 2026; it builds on Taming 3DGS, Mallick et al., 2024), which is
+                still used in the team’s pipeline; Analytic-Splatting (Liang et al.,
+                2024) in gsplat, with my CUDA forward and backward passes (June 2026);
                 led the pipeline restructuring and created a 3DGS monorepo, which
-                let me fix a long-standing camera-path bug</li>
+                let me fix a camera-path bug</li>
             <li>Windows, outdoor views and mirrors: fixed blurry windows, outdoor
                 views and mirrors after 140+ controlled training runs, then 600+
                 more experiments; shipped on 1 June 2026
