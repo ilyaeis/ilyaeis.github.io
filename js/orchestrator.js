@@ -348,6 +348,10 @@ export function setSkipRender(v) { skipRender = v; }
 export function getState() {
     return { phase, stopIndex, userDragging, phaseTime, frame: stops[stopIndex]?.graph ? graphK : undefined };
 }
+// Music (music.js, via main.js): comet speed, tunnel rush and warp, each 0..1
+const audioState = { speed: 0, rush: 0, warp: 0 };
+const _prevHead = new THREE.Vector3();
+export function getAudioState() { return audioState; }
 export function devState() {
     return { phase, phaseTime, stopIndex, stopType: stops[stopIndex]?.type ?? -1, worldPos, cometPos,
              tunnelFlight: phase === Phase.TRAVEL && easeC2, headS, portal: !!stops[stopIndex]?.portal };
@@ -1016,6 +1020,7 @@ export function update(dt) {
     addJourneyTime(dt);
     intro.update(dt, totalTime);
 
+    if (phase !== Phase.TRAVEL) audioState.speed = audioState.rush = audioState.warp = 0;
     switch (phase) {
         case Phase.INTRO:          updateIntro(dt); break;
         case Phase.ROCKET_EXIT:    updateRocketExit(dt); break;
@@ -1158,8 +1163,11 @@ function updateTravel(dt) {
     }
     trail.pointIntensity = 1.0;
 
+    _prevHead.copy(cometPos);
     // Camera follows the path, smoothed over time
     travelPoint(t, cometPos); // the head's true position, for the next leg
+    audioState.speed = dt > 0 ? Math.min(_prevHead.distanceTo(cometPos) / dt / 30, 1) : 0;
+    audioState.rush = rush; audioState.warp = w;
     cameraAnchor(phaseTime + dt, worldPos);
     travelTangent(t, cometDir);
     if (easeC2) {
