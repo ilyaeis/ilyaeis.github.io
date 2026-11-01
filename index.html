@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
-    <title>Ilja Safronovs — Portfolio</title>
-    <meta name="description" content="Ilja Safronovs — R&amp;D engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking, continuous research. Interactive WebGL portfolio; plain resume at /resume.html.">
+    <title>Ilja Safronovs — 3D Reconstruction &amp; Computer Vision Engineer</title>
+    <meta name="description" content="Ilja Safronovs, R&amp;D engineer in 3D reconstruction and computer vision at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas, PyTorch and CUDA. The portfolio is a Gaussian splat of a real flat that I trained; plain resume at /resume.html.">
     <meta name="author" content="Ilja Safronovs">
     <meta name="theme-color" content="#0a0a0a">
     <meta name="agent-api" content="window.journey v1; tools also via document.modelContext; docs: /llms.txt#journey">
@@ -16,8 +16,8 @@
     <!-- Social previews -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://ilyaeis.github.io/">
-    <meta property="og:title" content="Ilja Safronovs — Portfolio">
-    <meta property="og:description" content="Ilja Safronovs — R&amp;D engineer (3D reconstruction and computer vision) at Giraffe360, Riga. An interactive WebGL journey; tap to fly through.">
+    <meta property="og:title" content="Ilja Safronovs — 3D Reconstruction &amp; Computer Vision Engineer">
+    <meta property="og:description" content="R&amp;D engineer in 3D reconstruction and computer vision at Giraffe360, Riga: 3D Gaussian splatting from sparse panoramas, PyTorch and CUDA. Walk a Gaussian splat of a real flat that I trained.">
     <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -37,7 +37,7 @@
         "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
         "alumniOf": { "@type": "CollegeOrUniversity", "name": "Riga Technical University" },
         "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
-        "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "Benchmarking", "Mesh Generation", "PyTorch", "CUDA", "Python", "C++", "Dart", "Flutter", "JavaScript", "Financial Engineering", "Monte Carlo methods", "GARCH", "Value at Risk", "AWS S3", "OpenAI API", "Prompt Engineering", "Large Language Models"],
+        "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "Depth Estimation", "Mesh Generation", "PyTorch", "CUDA", "Python", "C++", "Dart", "Flutter", "JavaScript", "Financial Engineering", "Monte Carlo methods", "GARCH", "Value at Risk", "AWS S3", "OpenAI API", "Prompt Engineering", "Large Language Models"],
         "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
     }
     </script>
@@ -100,7 +100,8 @@
         <h1>Ilja Safronovs — 3D reconstruction and computer vision · Giraffe360 · Riga</h1>
         <p>Creative. Adaptive. Curious. This portfolio is an interactive
            WebGL journey. It starts inside a 3D Gaussian splat of a real
-           apartment (Zip-NeRF "london" scene, CC BY 4.0): my name floats in
+           apartment that I trained with gsplat from the public Zip-NeRF
+           "london" scene (Barron et al. 2023, CC BY 4.0): my name floats in
            front of the bay windows while the flat loads. Tap or press Enter,
            and you walk through the flat: six splat objects in it stand for
            my Giraffe360 R&amp;D work. Tap the floor to walk, drag to look, or
@@ -122,7 +123,7 @@
         <ul>
             <li>2025 — Giraffe360, R&amp;D Engineer in Riga: 3D reconstruction
                 and computer vision (3DGS reconstruction from sparse panorama
-                views), benchmarking and continuous research</li>
+                views, PyTorch and CUDA)</li>
         </ul>
         <h2>R&amp;D at Giraffe360 (the apartment stops)</h2>
         <ul>
@@ -130,9 +131,8 @@
                 Gaussian Splatting reconstruction from sparse panorama views, in
                 production since 1 June 2026, with splat quality much improved over
                 the year (<a tabindex="-1" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post</a>);
-                I replaced the first densification with my influence-based method
-                (Jan 2026; it builds on Taming 3DGS, Mallick et al., 2024), which is
-                still used in the team’s pipeline; Analytic-Splatting (Liang et al.,
+                I replaced the first densification with my influence-accumulation
+                densification (Jan 2026), which is still used in the team’s pipeline; Analytic-Splatting (Liang et al.,
                 2024) in gsplat, with my CUDA forward and backward passes (June 2026);
                 led the pipeline restructuring and created a 3DGS monorepo, which
                 let me fix a camera-path bug</li>
@@ -160,7 +160,7 @@
         <h2>Education</h2>
         <ul>
             <li>Riga State Classical Gymnasium (Rīgas Valsts klasiskā ģimnāzija), Programming and Mathematics track
-                (today named "Programming + AI"); Latvian state mathematics olympiads;
+                Latvian state mathematics olympiads;
                 Small Mathematics University (Mazā matemātikas universitāte) at the University of Latvia</li>
             <li>Nov 2024 – Jan 2025 — AI Talent Program (Ponder, Mākslīgā intelekta talantu
                 programma): selective program with training in C++, Python,
@@ -173,6 +173,8 @@
         </ul>
         <h2>Project milestones</h2>
         <ul>
+            <li>2025–26 — this site: a Gaussian splat of a real flat that I trained
+                with gsplat (public Zip-NeRF "london" scene; 730k splats, 350k on phones)</li>
             <li>2026 — load-balancing-experiments (RTU networks project, Python)</li>
             <li>2026 — flow, offline workout tracker (Dart, Flutter)</li>
             <li>2026 — monte-carlo-finance, Monte Carlo Methods in Finance: option pricing, GARCH volatility, VaR backtests (Python)</li>
@@ -224,7 +226,7 @@
     <p class="intro-links" hidden><a class="intro-skip" href="?go=rvkg">skip the walk</a> · <a href="resume.html">resume</a></p>
 
     <p class="room-loading" role="status"></p>
-    <p class="room-credit" hidden>Apartment: "london" scene, Zip-NeRF dataset (Barron et al. 2023), CC BY 4.0, reconstructed with gsplat</p>
+    <p class="room-credit" hidden>Apartment: public Zip-NeRF "london" scene (Barron et al. 2023), CC BY 4.0; trained by me with gsplat</p>
 
     <aside class="stop-panel" aria-live="polite" hidden>
         <p class="stop-panel-dates"></p>
