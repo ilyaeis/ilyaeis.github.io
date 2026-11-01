@@ -240,10 +240,10 @@ const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 const ROUTE = [
     { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 4, object: 'vase', paletteIdx: 3,
       summary: 'Solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.' },
-    { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 3, object: 'cherry', paletteIdx: 3,
-      summary: 'Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification (building on Taming 3DGS, Mallick et al., 2024), Analytic-Splatting, the pipeline restructuring.' },
     { id: 'mesh-generation', universe: 'rnd', type: StopType.OBJECT, milestone: 6, object: 'chair', paletteIdx: 3,
       summary: 'Mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.' },
+    { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 3, object: 'cherry', paletteIdx: 3,
+      summary: 'Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification (building on Taming 3DGS, Mallick et al., 2024), Analytic-Splatting, the pipeline restructuring.' },
     { id: 'benchmarking',    universe: 'rnd', type: StopType.OBJECT, milestone: 5, object: 'gpu', paletteIdx: 3,
       summary: 'Validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.' },
     { id: 'task-board-mcp',  universe: 'rnd', type: StopType.OBJECT, milestone: 7, object: 'board', paletteIdx: 3, tour: false,

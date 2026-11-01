@@ -7,9 +7,11 @@
 // its own DOM: the "Explore the flat" buttons, the HUD ("n / 4", and the
 // back button when entered from a stop), and one bottom bar (.walk-tour):
 // Collect (any walk, while a panel shows), then for the tour (entered from
-// the intro or ?go=<object id>) an onboarding hint, the task line, "Next
-// object" (also Enter: a guided walk to the first tour object not collected
-// yet, then its panel; from the intro the first one starts by itself),
+// the intro or ?go=<object id>) the task line, "Next object" (also Enter:
+// a guided walk to the first tour object not collected yet, then its panel;
+// from the intro the first one starts by itself; a tap, Enter or Next object
+// during it is the skip: a fade through black to the object; the hint "tap
+// to skip · drag to look" shows only while it runs),
 // "Skip the flat →" ("Continue →" once all are found) and an edge arrow to
 // that object while it is off screen or out of sight. The two stops out of
 // the tour (the wall board, the depth room) are reached by ?go: no halo
@@ -34,6 +36,13 @@ const DEG = Math.PI / 180;
 // ── Tuning ─────────────────────────────────────────────────────────
 const GRID_URL = 'assets/room/walk.json';
 const SPEED_M = 1.8;                   // m/s walk speed (a brisk walk: the tour should not drag)
+const GUIDE_SPEED_M = 2.6;             // m/s: a guided walk (Next object, the tour) glides faster: nobody steers it
+const CORNER_TURN = 20 * DEG;          // a guided walk slows to SPEED_M at path corners sharper than this ...
+const CORNER_DECEL_M = 1.5;            // ... braking at most this (m/s2) before them (fast through a corner: wall contacts)
+// The skip: a tap (or Enter) during a guided walk fades to black, moves the
+// walker to the goal (facing the object) and fades back in (the panel opens)
+const JUMP_FADE = 0.25;                // s: fade out, and fade in
+const JUMP_HOLD = 0.06;                // s: black between them
 const PREVIEW_SPEED = 0.5;             // × while the blurry preview splat still shows (a slow network): walk slowly until the full one is in
 const WALK_PIXEL_RATIO = 1.25;         // phones: pixel ratio ceiling while walking (the splat fills the screen; adaptive resolution steps only after 40 slow frames)
 const ACCEL_TIME = 0.25;               // s: velocity spring (eased start and stop)
@@ -71,7 +80,6 @@ const GUIDE_PITCH = 40 * DEG;
 const GOAL_ROOMY = 8;                  // cells of clearance a guide goal should have
 const ENTER_PITCH = -4 * DEG;          // the walk from the intro starts at eye level, a little down (the ceiling is a void)
 const GUIDE_ARRIVE_M = 0.15;            // m: ... and counts as there when it has stopped within this of the goal
-const HINT_TIME = 6;                   // s: the onboarding hint shows this long (or until the first walk)
 const ARROW_EVERY = 0.4;               // s: the edge arrow re-plans its way to the next object this often
 const ARROW_INSET = 0.86;              // NDC: the arrow keeps this far inside the screen edge
 
@@ -100,7 +108,7 @@ let onDone = null;
 let immediate = false;
 const pos = new THREE.Vector2(), vel = new THREE.Vector2(), acc = new THREE.Vector2();
 const look = { yaw: 0, pitch: 0, yawT: 0, pitchT: 0, yawV: 0, pitchV: 0 };
-let path = null, pathLen = 0, pathS = 0, autoYaw = false, stuckT = 0, stuckS = 0;
+let path = null, pathCum = null, pathLen = 0, pathS = 0, autoYaw = false, stuckT = 0, stuckS = 0;
 let keys = new Set();
 let selected = null;                   // the object stop whose panel shows
 let tour = false;                      // entered from the intro (or ?go): the tour HUD
@@ -109,7 +117,8 @@ let guide = null;                      // the object a Next-object walk goes to
 let autoNext = false;                  // the walk from the intro: Next object as soon as the walk starts
 let slowTurn = false;                  // auto turns at GUIDE_YAW_MAX (a guided walk and its turn)
 let arrived = false;                   // the path ended at its goal this step
-let hintT = -1;                        // s the hint has shown (-1: gone)
+let jumpT = -1;                         // s into the skip's fade (-1: none)
+const fadeEl = document.querySelector('.walk-fade');
 let arrowT = 0, arrowWay = null;       // edge arrow: re-plan timer, { stop, raw } to the next object
 const collected = new Set(load());
 let halos = null;                      // [{ stop, line, vis }]
@@ -337,13 +346,13 @@ function setPath(gx, gz) {
     const raw = astar(s[0], s[1], g[0], g[1]);
     if (!raw) return { ok: false, why: 'no path' };
     guide = null; slowTurn = false;
-    hideHint();
     return followRaw(raw);
 }
 function followRaw(raw) {
     raw[0] = [pos.x, pos.y];
     path = smooth(raw);
-    pathLen = 0; for (let i = 1; i < path.length; i++) pathLen += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
+    pathLen = 0; pathCum = [0];
+    for (let i = 1; i < path.length; i++) pathCum.push(pathLen += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
     pathS = 0; stuckT = 0; stuckS = 0; autoYaw = true;
     if (marker) { marker.position.set(path.at(-1)[0], G.floor + 0.003, path.at(-1)[1]); marker.visible = true; }
     return { ok: true, nodes: raw.length, smoothNodes: path.length, len_m: +(pathLen / M).toFixed(2) };
@@ -408,12 +417,12 @@ function nextWay(skip = null, oneFlood = false) {
 }
 // "Next object": walk to the first tour object not collected yet (the one
 // whose panel shows is done: the next one), then turn to it and show its
-// panel. keepHint: the walk from the intro starts by itself (the hint stays)
-function next(keepHint = false) {
+// panel (from the intro the first one starts by itself)
+function next() {
     if (mode !== 'walk') return { ok: false, why: 'not walking' };
+    if (guide && path) return skipGuide() ? { ok: true, skip: true, object: guide.id } : { ok: false, why: 'skipping' };   // (pressed again on the way: the skip)
     const way = nextWay(selected);
     if (!way) return { ok: false, why: 'all collected' };
-    if (!keepHint) hideHint();
     select(null);
     const r = followRaw(way.raw);
     guide = way.stop; slowTurn = true;
@@ -425,7 +434,6 @@ function guideTo(stop) {
     const h = halos.find(x => x.stop === stop), g = h && objectGoal(h), st = nearestFree(pos.x, pos.y, 0.3 * M);
     const raw = g && st && astar(st[0], st[1], g[0], g[1]);
     if (!raw) return { ok: false, why: 'no path' };
-    hideHint();
     select(null);
     const r = followRaw(raw);
     guide = stop; slowTurn = true;
@@ -491,7 +499,23 @@ function avoidance(out) {
 
 // ── Walker step (room units) ───────────────────────────────────────
 let lastPush = 0;
-const speedNow = () => SPEED * (roomSharp() ? 1 : PREVIEW_SPEED);
+// (a guided walk glides faster, and faster still after a tap: the skip;
+// it brakes to the walk speed before each sharp corner of its path)
+function speedNow() {
+    let v = SPEED;
+    if (guide && path) {
+        v = SPEED * GUIDE_SPEED_M / SPEED_M;
+        const A = CORNER_DECEL_M * M;
+        for (let i = 1; i < path.length - 1; i++) {
+            const d = pathCum[i] - pathS - vel.length() * ACCEL_TIME;   // (the velocity spring lags: brake early)
+            if (pathCum[i] < pathS) continue;
+            const ax = path[i][0] - path[i - 1][0], az = path[i][1] - path[i - 1][1], bx = path[i + 1][0] - path[i][0], bz = path[i + 1][1] - path[i][1];
+            const turn = Math.abs(wrap(Math.atan2(bz, bx) - Math.atan2(az, ax)));
+            if (turn > CORNER_TURN) v = Math.min(v, Math.sqrt(SPEED * SPEED + 2 * A * Math.max(0, d)));
+        }
+    }
+    return v * (roomSharp() ? 1 : PREVIEW_SPEED);
+}
 function step(dt) {
     _w.set(0, 0);
     const f = (keys.has('w') || keys.has('arrowup') ? 1 : 0) - (keys.has('s') || keys.has('arrowdown') ? 1 : 0);
@@ -499,7 +523,7 @@ function step(dt) {
     const turn = (keys.has('arrowleft') || keys.has('q') ? 1 : 0) - (keys.has('arrowright') || keys.has('e') ? 1 : 0);
     if (turn) { look.yaw += turn * KEY_TURN * dt; look.yawT = look.yaw; look.yawV = 0; autoYaw = false; }
     if (f || r) {
-        endPath(); guide = null; slowTurn = false; hideHint();
+        endPath(); guide = null; slowTurn = false;
         const sy = Math.sin(look.yaw), cy = Math.cos(look.yaw);
         _w.set(-sy * f + cy * r, -cy * f - sy * r).normalize().multiplyScalar(speedNow());
     } else if (path) {
@@ -507,11 +531,12 @@ function step(dt) {
         const left = pathLen - pathS;
         // carrot: LOOKAHEAD along the path, pulled in until it is in sight
         // (a carrot behind a corner pushes straight into the wall: no slide)
+        const fast = speedNow() / SPEED;   // the carrot and the braking scale with the speed
         let la = LOOKAHEAD, c = pathPoint(Math.min(pathLen, pathS + la));
         while (la > cell && !clearLine(pos.x, pos.y, c[0], c[1], 0)) { la *= 0.6; c = pathPoint(Math.min(pathLen, pathS + la)); }
         _w.set(c[0] - pos.x, c[1] - pos.y);
         const d = _w.length();
-        const sp = speedNow() * Math.min(1, Math.sqrt(Math.max(left, 0) / ARRIVE_R));   // eased arrival
+        const sp = speedNow() * Math.min(1, Math.sqrt(Math.max(left, 0) / (ARRIVE_R * Math.max(1, fast))));   // eased arrival
         if (d > 1e-6) _w.multiplyScalar(sp / d);
         if (left < 0.03 * M && Math.hypot(path.at(-1)[0] - pos.x, path.at(-1)[1] - pos.y) < 0.05 * M) { endPath(); arrived = true; }
         // a guided walk is there when it has (almost) stopped close to the goal
@@ -639,8 +664,43 @@ function showTour(on) {
     if (!on) { hideHint(); if (arrowEl) arrowEl.hidden = true; }
 }
 function hideHint() {
-    hintT = -1;
     if (hintEl) hintEl.hidden = true;
+}
+// The hint ("tap to skip · drag to look") shows only while a guided walk of
+// the tour runs (not yet skipped): never over a panel, never when idle
+function syncHint() {
+    if (!hintEl) return;
+    const want = tour && mode === 'walk' && !!guide && !!path && jumpT < 0;
+    if (hintEl.hidden === want) hintEl.hidden = !want;
+}
+// The skip: a tap (or Enter) during a guided walk speeds it up
+function skipGuide() {
+    if (!guide || !path || jumpT >= 0) return false;
+    jumpT = 0;
+    syncHint();
+    return true;
+}
+// Per frame while a skip runs: the fade; at full black the walker is at the goal
+function updateJump(dt) {
+    if (jumpT < 0) return;
+    const was = jumpT;
+    jumpT += dt;
+    if (was < JUMP_FADE && jumpT >= JUMP_FADE && guide && path) {
+        const g = path.at(-1), st = guide;
+        pos.set(g[0], g[1]); vel.set(0, 0); acc.set(0, 0);
+        endPath(); guide = null; slowTurn = false;
+        const a = aimAt(st.walkLook ?? st.center);
+        look.yaw = look.yawT = a.yaw; look.pitch = look.pitchT = a.pitch; look.yawV = look.pitchV = 0;
+        select(st, false);
+    }
+    const T = 2 * JUMP_FADE + JUMP_HOLD;
+    const o = jumpT < JUMP_FADE ? jumpT / JUMP_FADE : jumpT < JUMP_FADE + JUMP_HOLD ? 1 : Math.max(0, (T - jumpT) / JUMP_FADE);
+    if (jumpT >= T) endJump();
+    else if (fadeEl) { fadeEl.hidden = false; fadeEl.style.opacity = smoother(o).toFixed(3); }
+}
+function endJump() {
+    jumpT = -1;
+    if (fadeEl) { fadeEl.hidden = true; fadeEl.style.opacity = '0'; }
 }
 function showCollect(stop) {
     if (!collectBtn) return;
@@ -734,7 +794,7 @@ function enterWalk(opts = {}) {
     tour = !!opts.tour;
     if (hudEl) hudEl.hidden = false;
     showTour(tour);
-    if (tour && hintEl && !opts.at) { hintT = 0; hintEl.hidden = false; }
+    hideHint();
     updateHud();
     fromPos.copy(camera.position); fromQ.copy(camera.quaternion); fromFov = camera.fov;
     loadGrid().then(() => {
@@ -778,6 +838,7 @@ function leaveInPlace() {
 // (instant: at the next update)
 function exitWalk(viewPos, viewTarget, viewFov, done, instant = false) {
     autoNext = false;
+    endJump();
     selected = null; panel(null); showCollect(null);
     if (hudEl) hudEl.hidden = true;
     showTour(false);
@@ -806,6 +867,7 @@ function startEase(kind, dist, lift) {
 
 function finish() {
     mode = 'off';
+    endJump();
     if (group) group.visible = false;
     if (halos) for (const h of halos) { h.line.visible = false; h.vis.x = h.vis.v = 0; }
     const cb = onDone; onDone = null;
@@ -819,6 +881,7 @@ function update(dt) {
         arrived = false;
         if (dt > 0) step(dt);
         if (arrived) onArrive();
+        updateJump(dt);
         updateRooms();
         walkPose(camera.position, camera.quaternion);
         if (camera.fov !== FOV) { camera.fov = FOV; camera.updateProjectionMatrix(); }
@@ -834,7 +897,7 @@ function update(dt) {
         if (w >= 1) {
             if (mode === 'in') {
                 mode = 'walk';
-                if (autoNext) { autoNext = false; next(true); }
+                if (autoNext) { autoNext = false; next(); }
             }
             else { updateHalos(dt); finish(); return; }
         }
@@ -847,7 +910,7 @@ function update(dt) {
 // (to the next corner of the way there when a wall is in between)
 const _c3 = new THREE.Vector3();
 function updateTour(dt) {
-    if (hintT >= 0 && (hintT += dt) > HINT_TIME) hideHint();
+    syncHint();
     if (!arrowEl) return;
     arrowT -= dt;
     if (arrowT <= 0) {
@@ -902,7 +965,9 @@ export function onTap(px, py) {
         const d = _p.distanceTo(ray.ray.origin);
         if (d < bestD && seeLine(pos.x, pos.y, h.room.x, h.room.z, h.end)) { best = st; bestD = d; }
     }
-    if (best) { guide = null; slowTurn = false; hideHint(); select(best); return { ok: true, object: best.id }; }
+    if (best) { guide = null; slowTurn = false; select(best); return { ok: true, object: best.id }; }
+    // a guided walk: a tap on the floor skips (the walk speeds up), it does not turn off the way
+    if (skipGuide()) return { ok: true, skip: true };
     // floor plane, in room units
     const o = worldToRoom(_v.copy(ray.ray.origin)), o2 = worldToRoom(_p.copy(ray.ray.origin).add(ray.ray.direction));
     const dy = o2.y - o.y;
@@ -924,7 +989,11 @@ export function onDrag(dx, dy) {
 // The keys held down (lower case): WASD / arrows walk, Q/E and left/right turn
 export function setKeys(set) { keys = set; }
 // Enter (not on a link or button): "Next object" in the tour
-export function onEnter() { if (tour && mode === 'walk' && nextBtn && !nextBtn.hidden) next(); }
+// (during a guided walk: the skip)
+export function onEnter() {
+    if (mode !== 'walk' || skipGuide()) return;
+    if (tour && nextBtn && !nextBtn.hidden) next();
+}
 
 // Phones: a lower pixel ratio ceiling while walking (explore.js events)
 if (isMobile) window.addEventListener('journey:explore', e => setPixelRatioCap(e.detail?.phase === 'enter' ? WALK_PIXEL_RATIO : null));
@@ -944,7 +1013,7 @@ window.__walk = {
         if (mode === 'walk') walkPose(camera.position, camera.quaternion);
     },
     walkTo(x, z) { return setPath(x, z); },
-    next,
+    next, skip: skipGuide,
     get guide() { return guide?.id ?? null; },
     cellInfo(x, z) { const ix = cx(x), iz = cz(z); return { free: free(ix, iz), clear: clearAt(ix, iz), CL_MIN, path: path?.map(p => p.map(v => +v.toFixed(3))) }; },
     // run the walker offline with a fixed dt (no frames needed)

@@ -105,10 +105,11 @@
            front of the bay windows while the flat loads. Tap or press Enter,
            and you walk through the flat to four splat objects that stand for
            my Giraffe360 R&amp;D work, in this order: the windows and mirrors
-           fix, the 3DGS pipeline, meshes and viewers, and benchmarking. The
+           fix, meshes and viewers, the 3DGS pipeline, and benchmarking. The
            walk to the first one starts by itself; each opens a short panel,
            and you can collect it. "Next object" (or Enter) walks to the
-           next one; tap the floor to walk, drag to look. A "depth" switch
+           next one; a tap on the way skips the walk; tap the floor to walk,
+           drag to look. A "depth" switch
            shows the whole flat as depth (colour = distance from your eye).
            Two more stops are reached by link only: the team task board (my
            MCP server) and a bedroom drawn as depth. "Skip the flat" (or
@@ -263,8 +264,9 @@
             <button type="button" class="walk-btn walk-link walk-skip">Skip the flat &rarr;</button>
         </div>
     </div>
-    <p class="walk-hint" role="status" hidden>Tap the floor to walk · drag to look<span class="walk-hint-keys"> · WASD</span></p>
+    <p class="walk-hint" role="status" hidden>Tap<span class="walk-hint-keys"> or press Enter</span> to skip · drag to look</p>
     <div class="walk-arrow" hidden aria-hidden="true"></div>
+    <div class="walk-fade" hidden aria-hidden="true"></div>
 
     <script type="module" src="js/stopPanel.js"></script>
     <script type="module" src="js/room.js"></script>
