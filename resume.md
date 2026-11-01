@@ -6,7 +6,7 @@ R&D Engineer — 3D reconstruction (Gaussian splatting) · Giraffe360 · Riga, L
 
 ilya.safronos@gmail.com · [GitHub](https://github.com/ilyaeis) · [LinkedIn](https://www.linkedin.com/in/i%C4%BCja-safronovs-eis)
 
-I work on 3D reconstruction and computer vision: mainly Gaussian splatting, and a bit of meshes. At Giraffe360 I build our splat pipeline from sparse panoramas and implement published methods in PyTorch and CUDA. Two of my results are in production: the windows and mirrors fix and the exterior orbital videos. I also work on depth models, 3D camera paths, LLM APIs and tools that help a team build faster.
+I work on 3D reconstruction and computer vision: mainly Gaussian splatting, and a bit of meshes. At Giraffe360 I build our splat pipeline from sparse panoramas and implement published methods in PyTorch and CUDA. In production: the windows and mirrors fix, my densification changes, the exterior orbital videos and the looped drone. I also work on depth models, 3D camera paths, LLM APIs and tools that help a team build faster.
 
 ## Experience
 
