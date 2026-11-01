@@ -1,9 +1,8 @@
 // ── Orchestrator ───────────────────────────────────────────────────
 // Tap-driven state machine over a pre-built static world (world.js).
-// The trail is a short fading comet: it travels Bezier arcs between
-// stops, swings past attractor "galaxies" (scenery), and at planar stops
-// draws the element's trajectory once then loops around it while the
-// user views. The trait text is the exception: it spirals and flies on.
+// The trail is a short fading comet: it travels Bezier arcs and the
+// tunnel centreline between stops, and at planar stops draws the
+// element's trajectory once then loops around it while the user views.
 
 import * as THREE from 'three';
 import {
@@ -19,11 +18,9 @@ import * as portal from './portal.js';
 import * as explore from './explore.js';
 import { setPhaseOwner } from './input.js';
 import {
-    buildWorld, finishWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
-    getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL, fitDistance, viasFor, flatExitVias, apartment, setHaloFocus, snapHaloFocus,
-    graphToWorld, graphFrameTarget
+    buildWorld, finishWorld, stops, StopType, planePointToWorld, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
+    getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL, fitDistance, viasFor, flatExitVias, apartment, setHaloFocus, snapHaloFocus
 } from './world.js';
-import { EARLY_TAP as GRAPH_EARLY_TAP, CAM_PAN as GRAPH_CAM_PAN, PEN_INTENSITY as GRAPH_PEN_INTENSITY } from './eduGraph.js';
 
 export { CONTACT_EMAIL };
 
@@ -123,13 +120,6 @@ const CAM_PATH_SAMPLES = 9;          // path samples per frame for that smoothin
 const TRAVEL_ARC_SAMPLES = 2048;     // arc-length table samples per leg (even speed, no jump at leg joins; fine, so the camera jerk stays low at high frame rates)
 const TUNNEL_ARC_SAMPLES = 1024;     // tunnel and spiral legs are long and curved: a finer table keeps the speed smooth
 
-// Fly-by: a scenery galaxy within this corridor of the flight line (and
-// not too near either end) becomes a via point the comet swings past
-const VIA_BAND = [0.15, 0.85];       // projection range along the flight line
-const VIA_MAX_PERP = 0.6;            // × flight distance
-const VIA_RIM = 0.7;                 // via point sits at this × galaxy radius from its center
-const VIA_JITTER = 0.8;              // random offset so it never dead-centers
-
 // Hover departures (text / rocks / landing): the first Bezier control
 // point is where the comet would be HOVER_LOOKAHEAD seconds into its
 // loop, so the exit flows out of the hover motion instead of kinking.
@@ -155,16 +145,8 @@ const TRACE_LINK_INTENSITY = 0.4;    // faint pen-travel strokes (c=0)
 const VIEW_TAP_DELAY = {
     [StopType.PROJECT]: 0.5,
     [StopType.OBJECT]: 0.5,
-    [StopType.LANDING]: 1.5,
-    [StopType.GRAPH]: GRAPH_EARLY_TAP
+    [StopType.LANDING]: 1.5
 };
-
-// The timeline graph (one GRAPH stop, four frames; eduGraph.js): the pen
-// writes the comet trail at this rate (points per second: the trail is
-// COMET_CAPACITY points long, so about 1.2 s of pen shows)
-const GRAPH_TRAIL_HZ = COMET_CAPACITY / 1.2;
-// Frame 4 (Giraffe360): the panel says how many R&D objects the visitor found (walk.js keeps them)
-const COLLECTED_KEY = 'rnd.collected';
 
 // Object stops (the apartment): the comet traces the halo ring once, then
 // rides it, slowing from the trace pace to the loop pace (no speed jump)
@@ -200,7 +182,7 @@ const FLYBY_CAM_DIST = 4.6;          // chase distance while framing a fly-by (t
 const SHIFT_OFF_DELAY = 1.2;         // s: a flight with a fly-by drops the panel shift this late (after the hand-off turn)
 const FLYBY_GLOW = 0.9;              // extra comet intensity while it spirals round a fly-by
 const TUNNEL_EASE_TIME = 1.8 * TUNNEL_TIME_SCALE; // s to reach (and leave) the cruise pace in a tunnel flight
-const WARP_IN_EASE = 2.0;            // × that on the warp in: the comet turns from the graph to the throat while still slow (the chase camera swings less)
+const WARP_IN_EASE = 2.0;            // × that on the warp in: the comet leaves the flat and turns to the throat while still slow (the chase camera swings less)
 let tunnelEase = TUNNEL_EASE_TIME;   // this flight's ease time
 const FLYBY_CAM_L = 20;              // s: half-width of the fly-by framing (C2 bump round the viz)
 const FLYBY_CAM_LAG = 2;             // s: the camera anchor hangs back this far behind the comet at the fly-by
@@ -307,8 +289,8 @@ export function init({ deferViz = false } = {}) {
     }
     else if (goTarget?.navigable) {     // ?go=<id>[&mode=fly|jump]
         const i = goTarget.index;
-        if (q.get('mode') === 'fly' && i >= 1 && (goTarget.frame ?? 1) === 1) flyTo(i);
-        else jumpTo(i, goTarget.frame ?? 1);
+        if (q.get('mode') === 'fly' && i >= 1) flyTo(i);
+        else jumpTo(i);
     }
     else if (q.has('stop') && Number.isInteger(stopQ) && stops[stopQ]) jumpTo(stopQ);
     else if (q.has('leg') && Number.isInteger(legQ) && legQ >= 1 && stops[legQ]) { jumpTo(legQ - 1); setupTravel(legQ); }
@@ -319,8 +301,7 @@ export function init({ deferViz = false } = {}) {
         // main.js turns its click into skipTheWalk()
         introLinksEl = document.querySelector('.intro-links');
         const skip = introLinksEl?.querySelector('.intro-skip');
-        const after = stops[afterFlatIndex()];
-        const skipHref = '?go=' + (after.frames?.[0].id ?? after.id);
+        const skipHref = '?go=' + stops[afterFlatIndex()].id;
         if (skip) {
             skip.href = skipHref;
             introLinksEl.hidden = false;
@@ -376,7 +357,7 @@ function afterFlatIndex() {
 // Dev only (dev/camlog.html): step without drawing, and read the state
 export function setSkipRender(v) { skipRender = v; }
 export function getState() {
-    return { phase, stopIndex, userDragging, phaseTime, frame: stops[stopIndex]?.graph ? graphK : undefined };
+    return { phase, stopIndex, userDragging, phaseTime };
 }
 // Music (music.js, via main.js): comet speed, tunnel rush and warp, each 0..1
 const audioState = { speed: 0, rush: 0, warp: 0 };
@@ -392,26 +373,14 @@ export function devState() {
 function emitStop(phaseName, extra = null) {
     const stop = stops[stopIndex];
     if (!stop) return;
-    // the graph: the current frame's id, universe and panel (+ frame)
-    const f = stop.frames?.[graphK - 1];
-    const panel = f ? framePanel(f, graphK) : stop.panel || null;
+    const panel = stop.panel || null;
     window.dispatchEvent(new CustomEvent('journey:stop', {
         detail: { phase: phaseName, index: stopIndex, type: stop.type, panel,
-                  id: f?.id ?? stop.id, universe: f?.universe ?? stop.universe, label: panel?.title ?? stop.id,
-                  ...(f ? { frame: graphK } : {}), ...extra }
+                  id: stop.id, universe: stop.universe, label: panel?.title ?? stop.id, ...extra }
     }));
 }
-// Frame 4 (Giraffe360) adds "n / 6 R&D objects found in the flat"
-function framePanel(f, k) {
-    if (k !== stops[stopIndex].frames.length) return f.panel;
-    const ids = new Set(stops.filter(st => st.type === StopType.OBJECT).map(st => st.id));
-    let n = 0;
-    try { n = JSON.parse(localStorage.getItem(COLLECTED_KEY) || '[]').filter(id => ids.has(id)).length; } catch { /* no storage */ }
-    return { ...f.panel, items: [...f.panel.items, { text: `${n} / ${ids.size} R&D objects found in the flat` }] };
-}
-
 // Land the comet at stop n instantly (?stop, ?leg, ?go, journey.goTo jump).
-export function jumpTo(n, frame = 1) {
+export function jumpTo(n) {
     finishWorld();
     if (stops[n].type === StopType.OBJECT && explore.hasWalker() && phase !== Phase.EXPLORE) { walkAt(n); return; }   // objects are walked to
     explore.leaveNow();
@@ -422,9 +391,7 @@ export function jumpTo(n, frame = 1) {
     setHaloFocus(stop); snapHaloFocus();
     trail.fade = 1; trail.attractorIdx = stop.paletteIdx ?? 0; clearTrail(trail); addTrailToScene(trail);
     traceWorld(stop, 0, cometPos);
-    // the graph: frame `frame` (its own camera target), grown at once past frame 1
-    graphStartFrame = stop.graph ? frame : 1;
-    const c = stop.graph ? graphFrameTarget(stop, frame, _vD) : stop.center;
+    const c = stop.center;
     worldPos.copy(c);
     cam.setOrbitCenter(c.x, c.y, c.z);
     controls.target.copy(c);
@@ -439,7 +406,7 @@ export function jumpTo(n, frame = 1) {
 function setInside(f) { setInsideFade(f); }
 
 // Stops with an HTML panel beside them (screen shift, fit)
-function hasPanel(stop) { return stop.type === StopType.PROJECT || stop.type === StopType.OBJECT || stop.type === StopType.GRAPH; }
+function hasPanel(stop) { return stop.type === StopType.PROJECT || stop.type === StopType.OBJECT; }
 
 function showTapPrompt(kind = 'continue') {
     if (!tapPromptEl) return;
@@ -493,7 +460,6 @@ const ROCK_FIT_BOTTOM = 0.55;        // bottom layout: ~55% of the height
 // for the panel, text backs off for the helix, objects stay inside the
 // walls: at most stop.fitMax).
 function fitFor(stop) {
-    if (stop.type === StopType.GRAPH) return stop.camDist;   // the graph's own fit (world.js buildGraphStop)
     if (!hasPanel(stop)) return fitDistance(stop.halfW, stop.halfH);
     const [w, h] = cam.isPanelSideLayout() ? [ROCK_FIT_SIDE, 1] : [1, ROCK_FIT_BOTTOM];
     const fit = fitDistance(stop.fitHalfW ?? stop.halfW, stop.fitHalfH ?? stop.halfH, w, h);   // a portal stop takes in its rim
@@ -710,31 +676,6 @@ function buildFirstLeg(target) {
     return buildLeg(cometPos, cometDir, target);
 }
 
-// ── Fly-by pick ────────────────────────────────────────────────────
-// A scenery galaxy sitting near the corridor between the comet and its
-// target (not too close to either end) becomes a via point. Returns the
-// galaxy.
-function pickViaScenery(from, to) {
-    _vA.subVectors(to, from);
-    const abLenSq = _vA.lengthSq();
-    if (abLenSq < 1e-6) return null;
-    const abLen = Math.sqrt(abLenSq);
-
-    let best = null;
-    let bestPerp = VIA_MAX_PERP * abLen;
-    for (const g of scenery) {
-        const s = (_vB.subVectors(g.center, from).dot(_vA)) / abLenSq;
-        if (s < VIA_BAND[0] || s > VIA_BAND[1]) continue;
-        _vec3.copy(from).addScaledVector(_vA, s); // closest point on the line
-        const perp = _vec3.distanceTo(g.center);
-        if (perp < bestPerp) {
-            bestPerp = perp;
-            best = g;
-        }
-    }
-    return best;
-}
-
 // ── Face-on camera alignment ───────────────────────────────────────
 // Aim the camera at a planar stop: compute the face-on position once,
 // then glide toward it each frame until arrival — unless the user
@@ -786,7 +727,7 @@ export function leaveFlat() {
     const dest = afterFlatIndex();
     setNavSkip(false);
     if (REDUCED_MOTION.matches) {
-        // no lift flight: straight to the graph (the walk's FOV goes back at once)
+        // no lift flight: straight to the first project (the walk's FOV goes back at once)
         if (phase === Phase.EXPLORE) { emitStop('leave', { to: dest }); explore.leaveInPlace(); }
         camera.fov = baseFov; camera.updateProjectionMatrix();
         jumpTo(dest);
@@ -866,7 +807,7 @@ export function setupTravel(destIdx) {
     flyby = null;
     easeC2 = inTunnel || toTunnel;
     if (!inTunnel && toTunnel) tunnel.setUnwrapRef(0);   // the flight heads for the tunnel start (see tunnel.sOf)
-    const vias = fromFlat ? flatExitVias(cometPos, dest.center) : viasFor(from, dest);
+    const vias = fromFlat ? flatExitVias(cometPos, dest) : viasFor(from, dest);
     if (inTunnel || toTunnel) buildTunnelLegs(from, dest, inTunnel, toTunnel, vias);
     else buildOpenLegs(vias);
 
@@ -966,8 +907,8 @@ function pushCentre(sA, sB, endPos = null) {
 
 // Flights that touch the tunnel: warp in (open space -> tunnel), hops
 // inside it, warp out (tunnel -> open space).
-// Warp in from the graph: straight onto the tunnel start (vias, if any,
-// first). Warp out: the exit comes home behind the apartment,
+// Warp in from the flat (or the landing): out over the window wall (vias),
+// then onto the tunnel start. Warp out: the exit comes home behind the apartment,
 // over the roof (via), then a dive through the cut ceiling to the landing.
 function buildTunnelLegs(from, dest, inTunnel, toTunnel, vias) {
     if (!inTunnel) {
@@ -1029,41 +970,11 @@ function buildViaLegs(vias, target) {
     return null;
 }
 
-// Open space: swing past a scenery galaxy when one sits near the flight line.
-// With vias (out of the flat) there is no galaxy (it would sit indoors).
+// Open space (dev only: ?leg between objects without walk.js): through the
+// vias, if any, else one leg
 function buildOpenLegs(vias = []) {
-    const fromStop = stops[stopIndex];
-    const fromRoom = fromFlat || fromStop?.type === StopType.OBJECT || fromStop?.type === StopType.LANDING;
-    if (vias.length) {
-        const g = fromRoom ? null : pickViaScenery(cometPos, vias[0].p);
-        if (g) vias.unshift({ p: galaxyViaPoint(g, vias[0].p), dir: null });
-        buildViaLegs(vias, _targetPos);
-        return;
-    }
-    const via = pickViaScenery(cometPos, _targetPos);
-    if (via) {
-        const viaPos = galaxyViaPoint(via, _targetPos);
-        const leg1 = buildFirstLeg(viaPos);
-        // Cross the via along the mean of the ways in and out (a random
-        // crossing made a tight S-bend there: acceleration spikes mid-flight),
-        // and depart it along the same direction — smooth join
-        _vec3.subVectors(viaPos, cometPos).normalize().add(_vA.subVectors(_targetPos, viaPos).normalize()).normalize();
-        leg1.p2.copy(viaPos).addScaledVector(_vec3, -VIA_PULL * leg1.p0.distanceTo(viaPos));
-        travelLegs.push(leg1, buildLeg(viaPos, _vec3, _targetPos, true));
-    } else {
-        travelLegs.push(buildFirstLeg(_targetPos));
-    }
-}
-
-// Near edge of the galaxy, not its center: the closest point on the
-// flight line (comet to `to`), pushed back out to the rim on that side
-function galaxyViaPoint(g, to) {
-    _vA.subVectors(to, cometPos);
-    const s = _vB.subVectors(g.center, cometPos).dot(_vA) / _vA.lengthSq();
-    _vec3.copy(cometPos).addScaledVector(_vA, s);
-    return _vec3.sub(g.center).normalize()
-        .multiplyScalar(g.radius * VIA_RIM).add(g.center).clone()
-        .add(new THREE.Vector3(rand(-VIA_JITTER, VIA_JITTER), rand(-VIA_JITTER, VIA_JITTER), rand(-VIA_JITTER, VIA_JITTER)));
+    if (vias.length) buildViaLegs(vias, _targetPos);
+    else travelLegs.push(buildFirstLeg(_targetPos));
 }
 
 // ── Update ─────────────────────────────────────────────────────────
@@ -1382,7 +1293,6 @@ function enterView() {
     tracing = true;    // draw the element's trajectory once before looping
     traceCursor = 0;
     traceAcc = 0;
-    if (stop.graph) enterGraph(stop);
 
     emitStop('enter');
     enterPhase(Phase.VIEW);
@@ -1523,7 +1433,6 @@ function loopPlanar(stop, dt) {
 
 function updateView(dt) {
     const stop = stops[stopIndex];
-    if (stop.graph) { updateGraph(stop, dt); return; }
 
     // Face the stop during the first moments, then hand the camera
     // back so the user can zoom/rotate freely
@@ -1557,83 +1466,6 @@ function updateView(dt) {
         setupTravel(stopIndex === stops.length - 1 ? afterFlatIndex() : stopIndex + 1);
     }
 }
-
-// ── GRAPH (the timeline: four frames, a tap per frame; eduGraph.js) ──
-// The comet flies in to where the pen enters frame 1 (points2d[0]). In VIEW
-// the graph plays its frame (eduGraph: the pen draws the axis, sweeps up
-// the new column, then idles round the window) and the pen writes the comet
-// trail. A tap before GRAPH_EARLY_TAP waits for it; before the frame's end
-// it grows the frame at once; after it the next frame starts from where the
-// comet is, and the camera pans (orbit centre and camera move together, so
-// a drag rotation stays) to the next window over GRAPH_CAM_PAN. After frame
-// 4 a tap flies on (the warp into the tunnel). Each frame sends its own
-// journey:stop 'enter' (id, universe, panel, frame).
-let graphK = 1;                 // the frame now (emitStop)
-let graphStartFrame = 1;        // the frame enterView starts (jumpTo)
-const graphTarget = new THREE.Vector3(), graphPanFrom = new THREE.Vector3(), graphPanTo = new THREE.Vector3();
-const _gp = new THREE.Vector3(), _gq = new THREE.Vector3();
-
-function enterGraph(stop) {
-    graphK = graphStartFrame;
-    graphStartFrame = 1;
-    stop.graph.start(graphK, null);
-    if (graphK > 1) stop.graph.snap();       // a jump lands on the grown frame
-    tracing = false;
-    graphFrameTarget(stop, graphK, graphTarget);
-    graphPanFrom.copy(graphTarget); graphPanTo.copy(graphTarget);
-    cam.setOrbitCenter(graphTarget.x, graphTarget.y, graphTarget.z);
-    if (graphK > 1) camAligned = true;         // a jump: the camera is at this frame's pose already
-}
-
-function updateGraph(stop, dt) {
-    const G = stop.graph;
-    stepFaceAlign(dt);
-    const t0 = G.time;
-    G.update(dt);
-    const t1 = G.time;
-    // the pen writes the trail (sub-stepped, dt-based)
-    trail.pointIntensity = GRAPH_PEN_INTENSITY;
-    const n = Math.max(1, Math.ceil(dt * GRAPH_TRAIL_HZ));
-    for (let i = 1; i <= n; i++) {
-        graphToWorld(stop, G.cometAt(t0 + (t1 - t0) * i / n, _gp), _gq);
-        pushPointWorld(trail, _gq.x, _gq.y, _gq.z);
-    }
-    trail.pointIntensity = 1.0;
-    graphToWorld(stop, G.cometAt(t1, _gp), cometPos);
-    graphToWorld(stop, G.cometAt(t1 + 0.05, _gp), _gq);
-    if (_gq.distanceToSquared(cometPos) > 1e-10) cometDir.subVectors(_gq, cometPos).normalize();
-    // the pan to this frame's window: the camera moves with the orbit centre
-    _gq.lerpVectors(graphPanFrom, graphPanTo, THREE.MathUtils.smootherstep(t1, 0, GRAPH_CAM_PAN));
-    _gp.subVectors(_gq, graphTarget);
-    if (_gp.lengthSq() > 0) {
-        graphTarget.copy(_gq);
-        camera.position.add(_gp); controls.target.add(_gp);
-        faceCenter.add(_gp); textFacePos.add(_gp);
-    }
-    cam.setOrbitCenter(graphTarget.x, graphTarget.y, graphTarget.z);
-    worldPos.copy(graphTarget);
-
-    const ready = t1 >= G.end && camAligned;
-    if (ready) showTapPrompt();
-    if (!tapPending || t1 < GRAPH_EARLY_TAP) return;   // an early tap waits for GRAPH_EARLY_TAP
-    tapPending = false;
-    if (t1 < G.end) { G.snap(); clearTrail(trail); return; }   // grow the frame at once
-    if (!camAligned) return;
-    hideTapPrompt();
-    if (graphK < G.NFRAMES) {
-        // the next frame, from where the comet is
-        graphK++;
-        G.start(graphK, stop.graph.group.worldToLocal(_gp.copy(cometPos)));
-        graphPanFrom.copy(graphTarget);
-        graphFrameTarget(stop, graphK, graphPanTo);
-        emitStop('enter');
-    } else {
-        setupTravel(stopIndex === stops.length - 1 ? afterFlatIndex() : stopIndex + 1);
-    }
-}
-
-// The agent API: the graph frame now (0 elsewhere), and one frame back (grown)
-export function graphFrame() { return stops[stopIndex]?.graph && phase === Phase.VIEW ? graphK : 0; }
 
 // ── Landing mail hit-plane ─────────────────────────────────────────
 // Built by world.js; clickable only while viewing the contact landing

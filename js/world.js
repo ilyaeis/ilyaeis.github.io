@@ -1,100 +1,25 @@
 // ── Static World ───────────────────────────────────────────────────
 // Builds every journey stop as pre-existing geometry at load. The site
-// starts in a real apartment (a Gaussian splat, room.js renders it): six
-// object stops (the Giraffe360 R&D areas), each a splat object with a halo
-// ring. The comet leaves over the window wall to the timeline graph (one
-// GRAPH stop, eduGraph.js: traits, school, AI Talent, university,
-// Giraffe360, four frames), then warps into the projects tunnel
-// (tunnel.js): the project stops sit on its centreline, each with a live
-// visualization (projectViz.js); smaller fly-by projects hang on the wall.
-// The tunnel brings it back over the apartment roof, and it dives into the
-// living room to the contact landing. Strange attractors hang beside the
-// open-space flight legs as dim, slowly spinning scenery ("galaxies").
+// starts in a real apartment (a Gaussian splat, room.js renders it): object
+// stops (the Giraffe360 R&D areas), each a splat object with a halo ring
+// (and one room drawn as depth). The comet lifts out over the window wall
+// and warps into the projects tunnel (tunnel.js): the project stops sit on
+// its centreline, each with a live visualization (projectViz.js); a smaller
+// fly-by project hangs on the wall. The tunnel brings it back over the
+// apartment roof, and it dives into the living room to the contact landing.
 
 import * as THREE from 'three';
-import { ATTRACTORS, rk4Step, isMobile, getPaletteColor, camera, controls, renderer, composer } from './attractors.js';
+import { ATTRACTORS, getPaletteColor, camera, controls, renderer, composer } from './attractors.js';
 import { generateTextLines } from './strokeFont.js';
 import * as tunnel from './tunnel.js';
 import { buildProjectViz, FLYBY_TEXT_BOTTOM, VIZ_HALF_W, VIZ_HALF_H, RIM_OUTER_R } from './projectViz.js';
-import { createGraph, fitGraph } from './eduGraph.js';
 
-export const StopType = { LANDING: 2, PROJECT: 3, OBJECT: 4, GRAPH: 5 };   // (0 and 1 were the old trait text and rocks)
+export const StopType = { LANDING: 2, PROJECT: 3, OBJECT: 4 };   // (0, 1 and 5 were the old trait text, rocks and timeline graph)
 
 // ── Content ────────────────────────────────────────────────────────
 export const CONTACT_EMAIL = 'ilya.safronos@gmail.com';
 const LANDING_LINES = ['GET IN TOUCH', CONTACT_EMAIL];
 const MILESTONES = [
-    { label: 'RVKG', panel: {
-        title: 'Riga State Classical Gymnasium',
-        subtitle: 'Programming and Mathematics track · Riga',
-        items: [
-            { text: 'Latvian state mathematics olympiads; the Small Mathematics University.' },
-            { text: 'A school project became the Offline Graphing Calculator (2023).' }
-        ],
-        more: { href: 'resume.html#rvkg', label: 'details in the resume' }
-    }},
-    { label: 'RTU', panel: {
-        title: 'Riga Technical University',
-        subtitle: 'Professional Bachelor, Financial Engineering',
-        dates: '2024 – 2028 (expected)',
-        items: [
-            { text: 'Maths, statistics and programming applied to finance.' },
-            { text: 'Econometrics, stochastic analysis, Monte Carlo methods, time series.' }
-        ],
-        more: { href: 'resume.html#rtu', label: 'details in the resume' }
-    }},
-    { label: 'AI TALENT', panel: {
-        title: 'AI Talent Program',
-        subtitle: 'Ponder · selective, entry by test and interview',
-        dates: 'Nov 2024 – Jan 2025',
-        items: [
-            { text: 'It led to my R&D Engineer role at Giraffe360.' },
-            { text: 'C++, Python and AI theory: CNNs, transformers, GANs, VAEs, reinforcement learning.' }
-        ],
-        more: { href: 'https://www.ponder.lv/mi-programma', label: 'ponder.lv' }
-    }},
-    { label: 'GIRAFFE360', panel: {
-        title: 'Giraffe360',
-        subtitle: 'R&D Engineer · 3D reconstruction and computer vision',
-        dates: '2025 – present',
-        items: [
-            { text: 'Solved blurry windows and mirrors; in production since June 2026.' },
-            { text: '3DGS pipeline from sparse panoramas, in PyTorch and CUDA.' }
-        ],
-        more: { href: 'resume.html#giraffe360', label: 'details in the resume' }
-    }},
-    { label: 'BALANCER', panel: {
-        title: 'load-balancing-experiments',
-        subtitle: 'RTU networks project · Python',
-        dates: '2026',
-        items: [
-            { text: 'DNS round robin and anycast, measured from Riga.' },
-            { text: 'Queueing simulation of load-balancing policies, including power of two choices.' },
-            { text: 'Consistent, rendezvous and Maglev hashing; a mini load balancer with health checks.' }
-        ],
-        more: { href: 'https://github.com/ilyaeis/load-balancing-experiments', label: 'github' }
-    }},
-    { label: 'FLOW', panel: {
-        title: 'Flow — workout tracker app',
-        subtitle: 'Offline workout tracker · Dart/Flutter · private',
-        dates: '2026',
-        items: [
-            { text: 'In daily use: live set timers, volume, load (ACWR), records.' },
-            { text: 'JSON, CSV and PDF export; CI with golden-image tests.' }
-        ],
-        more: { href: 'resume.html#flow', label: 'details in the resume' }
-    }},
-    { label: 'MONTE CARLO', panel: {
-        title: 'Monte Carlo Methods in Finance',
-        subtitle: 'Python · NumPy · SciPy · pandas · arch',
-        dates: '2026',
-        items: [
-            { text: 'Priced options by simulation and checked them against Black-Scholes; variance reduction cut the variance by up to 1,900x.' },
-            { text: 'Fitted GARCH volatility to S&P 500 returns and backtested three 99% VaR models over 12 years (Kupiec test).' },
-            { text: 'Efficient frontier from 30,000 random portfolios and CAPM betas. A study project from my RTU Financial Engineering courses.' }
-        ],
-        more: { href: 'https://github.com/ilyaeis/monte-carlo-finance', label: 'github' }
-    }},
     { label: 'NEAT', panel: {
         title: 'projects_with_NEAT',
         subtitle: 'Neuroevolution · Python',
@@ -147,7 +72,7 @@ const MILESTONES = [
             { text: 'Shipped 1 June 2026 after 140+, then 600+ experiments.' },
             { text: 'Fixed blurry windows, outdoor views and mirrors.' }
         ],
-        more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post' }
+        more: { href: 'https://www.instagram.com/p/DZsNRB8o772/', label: 'Giraffe360 post: window and mirror renders before / after' }
     }},
     { label: 'BENCHMARKING', panel: {
         title: 'Benchmarking and evaluation',
@@ -195,32 +120,17 @@ const TEXT_SCALE = 0.22;          // world units per 2D unit (text/landing)
 const STROKE_INTENSITY = 1.5;            // bold letter strokes (HDR → bloom)
 const LINK_INTENSITY = 0.35;             // faint pen-travel strokes
 
-// Attractor scenery ("galaxies"): static dim curves beside the flight legs
-const SCENERY_POINTS = isMobile ? 6000 : 12000;
-const SCENERY_WARMUP = 500;              // integration steps before recording
-const SCENERY_ALPHA = 0.28;              // per-point alpha
-const SCENERY_SCALE_FRAC = 0.16;         // curve radius ≈ frac × leg length
-const SCENERY_SCALE_MIN = 2.0;           // world units (curve radius)
-const SCENERY_SCALE_MAX = 6.0;
-const SCENERY_STANDOFF = 0.35;           // center sits this × leg length beside the leg midpoint
-const SCENERY_STANDOFF_MIN = 5.0;
-const SCENERY_SPIN = 0.04;               // rad/s about local Y
-const SCENERY_TRIES = 24;                // random angles round the leg; the one farthest from the stops' views wins
-const PANEL_FIT = [0.5, 0.55];           // a stop's view share beside its panel (orchestrator ROCK_FIT_SIDE / ROCK_FIT_BOTTOM): the farthest VIEW camera
-// leg i = flight into stops[i]. One galaxy on the leg into the graph (out
-// of the flat); none indoors, on the warp into the tunnel or inside it, or
-// on the roof dive. Attractor k % ATTRACTORS.length.
-const SCENERY_LEGS = [];   // filled from ROUTE below
-
 // Projects tunnel (tunnel.js): entry point E = apartment window + e1 × TUNNEL_HOP.
 // Along s: the warp throat at 0, a rush, the first fly-by at TUNNEL_RUSH,
-// then project stop, fly-by, stop ... each FLYBY_GAP apart, then the exit.
+// then project stop, fly-by, stop ... each FLYBY_GAP apart (two stops with
+// no fly-by between them: STOP_GAP), then the exit.
 // The middle of every gap is a fast zone (the comet rushes, the tunnel
 // straightens there).
 const TUNNEL_HOP = [30, 34];
 const TUNNEL_RUSH = 100;                  // s of the first fly-by (~2 s of rush after the warp in)
 const FLYBY_GAP = 90;                    // s between a fly-by and the next project stop (and stop -> fly-by)
-const TUNNEL_EXIT_AFTER = 110;           // the tunnel ends this far after the last stop (a rush before the warp out)
+const STOP_GAP = 180;                    // s between two stops with no fly-by between them (135 or 90: the hop arrival turned the camera at up to 100-107 deg/s)
+const TUNNEL_EXIT_AFTER = 150;           // the tunnel ends this far after the last stop (a rush before the warp out; at 110 the shorter two-stop tunnel bent the warp out to 160-198 u/s2)
 const FAST_ZONE_RAMP = 48;               // s: speed / straightness ramps at each end of a fast zone
 const FAST_ZONE_MARGIN = [4, 10, 24];    // fast zones end this far from the throat / a stop or fly-by / the exit (slow there: spiral, framing, arrival, mouth)
 const TUNNEL_CLEAR = 15;                 // other stops stay this far from the tunnel axis
@@ -235,12 +145,6 @@ const PROJECT_DENSITY = 200;             // 2D stroke points per unit (trace spe
 // the comet spirals round each one (orchestrator)
 const FLYBY_SCALE = 0.8;
 const FLYBY_SIDE = 2.1;                  // viz centre this far beside the axis (left, right, left): the camera passes it, not through it
-
-// The graph hops far from the apartment in a random 3D direction (lightly
-// biased outward), never closer than MIN_SEPARATION to it.
-const MIN_HOP = 34;
-const MAX_HOP = 42;
-const MIN_SEPARATION = 26;
 
 // ── Apartment (universe 'rnd' and the landing) ─────────────────────
 // A Gaussian splat of a real apartment (room.js renders it), placed once as
@@ -322,75 +226,50 @@ const HALO_INTENSITY = 0.8;              // colour × this (the text strokes use
 const HALO_FADE_TIME = 0.5;              // s: a ring fades in (out) as its stop becomes (stops being) the focus
 const OBJECT_PAD = 0.15;                 // × height: framing room above and below the object
 const OBJECT_FRAME = 1.12;               // × the halo / object half width: framing room beside it (the fit)
-// The rocks after the apartment (education): placed once the apartment and
-// the tunnel exist, clear of both, as one chain that turns smoothly back to
-// the tunnel throat (placeAfterApartment)
-const AFTER_TRIES = 1500;
-const MAX_PITCH = 0.55;                  // |y| of hop direction — keeps text upright
-
 // Overall outward drift of the journey
 const journeyDir = new THREE.Vector3(0.45, 0.08, -0.89).normalize();
 
-// Visit order: the work first (the Giraffe360 rock, then the apartment of
-// its R&D objects), then the education rocks, the projects tunnel and the
-// contact landing. Planar stops carry their own paletteIdx (into the
-// ATTRACTORS table) so every scene glows in a different color — the rocks
-// share one palette.
-// The text block is one stop; the comet traces it, spirals around it and
-// flies on without a tap (orchestrator).
+// Visit order: the apartment's object stops (the tour walks the ones
+// without `tour: false` in this order; the other two are reached by ?go),
+// the projects tunnel and the contact landing. Each stop carries its own
+// paletteIdx (into the ATTRACTORS table).
 const ROUTE = [
-    { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 10, object: 'cherry', paletteIdx: 3,
-      summary: 'Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification, Analytic-Splatting, the pipeline restructuring.' },
-    { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 11, object: 'vase', paletteIdx: 3,
+    { id: 'windows-mirrors', universe: 'rnd', type: StopType.OBJECT, milestone: 4, object: 'vase', paletteIdx: 3,
       summary: 'Solved blurry windows, outdoor views and mirrors; exterior splats and orbital videos.' },
-    { id: 'benchmarking',    universe: 'rnd', type: StopType.OBJECT, milestone: 12, object: 'gpu', paletteIdx: 3,
-      summary: 'Validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.' },
-    { id: 'mesh-generation', universe: 'rnd', type: StopType.OBJECT, milestone: 13, object: 'chair', paletteIdx: 3,
+    { id: 'splatting',       universe: 'rnd', type: StopType.OBJECT, milestone: 3, object: 'cherry', paletteIdx: 3,
+      summary: 'Our custom 3DGS reconstruction pipeline from sparse panorama views, in production June 2026; influence-accumulation densification, Analytic-Splatting, the pipeline restructuring.' },
+    { id: 'mesh-generation', universe: 'rnd', type: StopType.OBJECT, milestone: 6, object: 'chair', paletteIdx: 3,
       summary: 'Mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.' },
-    { id: 'task-board-mcp',  universe: 'rnd', type: StopType.OBJECT, milestone: 14, object: 'board', paletteIdx: 3,
+    { id: 'benchmarking',    universe: 'rnd', type: StopType.OBJECT, milestone: 5, object: 'gpu', paletteIdx: 3,
+      summary: 'Validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.' },
+    { id: 'task-board-mcp',  universe: 'rnd', type: StopType.OBJECT, milestone: 7, object: 'board', paletteIdx: 3, tour: false,
       summary: 'MCP server for the team task board; the looped drone video.' },
     // a whole room (no splat object): walk in and it shows as depth (js/depthRoom.js)
-    { id: 'depth-room',      universe: 'rnd', type: StopType.OBJECT, milestone: 15, room: 'bedroom2', paletteIdx: 3,
+    { id: 'depth-room',      universe: 'rnd', type: StopType.OBJECT, milestone: 8, room: 'bedroom2', paletteIdx: 3, tour: false,
       summary: 'A bedroom drawn as depth (colour = distance from your eye); mentoring a junior on a new depth method, now used team-wide.' },
-    // The timeline graph: one stop, four frames (a tap per frame). Each frame
-    // has its own id, universe and panel; frame 1 also shows the trait words
-    { id: 'graph', universe: 'education', type: StopType.GRAPH, paletteIdx: 1, frames: [
-        { id: 'rvkg',       universe: 'education', milestone: 0,
-          summary: 'Programming and mathematics track; state mathematics olympiads. Frame 1 also shows my traits: curious, creative, adaptive.' },
-        { id: 'ai-talent',  universe: 'education', milestone: 2, summary: 'Ponder AI talent program.' },
-        { id: 'rtu',        universe: 'education', milestone: 1, summary: 'Professional Bachelor in Financial Engineering.' },
-        { id: 'giraffe360', universe: 'work',      milestone: 3,
-          summary: 'R&D engineer in 3D reconstruction and computer vision: 3DGS from sparse panorama views, benchmarking, research.' },
-    ] },
-    { id: 'flow',       universe: 'projects',   type: StopType.PROJECT, milestone: 5, paletteIdx: 2,
-      summary: 'Offline workout tracker app (Dart/Flutter).' },
-    { id: 'calculator', universe: 'projects',   type: StopType.PROJECT, milestone: 8, paletteIdx: 2,
-      summary: 'Offline graphing calculator; 4th place in a programming competition.' },
-    { id: 'sorting',    universe: 'projects',   type: StopType.PROJECT, milestone: 9, paletteIdx: 2,
+    { id: 'sorting',    universe: 'projects',   type: StopType.PROJECT, milestone: 2, paletteIdx: 2,
       summary: 'Sorting algorithm visualizer (C++/SFML).' },
+    { id: 'calculator', universe: 'projects',   type: StopType.PROJECT, milestone: 1, paletteIdx: 2,
+      summary: 'Offline graphing calculator; 4th place in a programming competition.' },
     { id: 'contact',    universe: 'contact',    type: StopType.LANDING, paletteIdx: 4,
       title: 'Contact', summary: 'Get in touch by email, LinkedIn or GitHub.' }
 ];
-// Old ids that still land somewhere (?go, the agent API)
-const ALIASES = { traits: 'rvkg' };
-ROUTE.forEach((d, i) => {
-    if (d.type === StopType.GRAPH) SCENERY_LEGS.push(i);
-});
+// Old ids that still land somewhere (?go, the agent API). The removed
+// timeline graph's Giraffe360 frame lands on the work; the other old ids
+// (traits, rvkg, ai-talent, rtu, flow, balancer, monte-carlo) are unknown
+// now: ?go gives the normal intro
+const ALIASES = { giraffe360: 'splatting' };
 // Universes are names, not indexes. A new universe is a new entry here
 // plus ROUTE entries that use its id.
 export const UNIVERSES = [
     { id: 'rnd',        title: 'Giraffe360 R&D' },
-    { id: 'education',  title: 'Education' },
-    { id: 'work',       title: 'Work' },
     { id: 'projects',   title: 'Projects' },
     { id: 'contact',    title: 'Contact' },
 ];
 // Fly-by projects (no stop, no panel): `before` = the project stop they hang in front of;
 // title and skills line say what each one is and shows
 const FLYBYS = [
-    { id: 'balancer', milestone: 4, before: 0, title: 'LOAD BALANCING LAB', skills: 'NETWORKING · DISTRIBUTED SYSTEMS · PYTHON' },
-    { id: 'monte-carlo', milestone: 6, before: 1, title: 'MONTE CARLO FINANCE', skills: 'RISK MODELLING · STATISTICS · PYTHON' },
-    { id: 'neat', milestone: 7, before: 2, title: 'NEUROEVOLUTION AI', skills: 'MACHINE LEARNING · GAME AI · PYTHON' },
+    { id: 'neat', milestone: 0, before: 0, title: 'NEUROEVOLUTION AI', skills: 'MACHINE LEARNING · GAME AI · PYTHON' },
 ];
 
 // Static catalog of every stop and fly-by (no WebGL needed): the agent API
@@ -398,13 +277,8 @@ const FLYBYS = [
 // Fly-bys are listed but not navigable (`near` = the stop they hang before).
 const TYPE_NAMES = { [StopType.PROJECT]: 'project',
                      [StopType.LANDING]: 'landing', [StopType.OBJECT]: 'object' };
-// The graph is listed by its frames: { type 'graph-frame', index (the stop), frame 1..4 }
 export const catalog = [
-    ...ROUTE.flatMap((d, index) => d.frames ? d.frames.map((f, i) => ({
-        id: f.id, universe: f.universe, type: 'graph-frame', index, frame: i + 1,
-        title: MILESTONES[f.milestone].panel.title, summary: f.summary,
-        panel: MILESTONES[f.milestone].panel, portal: null, navigable: true
-    })) : [{
+    ...ROUTE.map((d, index) => ({
         id: d.id, universe: d.universe, type: TYPE_NAMES[d.type], index,
         title: d.title ?? MILESTONES[d.milestone].panel.title,
         summary: d.summary,
@@ -412,7 +286,7 @@ export const catalog = [
         portal: d.milestone !== undefined && MILESTONES[d.milestone].panel.portal
             ? { href: MILESTONES[d.milestone].panel.portal.href, label: MILESTONES[d.milestone].panel.portal.label } : null,
         navigable: true
-    }]),
+    })),
     ...FLYBYS.map(fb => {
         const near = ROUTE.filter(d => d.type === StopType.PROJECT)[fb.before].id;
         const panel = MILESTONES[fb.milestone].panel;
@@ -421,8 +295,9 @@ export const catalog = [
     })
 ];
 export function stopById(id) { return catalog.find(e => e.id === (ALIASES[id] ?? id)) ?? null; }
-// The catalog entry of stop index i (the graph: its first frame)
+// The catalog entry of stop index i
 export function entryAt(i) { return catalog.find(e => e.navigable && e.index === i) ?? null; }
+
 
 
 // ── Stop shader ────────────────────────────────────────────────────
@@ -449,7 +324,7 @@ const STOP_FRAGMENT = `
     }
 `;
 
-// Shared materials: the outside world (rocks, text, galaxies) and the
+// Shared materials: the outside world (the landing text) and the
 // tunnel's project labels. The warp cross-fades them; indoors the outside
 // world fades too (setRoomFade): its lines have no depth test and would
 // shine through the walls. The apartment strokes have their own (focus).
@@ -470,7 +345,6 @@ function getStopMaterial(kind = 'outside') {
 
 // ── State ──────────────────────────────────────────────────────────
 export let stops = [];
-export let scenery = [];
 export let flybys = [];                  // { label, s, viz }
 export let tunnelExitS = 0;              // s where the tunnel ends (the warp out)
 let mailPlane = null;
@@ -526,76 +400,6 @@ export function planePointToWorld(out, center, right, up, scale, p) {
         center.y + (p.x * right.y + p.y * up.y) * scale,
         center.z + (p.x * right.z + p.y * up.z) * scale
     );
-}
-
-// ── Random scatter layout ──────────────────────────────────────────
-// Hop direction: a big random kick with a light outward drift,
-// pitch-limited so planar scenes stay roughly upright and the path
-// never goes vertical. The kick dwarfs the drift — hops can swing
-// sideways or even double back; only the long-run average drifts out.
-function randomHopDir(out) {
-    out.copy(journeyDir);
-    out.x += rand(-2.2, 2.2);
-    out.y += rand(-1.1, 1.1);
-    out.z += rand(-2.2, 2.2);
-    out.normalize();
-    // clamp the pitch, keeping the length 1 (scaling y alone and normalising
-    // again lets a near-vertical kick through)
-    if (Math.abs(out.y) > MAX_PITCH) {
-        const h = Math.hypot(out.x, out.z), k = h > 1e-6 ? Math.sqrt(1 - MAX_PITCH * MAX_PITCH) / h : 0;
-        out.set(out.x * k, Math.sign(out.y) * MAX_PITCH, out.z * k);
-        if (h <= 1e-6) out.set(Math.sqrt(1 - MAX_PITCH * MAX_PITCH), Math.sign(out.y) * MAX_PITCH, 0);
-    }
-    return out;
-}
-
-// The stops after the apartment (now one: the graph), placed together as a
-// chain from `prev` (the apartment) to the tunnel throat: each clear of the
-// tunnel axis (all of it, the exit comes home too), of the apartment and of
-// the other stops. The chain leaves the window (`fwd`) and must come back to
-// the throat, behind it and along the tunnel axis (no hairpin into the
-// warp), so it turns round somewhere: the best of the tries spreads that
-// turn over all its corners (the smallest largest turn). A stop faces its
-// hop, so a corner is a turn at a departure; a sharp one makes the comet
-// loop back past the camera (speed dips, a whipping view).
-// n: the number of stops in the chain.
-function placeAfterApartment(prev, placed, n, fwd) {
-    const T0 = tunnel.centreWorld(0, new THREE.Vector3()), e1 = tunnel.tangentWorld(0, new THREE.Vector3());
-    const chain = Array.from({ length: n }, () => new THREE.Vector3()), dir = new THREE.Vector3(), d0 = new THREE.Vector3();
-    const toThroat = new THREE.Vector3(), flat = new THREE.Vector3();
-    let best = null, bestScore = -Infinity;
-    for (let i = 0; i < AFTER_TRIES; i++) {
-        let p = prev, maxTurn = 0, sumTurn = 0;
-        d0.copy(fwd);
-        for (let k = 0; k < chain.length; k++) {
-            randomHopDir(dir);
-            chain[k].copy(p).addScaledVector(dir, rand(MIN_HOP, MAX_HOP));
-            const a = d0.angleTo(dir);
-            maxTurn = Math.max(maxTurn, a); sumTurn += a;
-            d0.copy(dir); p = chain[k];
-        }
-        toThroat.subVectors(T0, p).normalize();
-        // the last stop (the graph) is upright and viewed level: the camera
-        // arrives looking along flat(d0) and leaves for the throat from there,
-        // so the pitch of the way in and the turn from that level view count too
-        flat.copy(d0).setY(0).normalize();
-        // (a steep dive to the throat counts double: the chase view pitches slowly)
-        for (const a of [d0.angleTo(toThroat), toThroat.angleTo(e1), d0.angleTo(flat), flat.angleTo(toThroat), 2 * Math.abs(Math.asin(toThroat.y))]) { maxTurn = Math.max(maxTurn, a); sumTurn += a; }
-        const turnScore = 10 - maxTurn - 0.25 * sumTurn;
-        if (turnScore <= bestScore) continue;            // a clear chain could not beat the best: skip the clearance
-        let clear = Infinity;
-        chain.forEach((c, k) => {
-            const sep = MIN_SEPARATION;
-            clear = Math.min(clear, tunnel.axisDistance(c, tunnelExitS) / TUNNEL_CLEAR,
-                             (c.distanceTo(apartmentCentre) - apartmentRadius) / sep);
-            for (const q of placed) clear = Math.min(clear, c.distanceTo(q) / sep);
-            for (let j = 0; j < k; j++) clear = Math.min(clear, c.distanceTo(chain[j]) / sep);
-        });
-        const score = clear >= 1 ? turnScore : clear;
-        if (score > bestScore) { bestScore = score; best = chain.map(c => c.clone()); }
-    }
-    if (bestScore < 1) console.warn('the graph: not fully clear', bestScore.toFixed(2));
-    return best;
 }
 
 // ── Line builder ───────────────────────────────────────────────────
@@ -720,102 +524,12 @@ function buildPlanarStop(def, center, right, up, palette) {
     return out;
 }
 
-// ── Attractor scenery (pre-integrated curves) ─────────────────────
-// Each curve sits beside one flight leg so the comet can swing past it.
-function buildScenery(scene) {
-    scenery = [];
-    // Each stop's view: a sphere round the VIEW camera spot and the stop
-    // (the fit, with room for a panel: the largest one), so no galaxy curve
-    // runs through a rock, its label or the space in front of it
-    const views = stops.map(st => {
-        const fit = fitDistance(st.halfW, st.halfH, PANEL_FIT[0], PANEL_FIT[1]);
-        return { c: st.center.clone().addScaledVector(st.normal, -fit / 2), r: fit / 2 + Math.hypot(st.halfW, st.halfH) };
-    });
-    const perp = new THREE.Vector3();
-    const base = new THREE.Vector3();
-    const cand = new THREE.Vector3();
-    const dir = new THREE.Vector3();
-    const mid = new THREE.Vector3();
-
-    for (let k = 0; k < SCENERY_LEGS.length; k++) {
-        const leg = SCENERY_LEGS[k];
-        const a = stops[leg - 1].center, b = stops[leg].center;
-        const L = a.distanceTo(b);
-        mid.addVectors(a, b).multiplyScalar(0.5);
-        dir.subVectors(b, a).normalize();
-
-        const radius = THREE.MathUtils.clamp(L * SCENERY_SCALE_FRAC, SCENERY_SCALE_MIN, SCENERY_SCALE_MAX);
-        const standoff = Math.max(L * SCENERY_STANDOFF, SCENERY_STANDOFF_MIN) + radius * 0.5;
-
-        // Perpendicular basis, then try random angles; keep the one that
-        // sits farthest from every stop and every earlier galaxy.
-        base.crossVectors(dir, new THREE.Vector3(0, 1, 0));
-        if (base.lengthSq() < 1e-6) base.set(1, 0, 0);
-        base.normalize();
-        const base2 = new THREE.Vector3().crossVectors(dir, base).normalize();
-
-        let center = null, bestD = -Infinity;
-        for (let t = 0; t < SCENERY_TRIES; t++) {
-            const ang = Math.random() * Math.PI * 2;
-            perp.copy(base).multiplyScalar(Math.cos(ang)).addScaledVector(base2, Math.sin(ang));
-            cand.copy(mid).addScaledVector(perp, standoff);
-            let d = Infinity;
-            for (const v of views) d = Math.min(d, cand.distanceTo(v.c) - v.r - radius);   // out of every stop's view
-            for (const st of stops) d = Math.min(d, cand.distanceTo(st.center));
-            for (const sc of scenery) d = Math.min(d, cand.distanceTo(sc.center));
-            d = Math.min(d, tunnel.axisDistance(cand, tunnelExitS) - tunnel.TUNNEL_RADIUS - radius - 4); // off the tunnel
-            d = Math.min(d, cand.distanceTo(apartmentCentre) - apartmentRadius - radius - 4);        // off the apartment
-            if (d > bestD) { bestD = d; center = cand.clone(); }
-        }
-
-        // The curve (RK4, thousands of steps) is an idle job: only its place
-        // (above, random) must be known now (fly-by via points)
-        const line = buildStopLine(new Float32Array(0), new Float32Array(0), new Float32Array(0));
-        line.position.copy(center);
-        scene.add(line);
-        scenery.push({ attractorIdx: k, center, radius, line });
-        vizJobs.push(() => { line.geometry.dispose(); line.geometry = sceneryCurve(k, radius); });
-    }
-}
-// One galaxy curve (RK4 of attractor k), relative to its centre (the spin pivots there)
-function sceneryCurve(k, radius) {
-    const attr = ATTRACTORS[k % ATTRACTORS.length];
-    let s = [...attr.initialCondition];
-    const step = () => {
-        s = rk4Step(attr.derivatives, s[0], s[1], s[2], attr.dt, attr.params);
-        for (let j = 0; j < 3; j++) {
-            if (Math.abs(s[j]) > 150) s[j] *= 150 / Math.abs(s[j]);
-            if (!isFinite(s[j])) { s = [...attr.initialCondition]; break; }
-        }
-    };
-    for (let i = 0; i < SCENERY_WARMUP; i++) step();
-
-    const n = SCENERY_POINTS;
-    const positions = new Float32Array(n * 3);
-    const colors = new Float32Array(n * 3);
-    const alphas = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-        step();
-        // Relative to the origin: the line is moved to `center` so
-        // its spin pivots there.
-        positions[i * 3]     = (s[0] - attr.center[0]) * attr.scale * radius;
-        positions[i * 3 + 1] = (s[1] - attr.center[1]) * attr.scale * radius;
-        positions[i * 3 + 2] = (s[2] - attr.center[2]) * attr.scale * radius;
-        const col = getPaletteColor(attr.palette, i / (n - 1));
-        colors[i * 3] = col.r; colors[i * 3 + 1] = col.g; colors[i * 3 + 2] = col.b;
-        alphas[i] = SCENERY_ALPHA;
-    }
-
-    return buildStopLine(positions, colors, alphas).geometry;
-}
-
-// Per frame: galaxies spin, the tunnel moves, and the project
-// visualizations near the comet (arc parameter headS) animate.
+// Per frame: the tunnel moves, and the project visualizations near the
+// comet (arc parameter headS) animate.
 const VIZ_RANGE = [-12, 60];             // s window (behind, ahead) where a viz updates
 const VIZ_FADE = [16, 32];               // |s - headS|: a viz fades out from here to here (the next ones emerge from the dark)
 let insideFade = 0;                      // 0 = outside the tunnel, 1 = inside (cross-fade in the warp)
 export function updateWorld(dt, headS) {
-    for (const s of scenery) s.line.rotation.y += SCENERY_SPIN * dt;
     // Apartment strokes (halo rings, the landing text): only the focused
     // stop's show. The lines have no depth test, so the others would shine
     // through the walls (and the contact text would greet the comet at the window).
@@ -835,7 +549,7 @@ function updateViz(viz, s, headS, dt) {
     const v = (1 - THREE.MathUtils.smoothstep(Math.abs(s - headS), VIZ_FADE[0], VIZ_FADE[1])) * insideFade;
     viz.setVisibility(v, v > 0.002);
 }
-// Inside the tunnel the outside world (galaxies, rocks, landing) is
+// Inside the tunnel the outside world (the landing) is
 // hidden: the walls are see-through lines, and far glows would sit on
 // top of the visualizations. The projects (stops and fly-bys) exist only
 // inside. f = 0 outside .. 1 inside: the warp cross-fades the two worlds.
@@ -844,10 +558,8 @@ export function setInsideFade(f) {
     const out = (1 - f) * (1 - roomFade);
     getStopMaterial('outside').uniforms.uVis.value = out;
     getStopMaterial('inside').uniforms.uVis.value = f;
-    for (const s of scenery) s.line.visible = out > 0.002;
-    for (const st of stops) st.graph?.setOutside(out);
     for (const st of stops) {
-        if (st.focusVis !== undefined || !st.line) continue;  // updateWorld (focus fade); the graph has no stop line
+        if (st.focusVis !== undefined) continue;  // updateWorld (focus fade)
         st.line.visible = st.type === StopType.PROJECT ? f > 0.002 : f < 0.998;
         if (st.viz) st.viz.group.visible = f > 0.002;
     }
@@ -928,7 +640,6 @@ function buildMailPlane(stop) {
 // over the roof. Of the tries (turn sign, hop) the one that keeps the
 // apartment TUNNEL_CLEAR from the axis (except the last TUNNEL_EXIT_FREE
 // units) and brings the exit nearest the middle of LANDING_EXIT_DIST wins.
-let apartmentCentre = new THREE.Vector3(), apartmentRadius = 0;
 const _Y = new THREE.Vector3(0, 1, 0);
 function setApartmentFrame(winDir, s) {
     apartment.scale = s;
@@ -940,9 +651,6 @@ function setApartmentFrame(winDir, s) {
     // the landing text spot lands on the origin
     apartment.position.set(0, 0, 0);
     apartment.position.sub(roomToWorld(...LANDING_TEXT));
-    const b = ROOM_BOX;
-    roomToWorld((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2, apartmentCentre);
-    apartmentRadius = 0.5 * s * Math.hypot(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]);
 }
 function apartmentCorners() {
     const b = ROOM_BOX, out = [];
@@ -969,54 +677,6 @@ function placeApartmentAndTunnel(length, s) {
     }
     tunnel.setFrame(best.T0, e1, best.turn, length);
     if (bestScore < 1) console.warn('tunnel placement: the apartment is not fully clear', bestScore.toFixed(2));
-}
-
-// ── The timeline graph (one stop, four frames; eduGraph.js) ────────
-// An upright plane facing the way the comet comes in (from the flat). The
-// fit (fitGraph) is one scale per device, so the camera only pans from
-// frame to frame; it sits at GRAPH_CAM_DIST × controls.maxDistance (orchestrator fitFor).
-const GRAPH_CAM_DIST = 0.94;
-// `center` = frame 1's camera target; `graphOrigin` = the graph's (0, 0).
-// points2d[0] = where the pen enters frame 1 (the flight ends there).
-function buildGraphStop(def, center, from) {
-    const normal = center.clone().sub(from).setY(0).normalize();
-    const right = new THREE.Vector3().crossVectors(normal, new THREE.Vector3(0, 1, 0)).normalize();
-    const up = new THREE.Vector3(0, 1, 0);
-    const tanV = Math.tan(camera.fov * Math.PI / 360);
-    const side = window.matchMedia('(min-width: 700px) and (orientation: landscape)').matches;   // camera.js PANEL_SIDE_QUERY
-    // a little under controls.maxDistance: the chase camera's offset is ~2 %
-    // longer than its distance, and OrbitControls would clamp it (a kink)
-    const camDist = GRAPH_CAM_DIST * controls.maxDistance;
-    const fit = fitGraph(camDist, tanV, camera.aspect, side);
-    const graph = createGraph({ phone: fit.phone });
-    const t1 = graph.frameTarget(1, fit.drop);
-    const origin = center.clone().addScaledVector(right, -t1.x * fit.scale).addScaledVector(up, -t1.y * fit.scale);
-    graph.group.position.copy(origin);
-    graph.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, up, normal.clone().negate()));
-    graph.group.scale.setScalar(fit.scale);
-    graph.group.updateMatrixWorld(true);
-    // point size: pixels per graph unit at unit distance (the prototype's uPx)
-    graph.setPx(window.innerHeight / (2 * tanV) * fit.scale);
-    const pxPerUnit = window.innerHeight / (2 * camDist * tanV);
-    window.eduGraphFit = { scale: +fit.scale.toFixed(3), phone: fit.phone,
-        labelPx: +(fit.labelPx * pxPerUnit).toFixed(1), captionPx: +(fit.captionPx * pxPerUnit).toFixed(1) };
-    const e = graph.entry();
-    const frames = def.frames.map(f => ({ ...f, panel: MILESTONES[f.milestone].panel }));
-    return {
-        id: def.id, universe: def.universe, type: def.type, paletteIdx: def.paletteIdx ?? 1,
-        panel: frames[0].panel, frames, tunnelS: null, viz: null,
-        graph, graphDrop: fit.drop, camDist, center, right, up, normal,
-        points2d: [{ x: (e.x - t1.x) * fit.scale, y: (e.y - t1.y) * fit.scale, c: 1 }], scale: 1,
-        halfW: 2.4 * fit.scale, halfH: 2.7 * fit.scale, blockMid: 0, blockHalfH: 2.7 * fit.scale
-    };
-}
-// The world point of a graph-local point (graph units)
-export function graphToWorld(stop, p, out = new THREE.Vector3()) {
-    return out.copy(p).applyMatrix4(stop.graph.group.matrixWorld);
-}
-// Frame k's camera target (world)
-export function graphFrameTarget(stop, k, out = new THREE.Vector3()) {
-    return graphToWorld(stop, stop.graph.frameTarget(k, stop.graphDrop), out);
 }
 
 // ── Object stops (in the apartment) ────────────────────────────────
@@ -1139,8 +799,8 @@ function buildRoomStop(def, palette) {
 function via(p, dir = null) {
     return { p: roomToWorld(...p), dir: dir ? roomDirToWorld(...dir) : null };
 }
-// Out over the window wall, already turned towards `to` (the loop back to
-// the first stop after the flat). The crossing slides along the wall top to
+// Out over the window wall, already turned towards `to` (the tunnel throat
+// for a tunnel stop: the comet joins the centreline there). The crossing slides along the wall top to
 // the side `to` lies on (WALL_TOP.x × -1..1): no hard turn after it.
 function exitTowards(to) {
     const W = via(WALL_TOP, WALL_OUT);
@@ -1159,8 +819,9 @@ function exitTowards(to) {
 const FLAT_LIFT = 0.42;                  // room units: the lift via height (over the cut ceiling, 0.30)
 const FLAT_LIFT_TOWARDS = 0.3;           // ... this far towards the wall via
 const FLAT_LIFT_MIN = 0.6;               // no lift via within this horizontal distance of the wall via
-export function flatExitVias(p, to) {
-    const out = exitTowards(to);
+const aimOf = (dest) => dest.tunnelS != null ? tunnel.centreWorld(0, new THREE.Vector3()) : dest.center;
+export function flatExitVias(p, dest) {
+    const out = exitTowards(aimOf(dest));
     const r = worldToRoom(p.clone()), w = worldToRoom(out[0].p.clone());
     const dx = w.x - r.x, dz = w.z - r.z, h = Math.hypot(dx, dz);
     if (h > FLAT_LIFT_MIN) {
@@ -1175,7 +836,7 @@ export function viasFor(from, dest) {
         // over the roof, then a dive through the cut ceiling (down and towards the windows)
         return [{ p: roomToWorld(...ROOM_ROOF), dir: roomDirToWorld(0, -1, -1) }];
     }
-    if (fromIn) return exitTowards(dest.center);                            // out over the window wall: the landing loop back to the graph
+    if (fromIn) return exitTowards(aimOf(dest));                            // out over the window wall: the landing loop back to the first project
     return [];
 }
 
@@ -1183,11 +844,10 @@ export function viasFor(from, dest) {
 // KHR_parallel_shader_compile the driver compiles off the main thread).
 // The scene renders into the composer's target: compile for a render
 // target, so the program parameters (colour space, tone mapping) match.
-function precompile(scene, graph) {
+function precompile(scene) {
     if (!renderer?.compileAsync) return;
-    const roots = [...tunnel.meshes(), ...scenery.map(s => s.line), ...stops.filter(st => st.viz).map(st => st.viz.group),
+    const roots = [...tunnel.meshes(), ...stops.filter(st => st.viz).map(st => st.viz.group),
                    ...flybys.filter(f => f.viz).map(f => f.viz.group)];
-    if (graph) for (let k = 1; k <= graph.NFRAMES; k++) if (graph.builtGroup(k)) roots.push(graph.builtGroup(k));
     const prev = renderer.getRenderTarget();
     renderer.setRenderTarget(composer.readBuffer);
     for (const r of roots) renderer.compileAsync(r, camera, scene).catch(() => {});
@@ -1199,14 +859,11 @@ function precompile(scene, graph) {
 // slow phone) are not needed in the flat, where the site starts: with
 // `defer` they build one per idle slot after the first frame, and
 // finishWorld() builds the rest at once (the first flight, a jump).
-// A job that returns 'more' is not done: it runs again in the next slot
-// (the graph frames build GRAPH_JOB_MS at a time, so no slot is a long task).
 const vizJobs = [];
-const GRAPH_JOB_MS = 8;
-export function finishWorld() { while (vizJobs.length) { while (vizJobs[0]() === 'more'); vizJobs.shift(); } }
+export function finishWorld() { while (vizJobs.length) vizJobs.shift()(); }
 const whenIdle = window.requestIdleCallback ? f => requestIdleCallback(f, { timeout: 1000 }) : f => setTimeout(f, 50);
 function buildVizzesLater() {
-    const step = () => { if (vizJobs.length && vizJobs[0]() !== 'more') vizJobs.shift(); if (vizJobs.length) whenIdle(step); };
+    const step = () => { if (vizJobs.length) vizJobs.shift()(); if (vizJobs.length) whenIdle(step); };
     requestAnimationFrame(() => whenIdle(step));
 }
 
@@ -1214,14 +871,18 @@ export function buildWorld(scene, { defer = false } = {}) {
     stops = [];
     flybys = [];
     vizJobs.length = 0;
-    let prevDef = null;
     let projectK = 0;
     const nProjects = ROUTE.filter(d => d.type === StopType.PROJECT).length;
-    const projectS = k => TUNNEL_RUSH + FLYBY_GAP + 2 * k * FLYBY_GAP;
+    // Stop k sits STOP_GAP after stop k - 1, or 2 x FLYBY_GAP when a fly-by hangs between them
+    const stopS = [TUNNEL_RUSH + FLYBY_GAP];
+    for (let k = 1; k < nProjects; k++) stopS.push(stopS[k - 1] + (FLYBYS.some(fb => fb.before === k) ? 2 * FLYBY_GAP : STOP_GAP));
+    const projectS = k => stopS[k];
     tunnelExitS = projectS(nProjects - 1) + TUNNEL_EXIT_AFTER;
+    // A fly-by hangs at TUNNEL_RUSH (before the first stop) or half way
+    // between two stops (a stop gap leaves room for one)
+    const flybyS = fb => fb.before === 0 ? TUNNEL_RUSH : (projectS(fb.before - 1) + projectS(fb.before)) / 2;
     // Fast zones: the middle of every stretch between throat, fly-bys, stops and exit
-    const anchors = [0, TUNNEL_RUSH];
-    for (let k = 0; k < nProjects; k++) anchors.push(projectS(k), projectS(k) + (k < nProjects - 1 ? FLYBY_GAP : TUNNEL_EXIT_AFTER));
+    const anchors = [0, ...FLYBYS.map(flybyS), ...Array.from({ length: nProjects }, (_, k) => projectS(k)), tunnelExitS].sort((a, b) => a - b);
     const zones = [];
     const margin = i => i === 0 ? FAST_ZONE_MARGIN[0] : i === anchors.length - 1 ? FAST_ZONE_MARGIN[2] : FAST_ZONE_MARGIN[1];
     for (let i = 0; i < anchors.length - 1; i++) {
@@ -1241,20 +902,17 @@ export function buildWorld(scene, { defer = false } = {}) {
     apartment.objects = [];
     // The apartment first (the site starts in it), then the tunnel from its window
     placeApartmentAndTunnel(tunnelExitS, roomScale);
-    const placed = [apartmentCentre.clone()];
-    let prev = apartmentCentre.clone();
+    let prev = null;
 
     for (const def of ROUTE) {
         let center, tunnelS = null;
         if (def.type === StopType.OBJECT) {
             const palette = ATTRACTORS[def.paletteIdx ?? 0].palette;
-            const stop = { id: def.id, universe: def.universe, type: def.type, paletteIdx: def.paletteIdx ?? 0,
+            const stop = { id: def.id, universe: def.universe, type: def.type, paletteIdx: def.paletteIdx ?? 0, tour: def.tour ?? true,
                            panel: MILESTONES[def.milestone].panel, tunnelS: null, viz: null, objectName: def.object ?? null,
                            ...(def.room ? buildRoomStop(def, palette) : buildObjectStop(def, palette)) };
             scene.add(stop.line);
             stops.push(stop);
-            prevDef = def;
-            prev = stop.center;
             continue;
         }
         if (def.type === StopType.PROJECT) {
@@ -1266,19 +924,7 @@ export function buildWorld(scene, { defer = false } = {}) {
             // In the living room, in front of the bay windows, facing the camera inside
             center = roomToWorld(...LANDING_TEXT);
             prev = center.clone().sub(apartment.winDir);
-        } else if (def.type === StopType.GRAPH) {
-            // out over the window wall, then on to the tunnel throat (a chain of one)
-            center = placeAfterApartment(prev, placed, 1, apartment.winDir)[0];
-            const stop = buildGraphStop(def, center, prev);
-            scene.add(stop.graph.group);
-            stops.push(stop);
-            placed.push(center);
-            prevDef = def;
-            prev = center;
-            continue;
         }
-        placed.push(center);
-        prevDef = def;
 
         // Planar stops face back along their approach direction so the
         // arriving camera sees them head-on; basis stays upright.
@@ -1336,9 +982,8 @@ export function buildWorld(scene, { defer = false } = {}) {
     // The comet spirals round an axis along the tunnel through the centre
     // of viz + text. `offset` = that centre minus the centreline point,
     // `radius` = half-diagonal of viz + text (world units).
-    const sOfStop = stops.filter(st => st.type === StopType.PROJECT).map(st => st.tunnelS);
     for (const fb of FLYBYS) {
-        const s = fb.before === 0 ? TUNNEL_RUSH : (sOfStop[fb.before - 1] + sOfStop[fb.before]) / 2;
+        const s = flybyS(fb);
         const label = MILESTONES[fb.milestone].label;
         const c = tunnel.centreWorld(s, new THREE.Vector3());
         const T = tunnel.tangentWorld(s, new THREE.Vector3());
@@ -1365,14 +1010,10 @@ export function buildWorld(scene, { defer = false } = {}) {
     else finishWorld();
 
     tunnel.build(scene);
-    buildScenery(scene);
-    // The graph's four frames: built ahead, so a tap only starts one
-    const graph = stops.find(st => st.graph)?.graph;
-    if (graph) for (let k = 1; k <= graph.NFRAMES; k++) vizJobs.push(() => graph.prebuild(k, GRAPH_JOB_MS) ? undefined : 'more');
     // Last: compile the shaders of what is not on screen yet (the tunnel and
-    // the warp, the vizzes, the graph, the galaxies) in the background, so
-    // the first frame that shows them does not stall
-    if (defer) vizJobs.push(() => precompile(scene, graph));
+    // the warp, the vizzes) in the background, so the first frame that
+    // shows them does not stall
+    if (defer) vizJobs.push(() => precompile(scene));
     else finishWorld();   // (the jobs above use no Math.random: the seeded route of dev/camlog.html stays)
     setInsideFade(0);
 

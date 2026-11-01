@@ -249,7 +249,7 @@ async function buildObjects(g, { buildObject, mulberry32, contactShadow, FOOT })
 // On entering a stop in the apartment.
 // Elsewhere only when a flight into the apartment starts ('leave' with
 // `to`: the warp out from the last project is a long flight). So ?go to the
-// graph frames and the projects (or an open project app) loads nothing.
+// projects (or an open project app) loads nothing.
 const inApartment = e => APARTMENT_UNIVERSES.includes(e?.universe);
 function wantsRoom({ phase, universe, to }) {
     if (phase === 'enter') return inApartment({ universe });

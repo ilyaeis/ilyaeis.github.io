@@ -1,15 +1,19 @@
 // ── Walk mode ──────────────────────────────────────────────────────
-// Walk through the apartment at eye height and collect the six R&D
-// objects. The site starts here: after the intro the orchestrator switches
+// Walk through the apartment at eye height and collect the R&D objects of
+// the tour (the object stops without `tour: false`, in route order). The site starts here: after the intro the orchestrator switches
 // to Phase.EXPLORE (explore.js) and calls enterWalk / update / exitWalk /
 // leaveInPlace; main.js routes input here (onTap, onDrag, setKeys, onEnter).
 // This module owns the camera pose while walking (no camera.js changes) and
-// its own DOM: the "Explore the flat" buttons, the HUD ("n / 6", and the
+// its own DOM: the "Explore the flat" buttons, the HUD ("n / 4", and the
 // back button when entered from a stop), and one bottom bar (.walk-tour):
 // Collect (any walk, while a panel shows), then for the tour (entered from
-// the intro or ?go=<object id>) an onboarding hint, the task line, "Next object" (also Enter: a guided walk to the nearest object not
-// collected yet, then its panel), "Skip the flat →" ("Continue →" at 6/6)
-// and an edge arrow to that object while it is off screen or out of sight.
+// the intro or ?go=<object id>) an onboarding hint, the task line, "Next
+// object" (also Enter: a guided walk to the first tour object not collected
+// yet, then its panel; from the intro the first one starts by itself),
+// "Skip the flat →" ("Continue →" once all are found) and an edge arrow to
+// that object while it is off screen or out of sight. The two stops out of
+// the tour (the wall board, the depth room) are reached by ?go: no halo
+// hint, no count, no Collect.
 // Panel text goes through the 'walk:panel' event to stopPanel.js.
 //
 // Walk grid: assets/room/walk.json (make_walk_grid.py, lazily loaded), a
@@ -68,7 +72,7 @@ const GOAL_ROOMY = 8;                  // cells of clearance a guide goal should
 const ENTER_PITCH = -4 * DEG;          // the walk from the intro starts at eye level, a little down (the ceiling is a void)
 const GUIDE_ARRIVE_M = 0.15;            // m: ... and counts as there when it has stopped within this of the goal
 const HINT_TIME = 6;                   // s: the onboarding hint shows this long (or until the first walk)
-const ARROW_EVERY = 0.4;               // s: the edge arrow re-plans its way to the nearest object this often
+const ARROW_EVERY = 0.4;               // s: the edge arrow re-plans its way to the next object this often
 const ARROW_INSET = 0.86;              // NDC: the arrow keeps this far inside the screen edge
 
 // ── DOM ────────────────────────────────────────────────────────────
@@ -102,10 +106,11 @@ let selected = null;                   // the object stop whose panel shows
 let tour = false;                      // entered from the intro (or ?go): the tour HUD
 let barTour = false;                   // the bottom bar shows the tour (task, Next object, Skip)
 let guide = null;                      // the object a Next-object walk goes to
+let autoNext = false;                  // the walk from the intro: Next object as soon as the walk starts
 let slowTurn = false;                  // auto turns at GUIDE_YAW_MAX (a guided walk and its turn)
 let arrived = false;                   // the path ended at its goal this step
 let hintT = -1;                        // s the hint has shown (-1: gone)
-let arrowT = 0, arrowWay = null;       // edge arrow: re-plan timer, { stop, raw } to the nearest object
+let arrowT = 0, arrowWay = null;       // edge arrow: re-plan timer, { stop, raw } to the next object
 const collected = new Set(load());
 let halos = null;                      // [{ stop, line, vis }]
 let marker = null, group = null;
@@ -124,7 +129,8 @@ function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify([...collected])); } catch { /* private mode: this visit only */ }
 }
 const objectStops = () => stops.filter(s => s.type === StopType.OBJECT && s.universe === 'rnd');
-const total = () => objectStops().length;
+const tourStops = () => objectStops().filter(s => s.tour);
+const total = () => tourStops().length;
 
 // ── Grid ───────────────────────────────────────────────────────────
 function loadGrid() {
@@ -344,7 +350,7 @@ function followRaw(raw) {
 }
 function endPath() { path = null; if (marker) marker.visible = false; }
 
-// ── The tour: the nearest object not collected yet (by walking distance) ──
+// ── The tour: the first object not collected yet (route order) ──
 // The goal: GUIDE_VIEW_M from the object, on the side its journey view
 // looks from (stop.normal points from that view to the object). Of a few
 // spots round that one (turned, nearer, further) the one with room round it
@@ -369,19 +375,19 @@ function objectGoal(h) {
     h.goal = best ?? nearestFree(h.room.x + n.x * d0, h.room.z + n.z * d0, SNAP_M * M, GOAL_CLEAR);
     return h.goal;
 }
-// { stop, raw, len } of the nearest uncollected object (not `skip`), or null.
+// { stop, raw, len } of the first uncollected tour object (not `skip`), or null.
 // Each object has a flood from its goal (the grid and the goals are fixed:
 // built once), so a plan is a lookup at the walker's cell and a walk down
 // `from` (each step one cell nearer the goal), not a flood per plan.
 // `oneFlood`: build at most one missing flood and return undefined (plan
 // again next frame), so the edge arrow never builds several in one frame.
-function nearestWay(skip = null, oneFlood = false) {
+function nextWay(skip = null, oneFlood = false) {
     const st = nearestFree(pos.x, pos.y, 0.3 * M);
     if (!st || !halos) return null;
     const s = st[1] * nx + st[0];
     let best = null;
     for (const h of halos) {
-        if (collected.has(h.stop.id) || h.stop === skip) continue;
+        if (!h.stop.tour || collected.has(h.stop.id) || h.stop === skip) continue;
         const g = objectGoal(h);
         if (!g) continue;
         if (!h.flood) {
@@ -389,7 +395,7 @@ function nearestWay(skip = null, oneFlood = false) {
             if (oneFlood) return undefined;
         }
         const len = h.flood.gS[s];
-        if (len < (best?.len ?? Infinity)) best = { stop: h.stop, from: h.flood.from, goal: h.flood.s, len };
+        if (len < Infinity) { best = { stop: h.stop, from: h.flood.from, goal: h.flood.s, len }; break; }
     }
     if (!best) return null;
     const raw = [];
@@ -400,13 +406,14 @@ function nearestWay(skip = null, oneFlood = false) {
     }
     return { stop: best.stop, raw, len: best.len };
 }
-// "Next object": walk to the nearest object not collected yet (the one
-// whose panel shows is done: the next one), then turn to it and show its panel
-function next() {
+// "Next object": walk to the first tour object not collected yet (the one
+// whose panel shows is done: the next one), then turn to it and show its
+// panel. keepHint: the walk from the intro starts by itself (the hint stays)
+function next(keepHint = false) {
     if (mode !== 'walk') return { ok: false, why: 'not walking' };
-    const way = nearestWay(selected);
+    const way = nextWay(selected);
     if (!way) return { ok: false, why: 'all collected' };
-    hideHint();
+    if (!keepHint) hideHint();
     select(null);
     const r = followRaw(way.raw);
     guide = way.stop; slowTurn = true;
@@ -424,7 +431,7 @@ function guideTo(stop) {
     guide = stop; slowTurn = true;
     return { ...r, object: stop.id };
 }
-const allCollected = () => objectStops().every(s => collected.has(s.id));
+const allCollected = () => tourStops().every(s => collected.has(s.id));
 function onArrive() {
     if (!guide) return;
     const st = guide;
@@ -432,7 +439,8 @@ function onArrive() {
     select(st);   // (a room: turns to face into it, walkLook)
 }
 // Room stops (the depth room): walking into the box opens its panel (no
-// turn); walking out closes it. A guided walk opens it on arrival instead.
+// turn), but only for a tour stop; walking out closes it. A guided walk
+// (?go, the agent API) opens it on arrival instead.
 const ROOM_OUT = 0.02;                 // room units: hysteresis on the way out
 function updateRooms() {
     for (const h of halos) {
@@ -440,7 +448,7 @@ function updateRooms() {
         if (!b) continue;
         const m = h.inside ? ROOM_OUT : 0;
         const inside = pos.x > b.min[0] - m && pos.x < b.max[0] + m && pos.y > b.min[1] - m && pos.y < b.max[1] + m;
-        if (inside && !h.inside && !guide && selected !== h.stop) select(h.stop, false);
+        if (inside && !h.inside && !guide && selected !== h.stop && h.stop.tour) select(h.stop, false);
         else if (!inside && h.inside && selected === h.stop) select(null);
         h.inside = inside;
     }
@@ -580,7 +588,8 @@ function buildVisuals() {
 function updateHalos(dt) {
     if (!halos) return;
     for (const h of halos) {
-        const see = mode === 'walk' && seeLine(pos.x, pos.y, h.room.x, h.room.z, h.end) ? 1 : 0;
+        // (a stop out of the tour: its ring only while its panel shows)
+        const see = mode === 'walk' && (h.stop.tour || selected === h.stop) && seeLine(pos.x, pos.y, h.room.x, h.room.z, h.end) ? 1 : 0;
         [h.vis.x, h.vis.v] = smoothDamp(h.vis.x, see, h.vis.v, HALO_FADE, Infinity, Math.max(dt, 1e-4));
         h.line.material.opacity = h.vis.x;
         h.line.material.color.setScalar(collected.has(h.stop.id) ? HALO_LIT : HALO_HINT);
@@ -592,8 +601,8 @@ function updateHalos(dt) {
 function panel(p) { window.dispatchEvent(new CustomEvent('walk:panel', { detail: { panel: p } })); }
 function updateHud() {
     if (!countEl) return;
-    // "n / 6" on screen; screen readers get it in words (the halos are the only other sign)
-    const n = objectStops().filter(s => collected.has(s.id)).length;
+    // "n / 4" on screen; screen readers get it in words (the halos are the only other sign)
+    const n = tourStops().filter(s => collected.has(s.id)).length;
     const [shown, words] = countEl.children;
     if (shown) shown.textContent = `${n} / ${total()}`;
     if (words) words.textContent = `${n} of ${total()} objects collected`;
@@ -601,7 +610,7 @@ function updateHud() {
 }
 // The bottom bar: [Collect] [Next object] [Skip the flat →]. Collect shows
 // with a panel (any walk); the rest is the tour's. One primary (white):
-// Collect until collected, else Next object; at 6/6 "Next object" goes and
+// Collect until collected, else Next object; once all are found "Next object" goes and
 // the text button "Skip the flat →" becomes the primary "Continue →".
 function syncBar() {
     if (!tourEl) return;
@@ -635,7 +644,7 @@ function hideHint() {
 }
 function showCollect(stop) {
     if (!collectBtn) return;
-    collectBtn.hidden = !stop;
+    collectBtn.hidden = !stop?.tour;           // (no Collect out of the tour)
     if (stop) {
         const have = collected.has(stop.id);
         collectBtn.disabled = have;
@@ -654,19 +663,19 @@ function allFound() {
     selected = null;
     showCollect(null);
     panel({
-        title: `You found all ${total() === 6 ? 'six' : total()}`,
+        title: `You found all ${['', 'one', 'two', 'three', 'four', 'five', 'six'][total()] ?? total()}`,
         subtitle: 'Every R&D object in the flat is lit.',
         items: [{ text: 'The full story of each one is in the resume.' }],
         more: { href: 'resume.html', label: 'read the resume' }
     });
 }
 function collect() {
-    if (!selected || collected.has(selected.id)) return;
+    if (!selected?.tour || collected.has(selected.id)) return;
     collected.add(selected.id);
     save();
     window.dispatchEvent(new CustomEvent('walk:collect'));   // music.js: a chime
     updateHud();
-    if (objectStops().every(s => collected.has(s.id))) allFound();
+    if (allCollected()) allFound();
     else showCollect(selected);
 }
 
@@ -713,9 +722,11 @@ skipBtn?.addEventListener('click', () => skipFlat());
 function canWalk(stop) { return stop?.universe === 'rnd' || stop?.type === StopType.LANDING; }
 
 // Start walking from the current camera pose. opts.immediate: no ease;
-// opts.tour: the tour HUD; opts.at: start at that object, facing it, its panel open.
+// opts.tour: the tour HUD; opts.at: start at that object, facing it, its panel open;
+// opts.next: walk to the first object at once (no press: the walk from the intro).
 function enterWalk(opts = {}) {
     immediate = !!opts.immediate;
+    autoNext = !!opts.next;
     mode = 'wait';
     setExploreButtons(null);
     selected = null; panel(null); showCollect(null);
@@ -755,6 +766,7 @@ function enterWalk(opts = {}) {
 
 // Leave walk mode where the camera is (the journey flies on from here)
 function leaveInPlace() {
+    autoNext = false;
     selected = null; panel(null); showCollect(null);
     if (hudEl) hudEl.hidden = true;
     showTour(false);
@@ -765,6 +777,7 @@ function leaveInPlace() {
 // Ease back to the journey VIEW pose; done() runs when it is reached
 // (instant: at the next update)
 function exitWalk(viewPos, viewTarget, viewFov, done, instant = false) {
+    autoNext = false;
     selected = null; panel(null); showCollect(null);
     if (hudEl) hudEl.hidden = true;
     showTour(false);
@@ -819,7 +832,10 @@ function update(dt) {
         camera.quaternion.slerpQuaternions(fromQ, toQ, w);
         camera.fov = fromFov + (toFov - fromFov) * w; camera.updateProjectionMatrix();
         if (w >= 1) {
-            if (mode === 'in') mode = 'walk';
+            if (mode === 'in') {
+                mode = 'walk';
+                if (autoNext) { autoNext = false; next(true); }
+            }
             else { updateHalos(dt); finish(); return; }
         }
     }
@@ -827,7 +843,7 @@ function update(dt) {
 }
 
 // The tour HUD per frame: the hint times out; the edge arrow points to the
-// nearest object not collected yet while it is off screen or out of sight
+// next object not collected yet while it is off screen or out of sight
 // (to the next corner of the way there when a wall is in between)
 const _c3 = new THREE.Vector3();
 function updateTour(dt) {
@@ -835,7 +851,7 @@ function updateTour(dt) {
     if (!arrowEl) return;
     arrowT -= dt;
     if (arrowT <= 0) {
-        const way = nearestWay(null, true);
+        const way = nextWay(null, true);
         if (way !== undefined) { arrowT = ARROW_EVERY; arrowWay = way; }
     }
     const st = arrowWay?.stop;

@@ -30,84 +30,16 @@ const ADAPT_STEP = 0.8;              // pixel ratio factor per step
 const ADAPT_GAIN = 0.9;              // a step down must cut the frame time to this share
 const MIN_PIXEL_RATIO = 0.75;
 
-// ── Attractor Definitions ──────────────────────────────────────────
+// ── Palettes ───────────────────────────────────────────────────────
+// Named after the strange attractors the site once drew; now only their
+// palettes (comet and stop colours, by index) and the first one's camera.
 export const ATTRACTORS = [
-    {
-        name: 'lorenz',
-        params: { sigma: 10, rho: 28, beta: 8 / 3 },
-        derivatives: (x, y, z, p) => [
-            p.sigma * (y - x),
-            x * (p.rho - z) - y,
-            x * y - p.beta * z
-        ],
-        dt: 0.005,
-        scale: 0.0334,
-        center: [-0.08, -0.08, 23.56],
-        initialCondition: [0.1, 0, 0],
-        palette: [new THREE.Color(0xffbf00), new THREE.Color(0xff8800), new THREE.Color(0xdd3300)],
-        camera: { radius: 1.2, elevation: 0.5, azimuthSpeed: 0.7 },
-        milestones: true // constellation detour after this attractor (MILESTONES in orchestrator.js)
-    },
-    {
-        name: 'rossler',
-        params: { a: 0.2, b: 0.2, c: 5.7 },
-        derivatives: (x, y, z, p) => [
-            -(y + z),
-            x + p.a * y,
-            p.b + z * (x - p.c)
-        ],
-        dt: 0.008,
-        scale: 0.0705,
-        center: [0.17, -0.88, 0.86],
-        initialCondition: [0.1, 0, 0],
-        palette: [new THREE.Color(0x2266cc), new THREE.Color(0x00aacc), new THREE.Color(0x00ddbb)],
-        camera: { radius: 1.2, elevation: 1.0, azimuthSpeed: 0.5 }
-    },
-    {
-        name: 'thomas',
-        params: { b: 0.208186 },
-        derivatives: (x, y, z, p) => [
-            Math.sin(y) - p.b * x,
-            Math.sin(z) - p.b * y,
-            Math.sin(x) - p.b * z
-        ],
-        dt: 0.05,
-        scale: 0.2928,
-        center: [1.89, 1.89, 1.91],
-        initialCondition: [1.1, 1.1, -0.01],
-        palette: [new THREE.Color(0x8833cc), new THREE.Color(0xcc33aa), new THREE.Color(0xff44cc)],
-        camera: { radius: 1.2, elevation: 0.4, azimuthSpeed: 0.6 }
-    },
-    {
-        name: 'aizawa',
-        params: { a: 0.95, b: 0.7, c: 0.6, d: 3.5, e: 0.25, f: 0.1 },
-        derivatives: (x, y, z, p) => [
-            (z - p.b) * x - p.d * y,
-            p.d * x + (z - p.b) * y,
-            p.c + p.a * z - (z * z * z) / 3 - (x * x + y * y) * (1 + p.e * z) + p.f * z * x * x * x
-        ],
-        dt: 0.005,
-        scale: 0.5299,
-        center: [0.0, 0.0, 0.70],
-        initialCondition: [0.1, 0, 0],
-        palette: [new THREE.Color(0x22aa44), new THREE.Color(0x00ccaa), new THREE.Color(0x00eedd)],
-        camera: { radius: 1.2, elevation: 0.6, azimuthSpeed: 0.5 }
-    },
-    {
-        name: 'halvorsen',
-        params: { a: 1.89 },
-        derivatives: (x, y, z, p) => [
-            -p.a * x - 4 * y - 4 * z - y * y,
-            -p.a * y - 4 * z - 4 * x - z * z,
-            -p.a * z - 4 * x - 4 * y - x * x
-        ],
-        dt: 0.004,
-        scale: 0.0782,
-        center: [-2.64, -2.64, -2.64],
-        initialCondition: [-1.48, -1.51, 2.04],
-        palette: [new THREE.Color(0xccaa00), new THREE.Color(0xeecc44), new THREE.Color(0xffffff)],
-        camera: { radius: 1.2, elevation: 0.5, azimuthSpeed: 0.6 }
-    }
+    { name: 'lorenz', palette: [new THREE.Color(0xffbf00), new THREE.Color(0xff8800), new THREE.Color(0xdd3300)],
+      camera: { radius: 1.2, elevation: 0.5, azimuthSpeed: 0.7 } },
+    { name: 'rossler', palette: [new THREE.Color(0x2266cc), new THREE.Color(0x00aacc), new THREE.Color(0x00ddbb)] },
+    { name: 'thomas', palette: [new THREE.Color(0x8833cc), new THREE.Color(0xcc33aa), new THREE.Color(0xff44cc)] },
+    { name: 'aizawa', palette: [new THREE.Color(0x22aa44), new THREE.Color(0x00ccaa), new THREE.Color(0x00eedd)] },
+    { name: 'halvorsen', palette: [new THREE.Color(0xccaa00), new THREE.Color(0xeecc44), new THREE.Color(0xffffff)] }
 ];
 
 // ── Shader Source ───────────────────────────────────────────────────
@@ -153,19 +85,6 @@ const GLOW_FRAGMENT_SHADER = `
         gl_FragColor = vec4(uColor, intensity * uOpacity);
     }
 `;
-
-// ── RK4 Integrator ─────────────────────────────────────────────────
-export function rk4Step(derivFn, x, y, z, dt, params) {
-    const k1 = derivFn(x, y, z, params);
-    const k2 = derivFn(x + k1[0] * dt / 2, y + k1[1] * dt / 2, z + k1[2] * dt / 2, params);
-    const k3 = derivFn(x + k2[0] * dt / 2, y + k2[1] * dt / 2, z + k2[2] * dt / 2, params);
-    const k4 = derivFn(x + k3[0] * dt, y + k3[1] * dt, z + k3[2] * dt, params);
-    return [
-        x + (dt / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]),
-        y + (dt / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]),
-        z + (dt / 6) * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2])
-    ];
-}
 
 // ── Trail System ───────────────────────────────────────────────────
 // capacity bounds the ring buffer — a small capacity yields a short

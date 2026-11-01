@@ -5,7 +5,7 @@
 // raw indexes are accepted only as a fallback.
 
 import { catalog, stopById, UNIVERSES } from './world.js';
-import { Phase, getState, jumpTo, setupTravel, onTap, walkAt, leaveFlat, flyTo, graphFrame } from './orchestrator.js';
+import { Phase, getState, jumpTo, setupTravel, onTap, walkAt, leaveFlat, flyTo } from './orchestrator.js';
 import * as explore from './explore.js';
 
 const VERSION = 1;
@@ -37,8 +37,8 @@ function resolve(id) {
     return stopById(id);
 }
 
-// The catalog entry the journey is at (the graph: its current frame)
-const entryOf = (s) => navigable.find(e => e.index === s.stopIndex && (e.frame ?? 1) === (s.frame ?? 1)) ?? null;
+// The catalog entry the journey is at
+const entryOf = (s) => navigable.find(e => e.index === s.stopIndex) ?? null;
 
 function current() {
     const s = getState();
@@ -81,14 +81,14 @@ async function goTo(id, { mode = 'fly' } = {}) {
         const r = walkAt(e.index);
         return r?.ok === false ? { ok: false, reason: r.why, current: current() } : { ok: true, stop: e.id, mode: 'walk' };
     }
-    const fly = mode === 'fly' && e.index >= 1 && (e.frame ?? 1) === 1;   // a later graph frame: a jump (grown)
+    const fly = mode === 'fly' && e.index >= 1;
     if (fly) {
         const arrived = nextEnter(e.id);
         if (e.index === s.stopIndex + 1 && s.phase === Phase.VIEW) setupTravel(e.index);
-        else flyTo(e.index);          // (the first graph frame: the lift out of the flat, also from the walk)
+        else flyTo(e.index);          // (the first project: the lift out of the flat, also from the walk)
         await arrived;
     } else {
-        jumpTo(e.index, e.frame ?? 1); // dispatches 'enter' synchronously
+        jumpTo(e.index);              // dispatches 'enter' synchronously
     }
     return { ok: true, stop: e.id, mode: fly ? 'fly' : 'jump' };
 }
@@ -99,7 +99,7 @@ async function step(delta) {
     if (why) return { ok: false, reason: why, current: current() };
     if (delta > 0) {
         if (s.phase === Phase.EXPLORE && explore.touring()) {
-            // the walk: Next object (no wait for the arrival), at 6/6 on out of the flat
+            // the walk: Next object (no wait for the arrival), once all are found on out of the flat
             if (!explore.allCollected()) {
                 const r = explore.nextObject();
                 return r.ok ? { ok: true, stop: r.object, mode: 'walk' } : { ok: false, reason: r.why, current: current() };
@@ -113,9 +113,6 @@ async function step(delta) {
         onTap();
         return { ok: true, stop: await arrived, mode: 'fly' };
     }
-    // a graph frame past the first: one frame back (grown)
-    const k = graphFrame();
-    if (k > 1) { jumpTo(s.stopIndex, k - 1); return { ok: true, stop: current().stop, mode: 'jump' }; }
     const prev = navigable[navigable.indexOf(entryOf(s)) - 1];
     if (s.phase !== Phase.VIEW || !prev) return { ok: false, reason: 'no-previous-stop', current: current() };
     return goTo(prev.id);

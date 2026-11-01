@@ -550,6 +550,8 @@ body.panel-open .tap-prompt {
     body[data-input="walk"] .site-nav a,
     body[data-input="walk"] .site-nav .sound-toggle { margin-left: 0; }
     .walk-back-long { display: none; }
+    /* the row is full (count, nav): the depth switch sits under the count */
+    .walk-depth { position: fixed; top: calc(3.3rem + env(safe-area-inset-top)); left: calc(0.75rem + env(safe-area-inset-left)); }
 }
 .walk-count {
     color: #ccc;
@@ -639,8 +641,9 @@ body.panel-open .tap-prompt {
 }
 .walk-arrow[hidden] { display: none; }
 
-/* The depth room (js/depthRoom.js): the legend (near .. far in metres) in
-   the bottom bar while the eye is in the room */
+/* Depth view (js/depthRoom.js): the HUD switch, and the legend (near .. far
+   in metres) in the bottom bar while depth shows */
+.walk-depth[aria-pressed="true"] { border-color: #f9a00a; color: #ffd36b; }
 .depth-legend {
     display: flex;
     align-items: center;
@@ -657,5 +660,5 @@ body.panel-open .tap-prompt {
 .depth-legend i { display: block; width: 7rem; height: 0.45rem; border-radius: 0.25rem; }
 /* Phones, panel open: the bar sits over the panel's bottom padding; one line more */
 @media (max-width: 699px), (orientation: portrait) {
-    body.depth-inside .stop-panel { padding-bottom: calc(4.6rem + env(safe-area-inset-bottom)); }
+    body.depth-on .stop-panel { padding-bottom: calc(4.6rem + env(safe-area-inset-bottom)); }
 }

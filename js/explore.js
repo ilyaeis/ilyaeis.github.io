@@ -57,7 +57,8 @@ export function enterExplore(immediate = false) {
     return true;
 }
 
-// After the rocket morph: walk from the intro camera spot (the tour).
+// After the rocket morph: walk from the intro camera spot (the tour); the
+// walk to the first tour object starts at once (no press).
 // The stop is the first object (agent API, the room credit); no panel yet.
 let trailFade = 0;
 export function enterFromIntro() {
@@ -66,7 +67,7 @@ export function enterFromIntro() {
     J.emitStop('enter', { panel: null });
     trailFade = TRAIL_FADE;
     pauseJourney();
-    walker.enterWalk({ tour: true });
+    walker.enterWalk({ tour: true, next: true });
     return true;
 }
 

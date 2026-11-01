@@ -1,15 +1,16 @@
-// The depth room. Self-initialising (loaded after room.js).
-// One room of the flat (the room stop in world.js, `roomBox`) is drawn as
+// Depth view of the flat. Self-initialising (loaded after room.js).
+// The whole flat (the apartment box, world.js ROOM_BOX) can be drawn as
 // depth: each splat's colour = its distance from the eye, on a log ramp
-// (DEPTH_NEAR_M .. DEPTH_FAR_M), bright near to dark far. The mask is the
-// room box with a soft edge, so from the hall the room shows in depth
-// colour through the door, and crossing the doorway is the change.
+// (DEPTH_NEAR_M .. DEPTH_FAR_M), bright near to dark far. The HUD button
+// .walk-depth switches it in walk mode (the walk starts with it off);
+// walking into the depth room (the room stop, `roomBox`; also ?go=depth-room)
+// switches it on.
 // A Spark worldModifier dyno block on the room mesh, attached on the first
-// walk ('journey:explore' enter); on while walking, off (RGB) otherwise.
-// Spark regenerates all splats on updateVersion(), so the eye uniform
-// changes only when the eye moved more than MOVE_M (looking round costs
-// nothing), and at most UPDATE_SLOW_HZ while frames are slow.
-// A legend (near .. far in metres) shows while the eye is in the room.
+// walk ('journey:explore' enter); off (RGB) outside walk mode.
+// Spark regenerates all splats on updateVersion(), so while it is on the
+// eye uniform changes only when the eye moved more than MOVE_M (looking
+// round costs nothing), and at most UPDATE_SLOW_HZ while frames are slow.
+// A legend (near .. far in metres) shows in the bottom bar while it is on.
 
 import * as THREE from 'three';
 import { camera } from './attractors.js';
@@ -25,9 +26,11 @@ const DEPTH_GAIN = 0.75;             // the room is dimmed (room.js); this keeps
 const MOVE_M = 0.01;                 // regenerate only when the eye moved this far (m)
 const SLOW_DT = 1 / 30;              // s: frames slower than this (smoothed) ...
 const UPDATE_SLOW_HZ = 10;           // ... update the colours at most this often
+const EDGE = 0.02;                   // room units: soft edge of the apartment mask (GLSL smoothstep needs a width)
 
 let roomStop = null;                 // the room stop (world.js builds stops[] after this module loads)
 const legend = document.querySelector('.depth-legend');
+const button = document.querySelector('.walk-depth');
 if (legend) {
     legend.querySelector('i').style.background = 'linear-gradient(90deg, ' +
         RAMP.map(c => 'rgb(' + c.map(v => Math.round(v * 255)).join(',') + ')').join(', ') + ')';
@@ -38,6 +41,8 @@ const metresToWorld = (m) => m / M_PER_UNIT * apartment.scale;
 let u = null;                        // { uOn, uCam } once built
 let build = null;
 let walking = false;
+let wanted = false;                  // the visitor's switch (the button, or walking into the depth room)
+let inDepthRoom = false;
 let lastUpdate = 0, dtAvg = 1 / 60, lastNow = 0;
 const _v = new THREE.Vector3(), _r = new THREE.Vector3();
 
@@ -54,8 +59,9 @@ async function buildDepth() {
     const az = new THREE.Vector3(0, 0, 1).applyQuaternion(apartment.quaternion).divideScalar(apartment.scale);
     const O = dynoConst('vec3', apartment.position.clone());
     const AX = dynoConst('vec3', ax), AZ = dynoConst('vec3', az);
-    const { min, max: bmax, edge } = roomStop.roomBox;
-    const e = edge / 2;
+    // the apartment box, x and z (room units)
+    const min = [apartment.box.min[0], apartment.box.min[2]], bmax = [apartment.box.max[0], apartment.box.max[2]];
+    const e = EDGE / 2;
     const C = RAMP.map(c => dynoConst('vec3', new THREE.Vector3(...c).multiplyScalar(DEPTH_GAIN)));
     const F0 = f(0), F1 = f(1), FN = f(RAMP.length - 1);
     const block = dynoBlock({ gsplat: dyno.Gsplat }, { gsplat: dyno.Gsplat }, ({ gsplat }) => {
@@ -65,7 +71,7 @@ async function buildDepth() {
         let ramp = C[0];
         const x = mul(d01, FN);
         for (let i = 1; i < C.length; i++) ramp = mix(ramp, C[i], clamp(sub(x, f(i - 1)), F0, F1));
-        // the room box (x, z), soft edge
+        // the apartment box (x, z), soft edge
         const rel = sub(center, O);
         const rx = dot(rel, AX), rz = dot(rel, AZ);
         const inX = mul(smoothstep(f(min[0] - e), f(min[0] + e), rx), sub(F1, smoothstep(f(bmax[0] - e), f(bmax[0] + e), rx)));
@@ -75,15 +81,25 @@ async function buildDepth() {
     roomMesh.worldModifier = block;   // (room.js moves it to the full splat when that replaces the preview)
     roomMesh.updateGenerator();
     u = { uOn, uCam };
-    setOn(walking);
+    sync();
 }
 
-function setOn(on) {
-    if (!u) return;
+// Depth shows while walking and switched on; the button and the legend follow
+const isOn = () => walking && wanted;
+function sync() {
+    const on = isOn();
+    button?.setAttribute('aria-pressed', String(wanted));
+    if (legend && legend.hidden === on) {
+        legend.hidden = !on;
+        document.body.classList.toggle('depth-on', on);
+    }
+    if (!u || u.uOn.value === (on ? 1 : 0)) return;
     u.uOn.value = on ? 1 : 0;
     if (on) u.uCam.value.copy(camera.getWorldPosition(_v));
     roomMesh.updateVersion();
 }
+function toggleDepth() { wanted = !wanted; sync(); }
+button?.addEventListener('click', toggleDepth);
 
 function inRoom(p) {
     const r = worldToRoom(_r.copy(p)), b = roomStop.roomBox;
@@ -95,18 +111,18 @@ function tick(now) {
     const dt = lastNow ? Math.min((now - lastNow) / 1000, 0.25) : 1 / 60;
     lastNow = now;
     dtAvg += (dt - dtAvg) * 0.1;
-    if (!walking || !u) return;
+    if (!walking) return;
     camera.getWorldPosition(_v);
+    // walking into the depth room switches depth on (once per entry)
+    const inside = inRoom(_v);
+    if (inside && !inDepthRoom && !wanted) { wanted = true; sync(); }
+    inDepthRoom = inside;
+    if (!isOn() || !u) return;
     if (_v.distanceTo(u.uCam.value) > metresToWorld(MOVE_M) &&
         (dtAvg < SLOW_DT || now - lastUpdate >= 1000 / UPDATE_SLOW_HZ)) {
         u.uCam.value.copy(_v);
         roomMesh.updateVersion();       // uniforms changed: regenerate
         lastUpdate = now;
-    }
-    const inside = inRoom(_v);
-    if (legend && legend.hidden === inside) {
-        legend.hidden = !inside;
-        document.body.classList.toggle('depth-inside', inside);
     }
 }
 
@@ -114,8 +130,7 @@ window.addEventListener('journey:explore', (e) => {
     roomStop ??= stops.find(s => s.roomBox);
     if (!roomStop) return;
     walking = e.detail?.phase === 'enter';
-    if (walking) build ??= buildDepth();
-    setOn(walking);
-    if (!walking && legend) { legend.hidden = true; document.body.classList.remove('depth-inside'); }
+    if (walking) { build ??= buildDepth(); wanted = false; inDepthRoom = false; }   // each walk starts in colour
+    sync();
 });
 requestAnimationFrame(tick);

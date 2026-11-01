@@ -21,8 +21,7 @@ const C = {
     magenta: new THREE.Color(0xff44cc),
     cyan: new THREE.Color(0x44ccff),
     amber: new THREE.Color(0xffaa44),
-    white: new THREE.Color(1, 1, 1),
-    red: new THREE.Color(0xff3344)
+    white: new THREE.Color(1, 1, 1)
 };
 const _c = new THREE.Color();
 const BRACKET_ALPHA = 0.28;              // corner brackets round every viz
@@ -73,25 +72,6 @@ const POINT_FRAG = `
         gl_FragColor = vec4(vColor, a);
     }
 `;
-// Monte Carlo paths: each vertex knows its time share (aPath.x) and its
-// path's start delay (aPath.y); the path grows on the GPU.
-const PATH_VERT = `
-    attribute vec3 color;
-    attribute float aAlpha;
-    attribute vec2 aPath;
-    uniform float uOpacity, uVis, uT, uDur;
-    varying vec3 vColor;
-    varying float vAlpha;
-    void main() {
-        float prog = clamp((uT - aPath.y) / uDur, 0.0, 1.0);
-        float vis = 1.0 - smoothstep(prog, prog + 0.012, aPath.x);
-        float head = exp(-abs(prog - aPath.x) * 50.0) * (1.0 - step(0.999, prog));
-        vColor = color * (1.0 + 2.5 * head);
-        vAlpha = aAlpha * vis * uOpacity * uVis * (1.0 + 1.5 * head);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-`;
-
 // uVis: the whole viz fades with its distance down the tunnel (one
 // uniform object per viz, set while its builder runs)
 let curVis = { value: 1 };
@@ -131,12 +111,6 @@ function lineSegs(group, n) {
     group.add(o.obj);
     return o;
 }
-function lineStrip(group, n) {
-    const o = attrs(n);
-    o.obj = new THREE.Line(o.g, material());
-    group.add(o.obj);
-    return o;
-}
 function points(group, n) {
     const o = attrs(n);
     o.size = new Float32Array(n);
@@ -157,14 +131,6 @@ function quads(group, nQuads) {
     group.add(o.obj);
     return o;
 }
-// Gradient quad, from (x0, y0) to (x1, y1); bottom colour/alpha, top colour/alpha
-function setQuad(o, q, x0, y0, x1, y1, cb, kb, ab, ct, kt, at) {
-    setV(o, q * 4, x0, y0, cb, kb, ab);
-    setV(o, q * 4 + 1, x1, y0, cb, kb, ab);
-    setV(o, q * 4 + 2, x0, y1, ct, kt, at);
-    setV(o, q * 4 + 3, x1, y1, ct, kt, at);
-}
-
 // Soft ribbon along a polyline in the plane: 3 vertices per sample (edge,
 // core, edge). reveal(k) draws only the first k samples.
 function ribbon(group, n, width, vert = VERT, extra = {}, extraAttr = null) {
@@ -239,12 +205,6 @@ function shuffled(n, random = Math.random) {
     for (let i = n - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
     return a;
 }
-function gauss() {
-    let u = 0;
-    while (u === 0) u = Math.random();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
-}
-
 // ── SORTING ────────────────────────────────────────────────────────
 // The showpiece, after the original C++/SFML project: real algorithms
 // sort live (the op list of compares / swaps / writes is recorded on a
@@ -631,350 +591,6 @@ function calculatorViz(group) {
     return update;
 }
 
-// ── MONTE CARLO ────────────────────────────────────────────────────
-// Option pricing by simulation: a fan of geometric Brownian motion price
-// paths grows left to right from one start point (dim, a few bright),
-// and a histogram on the right fills as paths arrive, settling into a
-// log-normal shape. Paths that end above the strike K glow pink.
-const MC_PATHS = isMobile ? 36 : 72;
-const MC_STEPS = isMobile ? 60 : 96;
-const MC_BRIGHT = 5;
-const MC_BINS = 24;
-const MC_DELAY = 1.8;                    // start delays spread over this
-const MC_DUR = 2.2;                      // s for one path to grow
-const MC_HOLD = 1.0;
-const MC_FADE = 0.6;
-const MC_SIGMA = 0.38, MC_MU = 0.08, MC_STRIKE = 1.15;
-
-function monteCarloViz(group) {
-    const PX0 = -1.22, PX1 = 0.74, HX0 = 0.82, HW = 0.44, Y0 = -0.38, KY = 0.6;
-    const yOf = S => THREE.MathUtils.clamp(Y0 + KY * (S - 1), -0.96, 0.96);
-    const yK = yOf(MC_STRIKE);
-    // Axes, strike line
-    const axes = lineSegs(group, 4 + 40);
-    setV(axes, 0, PX0, -0.97, C.purple, 1, 0.4); setV(axes, 1, PX1, -0.97, C.purple, 1, 0.4);
-    setV(axes, 2, PX0, -0.97, C.purple, 1, 0.4); setV(axes, 3, PX0, 0.97, C.purple, 1, 0.4);
-    for (let i = 0; i < 20; i++) {
-        const x0 = PX0 + (HX0 + HW - PX0) * i / 20;
-        setV(axes, 4 + i * 2, x0, yK, C.pink, 1, 0.3);
-        setV(axes, 5 + i * 2, x0 + (HX0 + HW - PX0) / 40, yK, C.pink, 1, 0.3);
-    }
-    dirty(axes);
-    strokeText(group, 'K', HX0 + HW + 0.03, yK, 0.07, C.pink, 1, 0.6);
-    brackets(group);
-
-    // Dim paths: one LineSegments; aPath = (time share, start delay)
-    const nSeg = MC_PATHS * (MC_STEPS - 1) * 2;
-    const dimO = attrs(nSeg);
-    const dimPath = new Float32Array(nSeg * 2);
-    dimO.g.setAttribute('aPath', new THREE.BufferAttribute(dimPath, 2));
-    const uT = { value: 0 };
-    dimO.obj = new THREE.LineSegments(dimO.g, material(PATH_VERT, FRAG, { uT, uDur: { value: MC_DUR } }));
-    group.add(dimO.obj);
-    // Bright paths: ribbons with the same growth shader
-    const bright = [];
-    for (let b = 0; b < MC_BRIGHT; b++) {
-        bright.push(ribbon(group, MC_STEPS, 0.02, PATH_VERT, { uT, uDur: { value: MC_DUR } }, { name: 'aPath', size: 2 }));
-    }
-    const start = points(group, 1);
-    setV(start, 0, PX0, Y0, C.white, 2, 1); start.size[0] = 0.09; dirty(start);
-    // Histogram and its log-normal density
-    const bars = quads(group, MC_BINS);
-    const pdf = lineStrip(group, 64);
-    const pdfW = new Float32Array(64);       // alpha weight: no line where the density is ~0
-    const binH = 1.92 / MC_BINS, binOf = y => Math.min(MC_BINS - 1, Math.max(0, Math.floor((y + 0.96) / binH)));
-    const count = new Float32Array(MC_BINS), shown = new Float32Array(MC_BINS);
-    let maxCount = 1, ends = [], delays = [], arrived = [];
-    let t = 0;
-    const cycle = MC_DELAY + MC_DUR + MC_HOLD + MC_FADE;
-
-    function generate() {
-        const dt = 1 / (MC_STEPS - 1);
-        ends = []; delays = []; arrived = [];
-        const finals = new Float32Array(MC_BINS);
-        const brightSet = new Set();
-        while (brightSet.size < MC_BRIGHT) brightSet.add(Math.floor(Math.random() * MC_PATHS));
-        let bi = 0, v = 0;
-        for (let p = 0; p < MC_PATHS; p++) {
-            const delay = MC_DELAY * p / MC_PATHS + Math.random() * 0.1;
-            const ys = new Float32Array(MC_STEPS);
-            let lnS = 0;
-            for (let k = 0; k < MC_STEPS; k++) {
-                if (k) lnS += (MC_MU - MC_SIGMA * MC_SIGMA / 2) * dt + MC_SIGMA * Math.sqrt(dt) * gauss();
-                ys[k] = yOf(Math.exp(lnS));
-            }
-            const S = Math.exp(lnS), itm = S > MC_STRIKE;
-            ends.push(ys[MC_STEPS - 1]); delays.push(delay); arrived.push(false);
-            finals[binOf(ys[MC_STEPS - 1])]++;
-            const col = itm ? C.magenta : C.purple, k = itm ? 0.9 : 0.8, al = itm ? 0.2 : 0.11;
-            for (let s = 0; s < MC_STEPS - 1; s++) {
-                for (const e of [0, 1]) {
-                    setV(dimO, v, PX0 + (PX1 - PX0) * (s + e) / (MC_STEPS - 1), ys[s + e], col, k, al);
-                    dimPath[v * 2] = (s + e) / (MC_STEPS - 1); dimPath[v * 2 + 1] = delay;
-                    v++;
-                }
-            }
-            if (brightSet.has(p)) {
-                const r = bright[bi++];
-                const ap = r.g.attributes.aPath.array;
-                for (let s = 0; s < MC_STEPS; s++) {
-                    r.xs[s] = PX0 + (PX1 - PX0) * s / (MC_STEPS - 1); r.ys[s] = ys[s];
-                    for (let e = 0; e < 3; e++) { ap[(s * 3 + e) * 2] = s / (MC_STEPS - 1); ap[(s * 3 + e) * 2 + 1] = delay; }
-                }
-                ribbonWrite(r, _c.copy(itm ? C.magenta : C.cyan).lerp(C.white, 0.25), 1.05, 0.9);
-                r.g.attributes.aPath.needsUpdate = true;
-            }
-        }
-        dirty(dimO); dimO.g.attributes.aPath.needsUpdate = true;
-        maxCount = Math.max(...finals, 1);
-        count.fill(0);
-        // Log-normal density of S_T, scaled to the expected peak bar
-        const m = (MC_MU - MC_SIGMA * MC_SIGMA / 2), sd = MC_SIGMA;
-        let peak = 0;
-        const dens = [];
-        for (let i = 0; i < 64; i++) {
-            const y = -0.96 + 1.92 * i / 63, S = 1 + (y - Y0) / KY;
-            const d = S > 0.01 ? Math.exp(-((Math.log(S) - m) ** 2) / (2 * sd * sd)) / (S * sd) : 0;
-            dens.push([y, d]); peak = Math.max(peak, d);
-        }
-        dens.forEach(([y, d], i) => { setV(pdf, i, HX0 + HW * 0.95 * d / peak, y, C.white, 0.9, 0); pdfW[i] = Math.min(1, 12 * d / peak); });
-        dirty(pdf);
-    }
-    generate();
-
-    function update(dt) {
-        t += dt;
-        if (t >= cycle) { t -= cycle; generate(); }
-        uT.value = t;
-        const fade = t > cycle - MC_FADE ? 1 - smooth01((t - (cycle - MC_FADE)) / MC_FADE) : 1;
-        let nArr = 0;
-        for (let p = 0; p < MC_PATHS; p++) {
-            if (!arrived[p] && t >= delays[p] + MC_DUR) { arrived[p] = true; count[binOf(ends[p])]++; }
-            if (arrived[p]) nArr++;
-        }
-        for (let b = 0; b < MC_BINS; b++) {
-            shown[b] = ease(shown[b], count[b], 10, dt);
-            const y0 = -0.96 + b * binH + binH * 0.12, y1 = y0 + binH * 0.76;
-            const len = HW * shown[b] / maxCount;
-            const above = (y0 + y1) / 2 > yK;
-            const col = above ? C.magenta : C.purple;
-            // Horizontal bar: left edge dim, right edge bright (quad rotated: use x as "height")
-            setV(bars, b * 4, HX0, y0, col, 0.4, 0.25);
-            setV(bars, b * 4 + 1, HX0 + len, y0, col, 1.1, 0.85);
-            setV(bars, b * 4 + 2, HX0, y1, col, 0.4, 0.25);
-            setV(bars, b * 4 + 3, HX0 + len, y1, col, 1.1, 0.85);
-        }
-        dirty(bars);
-        const pa = pdf.alp, frac = nArr / MC_PATHS;
-        for (let i = 0; i < 64; i++) pa[i] = 0.55 * frac * frac * pdfW[i];
-        pdf.g.attributes.aAlpha.needsUpdate = true;
-        for (const o of [dimO, ...bright, bars, pdf, start]) o.obj.material.uniforms.uOpacity.value = fade;
-    }
-    return update;
-}
-
-// ── BALANCER ───────────────────────────────────────────────────────
-// Consistent hashing: a hash ring, five servers on it, each owning the
-// arc before it (ring coloured by owner). Requests fly from the clients
-// on the left to their hash point, then slide along the ring to the next
-// live server, which flashes and grows its load bar. Now and then a
-// server fails its health check: its arc joins the next server's.
-const LB_POOL = isMobile ? 24 : 40;
-const LB_RATE = 7;                       // requests per second
-const LB_RING_PTS = 160;
-
-function balancerViz(group) {
-    const CX = 0.05, CY = -0.02, R = 0.78;
-    const SERVERS = [0.35, 1.55, 2.7, 3.95, 5.3];
-    const COLS = [C.magenta, C.cyan, C.amber, C.pink, new THREE.Color(0x9a66ff)];
-    const up = SERVERS.map(() => true);
-    const load = new Float32Array(SERVERS.length), flash = new Float32Array(SERVERS.length);
-    const ring = lineStrip(group, LB_RING_PTS + 1);
-    const ticks = lineSegs(group, 64);
-    for (let i = 0; i < 32; i++) {
-        const a = i / 32 * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
-        setV(ticks, i * 2, CX + c * (R - 0.03), CY + s * (R - 0.03), C.purple, 1, 0.3);
-        setV(ticks, i * 2 + 1, CX + c * (R - 0.07), CY + s * (R - 0.07), C.purple, 1, 0.3);
-    }
-    dirty(ticks);
-    const client = lineSegs(group, 2);
-    setV(client, 0, -1.22, -0.85, C.purple, 1, 0.4); setV(client, 1, -1.22, 0.85, C.purple, 1, 0.4); dirty(client);
-    const srv = points(group, SERVERS.length);
-    const bars = lineSegs(group, SERVERS.length * 2);
-    const req = points(group, LB_POOL);
-    const tails = lineSegs(group, LB_POOL * 2);
-    brackets(group);
-
-    const owner = a => {                 // next live server at or after angle a
-        let best = -1, bestD = Infinity;
-        SERVERS.forEach((sa, i) => {
-            if (!up[i]) return;
-            const d = ((sa - a) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
-            if (d < bestD) { bestD = d; best = i; }
-        });
-        return best;
-    };
-    function paintRing() {
-        for (let i = 0; i <= LB_RING_PTS; i++) {
-            const a = i / LB_RING_PTS * Math.PI * 2;
-            setV(ring, i, CX + Math.cos(a) * R, CY + Math.sin(a) * R, COLS[owner(a)], 0.9, 0.55);
-        }
-        dirty(ring);
-    }
-    paintRing();
-
-    const pool = Array.from({ length: LB_POOL }, () => ({ live: false }));
-    let spawnAcc = 0, t = 0, downIdx = -1, downT = 0, nextFail = 4;
-    function update(dt) {
-        t += dt;
-        // Health checks: one server fails for a while, then recovers
-        if (downIdx < 0 && t >= nextFail) { downIdx = Math.floor(Math.random() * SERVERS.length); up[downIdx] = false; downT = 0; paintRing(); }
-        if (downIdx >= 0 && (downT += dt) > 2.8) { up[downIdx] = true; downIdx = -1; nextFail = t + 4 + Math.random() * 2; paintRing(); }
-        spawnAcc += LB_RATE * dt;
-        while (spawnAcc >= 1) {
-            spawnAcc--;
-            const r = pool.find(p => !p.live);
-            if (!r) break;
-            r.live = true; r.phase = 0; r.u = 0;
-            r.sx = -1.22; r.sy = (Math.random() * 2 - 1) * 0.8;
-            r.h = Math.random() * Math.PI * 2;
-            r.x = r.sx; r.y = r.sy; r.px = r.x; r.py = r.y;
-        }
-        pool.forEach((r, i) => {
-            if (!r.live) { setV(req, i, 0, 0, C.white, 0, 0); setV(tails, i * 2, 0, 0, C.white, 0, 0); setV(tails, i * 2 + 1, 0, 0, C.white, 0, 0); return; }
-            r.px = r.x; r.py = r.y;
-            const hx = CX + Math.cos(r.h) * R, hy = CY + Math.sin(r.h) * R;
-            if (r.phase === 0) {
-                r.u = Math.min(r.u + dt / 0.7, 1);
-                const e = smooth01(r.u), cx = (r.sx + hx) / 2, cy = r.sy * 0.3 + hy * 0.7 + 0.25;
-                r.x = (1 - e) * (1 - e) * r.sx + 2 * (1 - e) * e * cx + e * e * hx;
-                r.y = (1 - e) * (1 - e) * r.sy + 2 * (1 - e) * e * cy + e * e * hy;
-                if (r.u >= 1) { r.phase = 1; r.a = r.h; r.target = owner(r.h); }
-            } else {
-                const ta = SERVERS[r.target];
-                if (!up[r.target]) r.target = owner(r.a);
-                const d = ((SERVERS[r.target] - r.a) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
-                const stepA = 2.6 * dt;
-                if (d <= stepA || ta === undefined) {
-                    load[r.target] += 1; flash[r.target] = 1; r.live = false;
-                } else r.a += stepA;
-                r.x = CX + Math.cos(r.a) * R; r.y = CY + Math.sin(r.a) * R;
-            }
-            const col = r.phase === 1 ? COLS[r.target] : C.white;
-            setV(req, i, r.x, r.y, _c.copy(col).lerp(C.white, 0.5), 1.8, 1);
-            req.size[i] = 0.05;
-            const vx = r.x - r.px, vy = r.y - r.py, l = Math.hypot(vx, vy) || 1;
-            const tl = Math.min(0.12, l * 4);
-            setV(tails, i * 2, r.x, r.y, col, 1.2, 0.8);
-            setV(tails, i * 2 + 1, r.x - vx / l * tl, r.y - vy / l * tl, col, 1.2, 0);
-        });
-        SERVERS.forEach((a, i) => {
-            load[i] *= Math.exp(-0.6 * dt);
-            flash[i] *= Math.exp(-6 * dt);
-            const c = Math.cos(a), s = Math.sin(a);
-            const col = up[i] ? COLS[i] : C.red;
-            setV(srv, i, CX + c * R, CY + s * R, _c.copy(col).lerp(C.white, 0.3 + 0.5 * flash[i]), up[i] ? 1.6 + 1.5 * flash[i] : 0.6, up[i] ? 1 : 0.5);
-            srv.size[i] = 0.13 + 0.08 * flash[i];
-            const L = Math.min(0.42, 0.05 * load[i]);
-            setV(bars, i * 2, CX + c * (R + 0.1), CY + s * (R + 0.1), col, 1.2, up[i] ? 0.9 : 0);
-            setV(bars, i * 2 + 1, CX + c * (R + 0.1 + L), CY + s * (R + 0.1 + L), col, 1.2, up[i] ? 0.9 : 0);
-        });
-        dirty(req); dirty(tails); dirty(srv); dirty(bars);
-    }
-    return update;
-}
-
-// ── FLOW ───────────────────────────────────────────────────────────
-// A workout tracker: a rest timer sweeps round; each finished set fills
-// a dot and grows today's volume bar; after five sets the next day
-// starts. Below, acute vs chronic training load (ACWR) scrolls by, with
-// the safe band shaded.
-const FLOW_TIMER = 2.4;                  // s per set
-const FLOW_SETS = 5;
-const FLOW_ACWR_PTS = isMobile ? 80 : 140;
-
-function flowViz(group) {
-    const TX = -0.68, TY = 0.32, TR = 0.46;
-    const dial = lineStrip(group, 97);
-    for (let i = 0; i <= 96; i++) {
-        const a = i / 96 * Math.PI * 2;
-        setV(dial, i, TX + Math.cos(a) * TR, TY + Math.sin(a) * TR, C.purple, 1, 0.3);
-    }
-    dirty(dial);
-    const arc = ribbon(group, 97, 0.035);
-    for (let i = 0; i <= 96; i++) {
-        const a = Math.PI / 2 - i / 96 * Math.PI * 2;      // from the top, clockwise
-        arc.xs[i] = TX + Math.cos(a) * TR; arc.ys[i] = TY + Math.sin(a) * TR;
-    }
-    ribbonWrite(arc, null, 1.3, 1, i => _c.copy(C.purple).lerp(C.magenta, i / 96).clone());
-    const head = points(group, 1 + FLOW_SETS);
-    // Weekly volume bars
-    const BX0 = 0.08, BX1 = 1.2, BY = -0.18, BH = 0.95;
-    const bars = quads(group, 7);
-    const vol = new Float32Array(7), shownVol = new Float32Array(7);
-    const base = lineSegs(group, 2 + 6 + 4);
-    setV(base, 0, BX0 - 0.03, BY, C.purple, 1, 0.45); setV(base, 1, BX1 + 0.03, BY, C.purple, 1, 0.45);
-    // ACWR band
-    const AY0 = -0.95, AY1 = -0.42, val2y = v => AY0 + (v - 0.5) / 1.1 * (AY1 - AY0);
-    for (const [k, v] of [[2, 0.8], [4, 1.3]]) {
-        setV(base, k, -1.2, val2y(v), C.cyan, 1, 0.22); setV(base, k + 1, 1.2, val2y(v), C.cyan, 1, 0.22);
-    }
-    setV(base, 6, -1.2, AY0, C.purple, 1, 0.35); setV(base, 7, 1.2, AY0, C.purple, 1, 0.35);
-    base.g.setDrawRange(0, 8);
-    dirty(base);
-    const acute = ribbon(group, FLOW_ACWR_PTS, 0.02);
-    const chronic = lineStrip(group, FLOW_ACWR_PTS);
-    brackets(group);
-
-    let t = 0, sets = 0, day = 3, scroll = 0, setFlash = 0;
-    for (let d = 0; d < day; d++) vol[d] = 0.45 + Math.random() * 0.45;   // a week already under way
-    const acuteF = x => 1.05 + 0.22 * Math.sin(1.7 * x) + 0.11 * Math.sin(4.3 * x + 1) + 0.07 * Math.sin(9.1 * x + 2);
-    const chronicF = x => 1.02 + 0.08 * Math.sin(0.55 * x + 0.5);
-    function update(dt) {
-        t += dt;
-        const cyc = FLOW_TIMER + 0.5;
-        if (t >= cyc) {
-            t -= cyc; sets++; setFlash = 1;
-            vol[day] += 0.12 + Math.random() * 0.1;
-            if (sets >= FLOW_SETS) {
-                sets = 0; day++;
-                if (day >= 7) { day = 0; vol.fill(0); }
-            }
-        }
-        setFlash *= Math.exp(-4 * dt);
-        const prog = smooth01(Math.min(t / FLOW_TIMER, 1));
-        ribbonReveal(arc, prog * 96 + 1);
-        arc.obj.material.uniforms.uOpacity.value = 1 + 1.5 * setFlash;
-        const hi = Math.min(Math.floor(prog * 96), 96);
-        setV(head, 0, arc.xs[hi], arc.ys[hi], C.white, 2.2, t < FLOW_TIMER ? 1 : 0);
-        head.size[0] = 0.08;
-        for (let s = 0; s < FLOW_SETS; s++) {
-            const on = s < sets;
-            setV(head, 1 + s, TX - 0.32 + s * 0.16, TY - TR - 0.2, on ? C.magenta : C.purple, on ? 1.6 : 0.8, on ? 1 : 0.35);
-            head.size[1 + s] = on ? 0.07 : 0.05;
-        }
-        dirty(head);
-        const step = (BX1 - BX0) / 7;
-        for (let d = 0; d < 7; d++) {
-            shownVol[d] = ease(shownVol[d], vol[d], 6, dt);
-            const x0 = BX0 + d * step + step * 0.2, x1 = x0 + step * 0.6;
-            const today = d === day;
-            _c.copy(today ? C.magenta : C.purple);
-            setQuad(bars, d, x0, BY, x1, BY + 0.005 + shownVol[d] * BH, _c, 0.35, 0.15, today ? _c.clone().lerp(C.white, 0.3 * setFlash) : _c, today ? 1.2 + setFlash : 0.85, 0.8);
-        }
-        dirty(bars);
-        scroll += dt * 0.7;
-        for (let i = 0; i < FLOW_ACWR_PTS; i++) {
-            const u = i / (FLOW_ACWR_PTS - 1), x = -1.2 + 2.4 * u, tt = scroll + u * 4;
-            acute.xs[i] = x; acute.ys[i] = val2y(acuteF(tt));
-            setV(chronic, i, x, val2y(chronicF(tt)), C.purple, 1, 0.55);
-        }
-        ribbonWrite(acute, C.magenta, 1.2, 1);
-        dirty(chronic);
-    }
-    return update;
-}
-
 // ── NEAT ───────────────────────────────────────────────────────────
 // A small evolving network: inputs, an irregular hidden layer, outputs.
 // Signals flow along the links; nodes flash as they arrive; the winning
@@ -1066,9 +682,6 @@ function neatViz(group) {
 const BUILDERS = {
     'SORTING': sortingViz,
     'CALCULATOR': calculatorViz,
-    'MONTE CARLO': monteCarloViz,
-    'BALANCER': balancerViz,
-    'FLOW': flowViz,
     'NEAT': neatViz
 };
 const PREWARM = 2.0;                     // s simulated at build, so a viz never starts empty

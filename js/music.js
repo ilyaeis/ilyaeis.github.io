@@ -1,11 +1,13 @@
 // Background music: generative WebAudio, no audio files (0 bytes to load).
 // A soft chord pad walks a slow lo-fi progression, a quiet pentatonic
 // melody drifts over it, and plucks ring on events (a stop, a collected
-// object). The comet drives it: speed and the tunnel rush open the filter
+// object). Each arrival also moves the pad on to the next chord (the
+// landing: back to the root), so the harmony follows the journey. The comet drives it: speed and the tunnel rush open the filter
 // and raise a noise whoosh, the warp swells. Graph: detuned saws + a sine
 // sub -> low-pass -> feedback delay -> compressor.
 // It starts on the first tap (a user gesture), fades in, and the
-// .site-nav button mutes it (remembered). ?music=0 turns it off (dev).
+// .site-nav button mutes it (remembered). Off by default on phones (the
+// visitor's remembered choice wins). ?music=0 turns it off (dev).
 import { isMobile } from './attractors.js';
 import { StopType } from './world.js';
 
@@ -105,15 +107,19 @@ export function createEngine(ctx, out, mobile = false) {
         }
     }
 
+    // Chord k (the next one by default): voices glide there; the clock restarts
+    function stepChord(k = (chord + 1) % CHORDS.length) {
+        const t = ctx.currentTime;
+        chord = k;
+        nextChord = t + CHORD_TIME;
+        const c = CHORDS[chord];
+        sub.frequency.setTargetAtTime(midiHz(c[0]), t, 0.3);
+        voices.forEach((v, i) => v.forEach(o => o.frequency.setTargetAtTime(midiHz(c[i + 1]), t, 0.3)));
+    }
+
     function update(s) {
         const t = ctx.currentTime;
-        if (t >= nextChord) {                       // the next chord: voices glide there
-            chord = (chord + 1) % CHORDS.length;
-            nextChord += CHORD_TIME;
-            const c = CHORDS[chord];
-            sub.frequency.setTargetAtTime(midiHz(c[0]), t, 0.3);
-            voices.forEach((v, i) => v.forEach(o => o.frequency.setTargetAtTime(midiHz(c[i + 1]), t, 0.3)));
-        }
+        if (t >= nextChord) stepChord();
         if (t >= nextNote) {                        // the melody: a quiet random walk
             melody = Math.max(0, Math.min(PENTA.length - 1, melody + [-2, -1, 1, 2][Math.floor(Math.random() * 4)]));
             pluck(PENTA[melody], 0, 0.4);
@@ -129,8 +135,10 @@ export function createEngine(ctx, out, mobile = false) {
         bp.frequency.setTargetAtTime(350 + 1000 * v + 1800 * w, t, 0.3);
     }
 
-    // A stop: one pluck. A collected object: a rising pair. The landing: home (A + E)
+    // Each arrival steps the chord first (the pluck then fits it). A stop:
+    // one pluck. A collected object: a rising pair. The landing: home (A + E, the root chord)
     function event(kind, n = 0) {
+        stepChord(kind === 'home' ? 0 : undefined);
         if (kind === 'stop') pluck(PENTA[3 + n % 5]);
         else if (kind === 'collect') { pluck(PENTA[4 + n % 3]); pluck(PENTA[6 + n % 3], 0.14); }
         else { pluck(57, 0, 0.8); pluck(64, 0.2, 0.8); pluck(69, 0.4); }
@@ -142,8 +150,8 @@ export function createEngine(ctx, out, mobile = false) {
 // ── The page ───────────────────────────────────────────────────────
 const off = new URLSearchParams(location.search).get('music') === '0';
 let ctx = null, engine = null, ducked = false, collects = 0;
-let muted = false;
-try { muted = localStorage.getItem(STORE_KEY) === '1'; } catch { /* no storage: on */ }
+let muted = isMobile;           // phones: off until the visitor turns it on
+try { const v = localStorage.getItem(STORE_KEY); if (v !== null) muted = v === '1'; } catch { /* no storage: the default */ }
 const target = () => (muted ? 0 : MASTER * (ducked ? DUCK : 1));
 
 // main.js calls it on every tap and key (the first one is the user gesture)
@@ -193,7 +201,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('journey:stop', (e) => {
     if (e.detail.phase !== 'enter') return;
-    play(e.detail.type === StopType.LANDING ? 'home' : 'stop', e.detail.index + (e.detail.frame ?? 0));
+    play(e.detail.type === StopType.LANDING ? 'home' : 'stop', e.detail.index);
 });
 window.addEventListener('walk:collect', () => play('collect', collects++));
 window.addEventListener('journey:portal', (e) => { if (e.detail.phase === 'enter') duck(true); });
