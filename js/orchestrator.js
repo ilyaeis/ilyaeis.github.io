@@ -19,7 +19,7 @@ import * as portal from './portal.js';
 import * as explore from './explore.js';
 import { setPhaseOwner } from './input.js';
 import {
-    buildWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
+    buildWorld, finishWorld, stops, StopType, planePointToWorld, scenery, updateWorld, lightStop, tunnelExitS, setInsideFade, flybys, stopById,
     getMailPlane as mailPlaneFromWorld, CONTACT_EMAIL, fitDistance, viasFor, flatExitVias, apartment, setHaloFocus, snapHaloFocus,
     graphToWorld, graphFrameTarget
 } from './world.js';
@@ -236,10 +236,12 @@ let introLinksEl = null;   // "skip the walk · resume" under the first prompt
 let skipWalk = false;      // the intro's "skip the walk": after the morph, leave the flat at once
 
 // ── Init ───────────────────────────────────────────────────────────
-export function init() {
+// deferViz (main.js): the project vizzes build after the first frame
+// (world.js); a jump or the first flight builds the rest at once
+export function init({ deferViz = false } = {}) {
     tapPromptEl = document.querySelector('.tap-prompt');
     trail = createTrailSystem(COMET_CAPACITY);
-    buildWorld(scene); // the dim world exists from frame one
+    buildWorld(scene, { defer: deferViz }); // the dim world exists from frame one
     // The site starts in the flat: the intro camera is the landing VIEW pose
     // (inside, facing the bay windows), the name floats at the landing text spot
     const landing = stops.find(st => st.type === StopType.LANDING);
@@ -376,6 +378,7 @@ function framePanel(f, k) {
 
 // Land the comet at stop n instantly (?stop, ?leg, ?go, journey.goTo jump).
 export function jumpTo(n, frame = 1) {
+    finishWorld();
     if (stops[n].type === StopType.OBJECT && explore.hasWalker() && phase !== Phase.EXPLORE) { walkAt(n); return; }   // objects are walked to
     explore.leaveNow();
     intro.hideIntro(); hideTapPrompt();
@@ -788,6 +791,7 @@ const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 // ── Travel setup ───────────────────────────────────────────────────
 export function setupTravel(destIdx) {
+    finishWorld();
     const dest = stops[destIdx];
     explore.leaveNow();
     emitStop('leave', { to: destIdx }); // before stopIndex moves to the destination

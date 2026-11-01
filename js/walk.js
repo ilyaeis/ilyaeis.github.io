@@ -229,32 +229,47 @@ function seeLine(ax, az, bx, bz, end) {
     return true;
 }
 
-// A* (8-connected, no corner cutting, octile heuristic, binary heap).
+// A* (8-connected, no corner cutting, octile heuristic, binary heap on
+// typed arrays: a full flood is about 2x faster than with [f, i] pairs).
 // With gx < 0: no goal, a flood from the start (Dijkstra): { gS, from } for every cell
+let heapF = new Float64Array(1 << 16), heapI = new Int32Array(1 << 16);
 function search(sx, sz, gx, gz) {
     const N = nx * nz, gS = new Float32Array(N).fill(Infinity), from = new Int32Array(N).fill(-1);
-    const closed = new Uint8Array(N), heap = [];
+    const closed = new Uint8Array(N);
+    let n = 0;
     const h = gx < 0 ? () => 0
         : (ix, iz) => { const dx = Math.abs(ix - gx), dz = Math.abs(iz - gz); return Math.max(dx, dz) + 0.41421356 * Math.min(dx, dz); };
-    const push = (f, i) => { heap.push([f, i]); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
-    const pop = () => {
-        const top = heap[0], last = heap.pop();
-        if (heap.length) {
-            heap[0] = last; let k = 0;
-            for (;;) {
-                const l = 2 * k + 1, r = l + 1; let m = k;
-                if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
-                if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
-                if (m === k) break;
-                [heap[m], heap[k]] = [heap[k], heap[m]]; k = m;
-            }
+    const push = (f, i) => {
+        if (n === heapF.length) {
+            const F = new Float64Array(n * 2), I = new Int32Array(n * 2);
+            F.set(heapF); I.set(heapI); heapF = F; heapI = I;
         }
+        let k = n++;
+        while (k > 0) {
+            const p = (k - 1) >> 1;
+            if (heapF[p] <= f) break;
+            heapF[k] = heapF[p]; heapI[k] = heapI[p]; k = p;
+        }
+        heapF[k] = f; heapI[k] = i;
+    };
+    const pop = () => {
+        const top = heapI[0];
+        const f = heapF[--n], i = heapI[n];
+        let k = 0;
+        for (;;) {
+            const l = 2 * k + 1, r = l + 1;
+            if (l >= n) break;
+            const m = r < n && heapF[r] < heapF[l] ? r : l;
+            if (heapF[m] >= f) break;
+            heapF[k] = heapF[m]; heapI[k] = heapI[m]; k = m;
+        }
+        heapF[k] = f; heapI[k] = i;
         return top;
     };
     const s = sz * nx + sx, goal = gx < 0 ? -1 : gz * nx + gx;
     gS[s] = 0; push(h(sx, sz), s);
-    while (heap.length) {
-        const [, i] = pop();
+    while (n) {
+        const i = pop();
         if (closed[i]) continue;
         if (i === goal) break;
         closed[i] = 1;
@@ -352,22 +367,36 @@ function objectGoal(h) {
     h.goal = best ?? nearestFree(h.room.x + n.x * d0, h.room.z + n.z * d0, SNAP_M * M, GOAL_CLEAR);
     return h.goal;
 }
-// { stop, raw, len } of the nearest uncollected object (not `skip`), or null
-function nearestWay(skip = null) {
+// { stop, raw, len } of the nearest uncollected object (not `skip`), or null.
+// Each object has a flood from its goal (the grid and the goals are fixed:
+// built once), so a plan is a lookup at the walker's cell and a walk down
+// `from` (each step one cell nearer the goal), not a flood per plan.
+// `oneFlood`: build at most one missing flood and return undefined (plan
+// again next frame), so the edge arrow never builds several in one frame.
+function nearestWay(skip = null, oneFlood = false) {
     const st = nearestFree(pos.x, pos.y, 0.3 * M);
     if (!st || !halos) return null;
-    const flood = search(st[0], st[1], -1, -1);
+    const s = st[1] * nx + st[0];
     let best = null;
     for (const h of halos) {
         if (collected.has(h.stop.id) || h.stop === skip) continue;
         const g = objectGoal(h);
         if (!g) continue;
-        const i = g[1] * nx + g[0], len = flood.gS[i];
-        if (len < (best?.len ?? Infinity)) best = { stop: h.stop, goal: i, len };
+        if (!h.flood) {
+            h.flood = search(g[0], g[1], -1, -1);
+            if (oneFlood) return undefined;
+        }
+        const len = h.flood.gS[s];
+        if (len < (best?.len ?? Infinity)) best = { stop: h.stop, from: h.flood.from, goal: h.flood.s, len };
     }
     if (!best) return null;
-    best.raw = cellPath(flood, best.goal);
-    return best.raw ? best : null;
+    const raw = [];
+    for (let i = s; i >= 0; i = best.from[i]) {
+        const ix = i % nx;
+        raw.push([x0 + (ix + 0.5) * cell, z0 + ((i - ix) / nx + 0.5) * cell]);
+        if (i === best.goal) break;
+    }
+    return { stop: best.stop, raw, len: best.len };
 }
 // "Next object": walk to the nearest object not collected yet (the one
 // whose panel shows is done: the next one), then turn to it and show its panel
@@ -801,7 +830,10 @@ function updateTour(dt) {
     if (hintT >= 0 && (hintT += dt) > HINT_TIME) hideHint();
     if (!arrowEl) return;
     arrowT -= dt;
-    if (arrowT <= 0) { arrowT = ARROW_EVERY; arrowWay = nearestWay(); }
+    if (arrowT <= 0) {
+        const way = nearestWay(null, true);
+        if (way !== undefined) { arrowT = ARROW_EVERY; arrowWay = way; }
+    }
     const st = arrowWay?.stop;
     const h = st && halos.find(x => x.stop === st);
     let show = !!h && selected !== st;

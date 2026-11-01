@@ -529,7 +529,7 @@ function portalRim(group) {
         dirty(ticks);
     }
     return {
-        update, hit, outerR: RIM_R0 + RIM_LEN[0] + RIM_LEN[1],
+        update, hit, outerR: RIM_OUTER_R,
         setHover(v) { hover = v; },
         setProgress(p) { progress = Math.min(Math.max(p, 0), 1); }
     };
@@ -1079,6 +1079,10 @@ const FLYBY_TITLE_H = 0.2;
 const FLYBY_SKILLS_H = 0.1;
 const FLYBY_TEXT_W = 2 * HALF_W;         // both lines fit the viz width
 export const FLYBY_TEXT_BOTTOM = -HALF_H - 0.62; // lowest text y (local units)
+// Sizes known before a viz is built (world.js places the stops with them
+// and builds the vizzes later, after the first frame)
+export const VIZ_HALF_W = HALF_W, VIZ_HALF_H = HALF_H;
+export const RIM_OUTER_R = RIM_R0 + RIM_LEN[0] + RIM_LEN[1];
 // portal: a stop with an app behind it gets a rim (portalRim, SORTING only for now)
 export function buildProjectViz(label, { title = null, skills = null, portal = false } = {}) {
     pxScale = window.innerHeight * renderer.getPixelRatio() / (2 * Math.tan(Math.PI / 6));

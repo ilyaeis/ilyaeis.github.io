@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import { ATTRACTORS, rk4Step, isMobile, getPaletteColor, camera, controls } from './attractors.js';
 import { generateTextLines } from './strokeFont.js';
 import * as tunnel from './tunnel.js';
-import { buildProjectViz, FLYBY_TEXT_BOTTOM } from './projectViz.js';
+import { buildProjectViz, FLYBY_TEXT_BOTTOM, VIZ_HALF_W, VIZ_HALF_H, RIM_OUTER_R } from './projectViz.js';
 import { createGraph, fitGraph } from './eduGraph.js';
 
 export const StopType = { LANDING: 2, PROJECT: 3, OBJECT: 4, GRAPH: 5 };   // (0 and 1 were the old trait text and rocks)
@@ -817,7 +817,7 @@ export function updateWorld(dt, headS) {
     }
     tunnel.update(dt);
     for (const st of stops) if (st.viz) updateViz(st.viz, st.tunnelS, headS, dt);
-    for (const f of flybys) updateViz(f.viz, f.s, headS, dt);
+    for (const f of flybys) if (f.viz) updateViz(f.viz, f.s, headS, dt);
 }
 function updateViz(viz, s, headS, dt) {
     if (near(s, headS)) viz.update(dt);
@@ -840,7 +840,7 @@ export function setInsideFade(f) {
         st.line.visible = st.type === StopType.PROJECT ? f > 0.002 : f < 0.998;
         if (st.viz) st.viz.group.visible = f > 0.002;
     }
-    for (const fb of flybys) fb.viz.group.visible = f > 0.002;
+    for (const fb of flybys) if (fb.viz) fb.viz.group.visible = f > 0.002;
 }
 export function getInsideFade() { return insideFade; }
 // room.js: 0 outside .. 1 when the camera is at (or in) the apartment
@@ -1169,9 +1169,22 @@ export function viasFor(from, dest) {
 }
 
 // ── Build ──────────────────────────────────────────────────────────
-export function buildWorld(scene) {
+// The project vizzes (6 live animations, about 0.15 s of main thread on a
+// slow phone) are not needed in the flat, where the site starts: with
+// `defer` they build one per idle slot after the first frame, and
+// finishWorld() builds the rest at once (the first flight, a jump).
+const vizJobs = [];
+export function finishWorld() { while (vizJobs.length) vizJobs.shift()(); }
+const whenIdle = window.requestIdleCallback ? f => requestIdleCallback(f, { timeout: 1000 }) : f => setTimeout(f, 50);
+function buildVizzesLater() {
+    const step = () => { vizJobs.shift()?.(); if (vizJobs.length) whenIdle(step); };
+    requestAnimationFrame(() => whenIdle(step));
+}
+
+export function buildWorld(scene, { defer = false } = {}) {
     stops = [];
     flybys = [];
+    vizJobs.length = 0;
     let prevDef = null;
     let projectK = 0;
     const nProjects = ROUTE.filter(d => d.type === StopType.PROJECT).length;
@@ -1247,15 +1260,8 @@ export function buildWorld(scene) {
 
         const paletteIdx = def.paletteIdx ?? 0;
         const palette = ATTRACTORS[paletteIdx].palette;
-        let viz = null;
-        if (def.type === StopType.PROJECT) {
-            viz = buildProjectViz(MILESTONES[def.milestone].label, { portal: !!MILESTONES[def.milestone].panel.portal });
-            def.vizHalfW = viz.halfW; def.vizHalfH = viz.halfH;
-            viz.group.position.copy(center);
-            viz.group.quaternion.setFromRotationMatrix(
-                new THREE.Matrix4().makeBasis(right, up, _vec3.copy(normal).negate()));
-            scene.add(viz.group);
-        }
+        const portal = def.type === StopType.PROJECT && !!MILESTONES[def.milestone].panel.portal;
+        if (def.type === StopType.PROJECT) { def.vizHalfW = VIZ_HALF_W; def.vizHalfH = VIZ_HALF_H; }
         const built = buildPlanarStop(def, center, right, up, palette);
 
         const stop = {
@@ -1265,7 +1271,7 @@ export function buildWorld(scene) {
             paletteIdx,
             panel: def.milestone !== undefined ? MILESTONES[def.milestone].panel : undefined,
             tunnelS,
-            viz,
+            viz: null,                        // built by a viz job (project stops)
             center,
             right,
             up,
@@ -1273,12 +1279,23 @@ export function buildWorld(scene) {
             ...built
         };
         if (def.type === StopType.PROJECT) stop.line.material = getStopMaterial('inside');
-        if (viz?.rim) {
+        if (def.type === StopType.PROJECT) {
+            vizJobs.push(() => {
+                const viz = buildProjectViz(MILESTONES[def.milestone].label, { portal });
+                viz.group.position.copy(center);
+                viz.group.quaternion.setFromRotationMatrix(
+                    new THREE.Matrix4().makeBasis(right, up, _vec3.copy(normal).negate()));
+                viz.group.visible = false;    // (updateWorld shows it near the viewer)
+                scene.add(viz.group);
+                stop.viz = viz;
+            });
+        }
+        if (portal) {
             // A portal stop: the camera fit takes in the rim (fitHalfW/H), the comet loops round it
             stop.portal = stop.panel.portal;
-            stop.rimR = viz.rim.outerR;
-            stop.fitHalfW = Math.max(stop.halfW, viz.rim.outerR);
-            stop.fitHalfH = Math.max(stop.halfH, viz.rim.outerR);
+            stop.rimR = RIM_OUTER_R;
+            stop.fitHalfW = Math.max(stop.halfW, RIM_OUTER_R);
+            stop.fitHalfH = Math.max(stop.halfH, RIM_OUTER_R);
         }
         if (def.type === StopType.LANDING) { ownMaterial(stop.line); stop.focusVis = 0; }
         scene.add(stop.line);
@@ -1294,20 +1311,29 @@ export function buildWorld(scene) {
     for (const fb of FLYBYS) {
         const s = fb.before === 0 ? TUNNEL_RUSH : (sOfStop[fb.before - 1] + sOfStop[fb.before]) / 2;
         const label = MILESTONES[fb.milestone].label;
-        const viz = buildProjectViz(label, { title: fb.title, skills: fb.skills });
         const c = tunnel.centreWorld(s, new THREE.Vector3());
         const T = tunnel.tangentWorld(s, new THREE.Vector3());
         tunnel.frameWorld(s, _r, _u);
-        const top = viz.halfH, bottom = FLYBY_TEXT_BOTTOM;  // local y range
+        const top = VIZ_HALF_H, bottom = FLYBY_TEXT_BOTTOM;  // local y range
         const mid = (top + bottom) / 2 * FLYBY_SCALE;
         const offset = _r.clone().multiplyScalar(flybys.length % 2 ? FLYBY_SIDE : -FLYBY_SIDE);
-        viz.group.position.copy(c).add(offset).addScaledVector(_u, -mid);
-        viz.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(_r, _u, T.clone().negate()));
-        viz.group.scale.setScalar(FLYBY_SCALE);
-        scene.add(viz.group);
-        const radius = Math.hypot(viz.halfW, (top - bottom) / 2) * FLYBY_SCALE;
-        flybys.push({ label, s, viz, radius, T, offset, center: c.clone().add(offset) });
+        const pos = c.clone().add(offset).addScaledVector(_u, -mid);
+        const quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(_r, _u, T.clone().negate()));
+        const radius = Math.hypot(VIZ_HALF_W, (top - bottom) / 2) * FLYBY_SCALE;
+        const fly = { label, s, viz: null, radius, T, offset, center: c.clone().add(offset) };
+        flybys.push(fly);
+        vizJobs.push(() => {
+            const viz = buildProjectViz(label, { title: fb.title, skills: fb.skills });
+            viz.group.position.copy(pos);
+            viz.group.quaternion.copy(quat);
+            viz.group.scale.setScalar(FLYBY_SCALE);
+            viz.group.visible = false;
+            scene.add(viz.group);
+            fly.viz = viz;
+        });
     }
+    if (defer) buildVizzesLater();
+    else finishWorld();
 
     tunnel.build(scene);
     buildScenery(scene);

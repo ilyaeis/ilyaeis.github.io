@@ -195,6 +195,8 @@ async function loadRoom() {
         if (!first.final) full.then(async bytes => {
             const m = makeRoom(bytes);
             await m.initialized;
+            // keep a modifier set on the preview (depthRoom.js)
+            if (room.worldModifiers) { m.worldModifiers = room.worldModifiers; m.updateGenerator(); }
             m.opacity = room.opacity; m.visible = room.visible;
             g.add(m);
             g.remove(room);

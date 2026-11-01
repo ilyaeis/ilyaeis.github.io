@@ -189,7 +189,7 @@ import * as walk from './walk.js';
     // ── Init ───────────────────────────────────────────────────
     function init() {
         initAttractor(document.getElementById('attractor'));
-        initOrchestrator();
+        initOrchestrator({ deferViz: true });
 
         let resizeTimer;
         window.addEventListener('resize', () => {

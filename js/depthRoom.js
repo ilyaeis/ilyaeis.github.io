@@ -36,7 +36,6 @@ if (legend) {
 const metresToWorld = (m) => m / M_PER_UNIT * apartment.scale;
 
 let u = null;                        // { uOn, uCam } once built
-let mesh = null;
 let build = null;
 let walking = false;
 let lastUpdate = 0, dtAvg = 1 / 60, lastNow = 0;
@@ -73,9 +72,8 @@ async function buildDepth() {
         const inZ = mul(smoothstep(f(min[1] - e), f(min[1] + e), rz), sub(F1, smoothstep(f(bmax[1] - e), f(bmax[1] + e), rz)));
         return { gsplat: combineGsplat({ gsplat, rgb: mix(rgb, ramp, mul(mul(inX, inZ), uOn)) }) };
     });
-    mesh = roomMesh;
-    mesh.worldModifier = block;
-    mesh.updateGenerator();
+    roomMesh.worldModifier = block;   // (room.js moves it to the full splat when that replaces the preview)
+    roomMesh.updateGenerator();
     u = { uOn, uCam };
     setOn(walking);
 }
@@ -84,7 +82,7 @@ function setOn(on) {
     if (!u) return;
     u.uOn.value = on ? 1 : 0;
     if (on) u.uCam.value.copy(camera.getWorldPosition(_v));
-    mesh.updateVersion();
+    roomMesh.updateVersion();
 }
 
 function inRoom(p) {
@@ -102,7 +100,7 @@ function tick(now) {
     if (_v.distanceTo(u.uCam.value) > metresToWorld(MOVE_M) &&
         (dtAvg < SLOW_DT || now - lastUpdate >= 1000 / UPDATE_SLOW_HZ)) {
         u.uCam.value.copy(_v);
-        mesh.updateVersion();       // uniforms changed: regenerate
+        roomMesh.updateVersion();       // uniforms changed: regenerate
         lastUpdate = now;
     }
     const inside = inRoom(_v);
