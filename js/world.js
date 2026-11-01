@@ -85,7 +85,7 @@ const MILESTONES = [
             { text: 'Validation tools that check quality against ground-truth datasets.' },
             { text: 'Experiment runner: AI-agent-driven training runs on local GPUs.' }
         ],
-        more: { href: 'resume.html#ground-truth', label: 'details in the resume' }
+        more: { href: 'resume.html#ai-automation', label: 'details in the resume' }
     }},
     { label: 'MESHES AND VIEWERS', panel: {
         title: 'Meshes and viewers',
@@ -104,7 +104,7 @@ const MILESTONES = [
               href: 'https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/' },
             { text: 'AI agents and tools read and write the board through it; colleagues use it.' }
         ],
-        more: { href: 'resume.html#ground-truth', label: 'details in the resume' }
+        more: { href: 'resume.html#ai-automation', label: 'details in the resume' }
     }},
     // The depth room (bedroom2, js/depthRoom.js). Honest: the colours are this
     // public scene's own depth, not the output of the method in the second item

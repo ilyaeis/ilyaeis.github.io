@@ -1,6 +1,6 @@
 # Ilja Safronovs
 
-> R&D Engineer in 3D reconstruction and AI automation at Giraffe360, Riga, Latvia: mainly Gaussian splatting from sparse panoramas (PyTorch, CUDA), and a bit of meshes. In production: the windows and mirrors fix, my densification changes, the exterior orbital videos and the looped drone. AI automation: an experiment runner driven by AI agents, an MCP server for the team task board and a coding-agent harness. Also depth models, 3D camera paths and LLM APIs. Studies Financial Engineering at Riga Technical University. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
+> R&D Engineer in 3D reconstruction and AI automation at Giraffe360, Riga, Latvia. Builds 3D Gaussian splatting reconstruction from sparse panoramas (PyTorch, CUDA), and AI-agent tools for the team. In production: the windows and mirrors fix, his densification, the exterior orbital videos and the looped drone. AI automation: an agent-driven experiment runner, an MCP server for the team task board and a coding-agent harness. Studies Financial Engineering at Riga Technical University. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
 
 ## Resume
 
