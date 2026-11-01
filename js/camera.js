@@ -123,7 +123,8 @@ export function setScreenShift(on, immediate = false) {
     shiftTarget = on ? 1 : 0;
     if (immediate) { shift.x = shiftGoal.x = shiftTarget; shift.v = shiftGoal.v = 0; }
 }
-export function isPanelSideLayout() { return window.matchMedia(PANEL_SIDE_QUERY).matches; }
+const sideQuery = window.matchMedia(PANEL_SIDE_QUERY);   // (one list, read per frame: no new matchMedia each frame)
+export function isPanelSideLayout() { return sideQuery.matches; }
 
 export function init(controls) { controls.target.set(0, 0, 0); currentMode = Mode.ORBIT; }
 

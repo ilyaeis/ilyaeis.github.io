@@ -8,7 +8,8 @@
      Params: dt=30|60|144|jitter (default 60), hold=S (extra view seconds
      before each tap, default 0), seed=N (route seed, default 1),
      dim=S (at the first stop with a portal: enter it, stay S seconds in
-     the dimension, come back out, then go on; default off). -->
+     the dimension, come back out, then go on; default off),
+     skip=S (a tap S seconds into every flight: the skip; default off). -->
 <base href="../">
 <title>camlog</title>
 <script>
@@ -52,6 +53,8 @@ const dtMode = q.get('dt') || '60';
 const hold = Number(q.get('hold') || 0);
 const portalStay = q.has('dim') ? Number(q.get('dim') || 1) : -1;   // not 'portal': that is the page's own dev param
 let portalDone = portalStay < 0, dimAt = -1;
+const skipAt = q.has('skip') ? Number(q.get('skip') || 1) : -1;   // tap this long into each flight
+let skipFlight = -1;
 const MAX_TIME = 240;           // seconds; safety cap
 
 // Jitter: own RNG so the route (Math.random) stays the same as the fixed-dt runs
@@ -85,6 +88,11 @@ while (t < Math.min(MAX_TIME, endAt)) {
     }
     // Auto-tap: the intro after 1 s, and every VIEW frame after `hold`.
     // The orchestrator keeps the tap until the stop's VIEW_TAP_DELAY.
+    // Skip (skip=S): one tap S s into each flight
+    if (skipAt >= 0 && s.phase === orch.Phase.TRAVEL && s.phaseTime >= skipAt && skipFlight < 0) {
+        orch.onTap(); skipFlight = 1;
+    }
+    if (s.phase !== orch.Phase.TRAVEL) skipFlight = -1;
     if ((s.phase === orch.Phase.INTRO && t > 1) ||
         (s.phase === orch.Phase.VIEW && s.phaseTime >= hold && !atPortal)) orch.onTap();
 
@@ -115,7 +123,7 @@ while (t < Math.min(MAX_TIME, endAt)) {
 }
 
 document.getElementById('out').textContent = JSON.stringify({
-    dtMode, hold, seed: Number(q.get('seed') || 1), portal: portalStay,
+    dtMode, hold, seed: Number(q.get('seed') || 1), portal: portalStay, skip: skipAt,
     width: innerWidth, height: innerHeight,
     phases: orch.Phase, frames
 });

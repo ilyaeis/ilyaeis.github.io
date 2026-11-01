@@ -517,9 +517,18 @@ export function render() {
 let adaptLevel = 0, adaptCeiling = 0, adaptFloor = Infinity, lastRender = 0;
 let fastRuns = 0, downFrom = 0, steppedUp = false;
 const adaptDts = [];
+let ratioCap = Infinity;              // setPixelRatioCap (walk mode on phones)
 function pixelRatioAt(level) {
-    const top = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
+    const top = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO, ratioCap);
     return Math.max(Math.min(top, MIN_PIXEL_RATIO), top * ADAPT_STEP ** level);
+}
+// A ceiling for the pixel ratio (null: none); the adaptive level stays
+export function setPixelRatioCap(r) {
+    const cap = r ?? Infinity;
+    if (cap === ratioCap || !renderer) return;
+    ratioCap = cap;
+    setAdaptLevel(adaptLevel);
+    adaptDts.length = 0;            // (the frames before the change say nothing about the new size)
 }
 function setAdaptLevel(level) {
     adaptLevel = level;

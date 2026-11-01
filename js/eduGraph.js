@@ -75,16 +75,16 @@ const EDGE_END = 0.10, EDGE_SEGS = 160;   // spec 40: steep column-4 S-curves ne
 const TEXT_CLEAR = 0.03;                 // edges break this close round text (column-4 S-curves crossed labels)
 const PAST_GEO = 0.55, PAST_LABEL = 0.5, PAST_CAPTION = 0.35, PAST_AXIS_LABEL = 0.6;
 const PARENT_FLASH = 0.5, PARENT_FLASH_T = 0.4;   // past parent ×1.5 when its new edge starts
-const PEN_SPEED_AXIS = 2.5, PEN_SPEED_SWEEP = 1.4, PEN_EASE = 0.3, PEN_STEP = 0.015;
+const PEN_SPEED_AXIS = 3.75, PEN_SPEED_SWEEP = 2.1, PEN_EASE = 0.3, PEN_STEP = 0.015;   // (1.5x the prototype: less waiting)
 const PEN_ENTER = 1.0;                   // pen enters the axis this far left of tick k−1
 const PEN_ENTER_F1 = -1.2;               // frame 1: from this x
-const CONNECT_SPEED = 5.0;               // peak speed flying from the idle loop to the axis entry
+const CONNECT_SPEED = 7.5;               // peak speed flying from the idle loop to the axis entry
 const SWEEP_OVER = 0.25;                 // the sweep runs this far past the top node
 const EDGE_GROW = 0.7, IGNITE = 0.5, IGNITE_PEAK = 2.4;
 const LABEL_FADE = 0.3, CAPTION_FADE = 0.4, AXIS_LABEL_FADE = 0.4, WORDS_FADE = 0.5;
 const COPY_FADE = 0.4, GROW_EL = 0.08;
-export const CAM_PAN = 1.2;               // s: the camera pans to the next frame's window (orchestrator)
-export const EARLY_TAP = 2.0;             // s: a tap before this does nothing, after it (before the end) grows the frame at once
+export const CAM_PAN = 1.0;               // s: the camera pans to the next frame's window (orchestrator)
+export const EARLY_TAP = 1.0;             // s: a tap before this waits, after it (before the end) grows the frame at once (>= CAM_PAN: a pan never restarts mid-way)
 const LOOP_SETTLE = 1.5;
 const IDLE_PAD = 0.35, IDLE_R = 0.5, IDLE_PERIOD = 18, IDLE_Z = 0.15;
 const IDLE_PAD_X = 0.15;                 // sideways pad (spec 0.35 ran into the panel: the fit leaves 0.15 each side)
@@ -165,13 +165,15 @@ function edgePath(par, child) {
 }
 
 // ── Geometry buffers (one per copy; the shader plays the timeline) ──
+// aStart of an element that shows from the start (the copy clock starts below 0 while the connector runs)
+const ALWAYS = -1e4;
 function makeBuf() { return { P: [], C0: [], C1: [], S: [], D: [], FL: [], K: [], PH: [], SZ: [] }; }
 const at = (v, i) => (Array.isArray(v) ? v[i] : v);
 function vtx(b, p, o, i) {
     const c0 = at(o.c0, i), c1 = at(o.c1, i);
     b.P.push(p.x, p.y, p.z);
     b.C0.push(c0.r, c0.g, c0.b); b.C1.push(c1.r, c1.g, c1.b);
-    b.S.push(at(o.start ?? -1, i)); b.D.push(o.dur ?? 0);
+    b.S.push(at(o.start ?? ALWAYS, i)); b.D.push(o.dur ?? 0);
     b.FL.push(o.flash ?? 0, o.flashDur ?? 1);
     b.K.push(o.kind ?? 0); b.PH.push(o.phase ?? 0); b.SZ.push(o.size ?? 0);
 }
@@ -316,21 +318,25 @@ function idleLoop(k) {
 }
 
 // ── One stop's copy: columns < k past, column k grows ──────────────
-function buildCopy(k, start) {
+// The heavy part (geometry, materials) does not depend on where the comet
+// is, so all four frames are built ahead (prebuild, idle slots; a tap then
+// only starts one). The pen here starts at the axis entry; start() puts the
+// connector from the comet in front of it and shifts the copy's clock by
+// its duration (tOff). The build is a generator: it yields after each node
+// (prebuild spreads it over idle slots, a few ms each; buildCopy runs it
+// through at once).
+const entryOf = k => V(k === 1 ? PEN_ENTER_F1 : colX(k - 1) - PEN_ENTER, axisY(), PEN_Z);
+function buildCopy(k) {
+    const steps = copySteps(k);
+    for (;;) { const r = steps.next(); if (r.done) return r.value; }
+}
+function* copySteps(k) {
     const L = makeBuf(), Pt = makeBuf();
     const ay = axisY();
-    // 1. the pen: (connector) → axis from tick k−1 to tick k → up column k
+    // 1. the pen: axis from tick k−1 to tick k → up column k
     const xPrev = colX(k - 1), xk = colX(k);
-    const entry = V(k === 1 ? PEN_ENTER_F1 : xPrev - PEN_ENTER, ay, PEN_Z);
-    const pen = new Pen(start ?? entry, start ? CONNECT_SPEED * 0.4 : PEN_SPEED_AXIS);
-    if (start && start.distanceTo(entry) > 0.05) {
-        const D = start.distanceTo(entry);
-        const v0 = CONNECT_SPEED * 0.4;
-        pen.cubic(start.clone().add(V(0, -D * 0.35, 0)), entry.clone().add(V(-D * 0.35, 0, 0)), entry,
-                  u => v0 + (PEN_SPEED_AXIS - v0) * smooth(u) + (CONNECT_SPEED - PEN_SPEED_AXIS) * Math.sin(Math.PI * u) ** 2);
-        pen.vFrom = pen.vTo = PEN_SPEED_AXIS; pen.tSet = pen.t;
-    }
-    const iAxis = pen.pts.length - 1;
+    const pen = new Pen(entryOf(k), PEN_SPEED_AXIS);
+    const iAxis = 0;
     const turnR = TICK_H;
     pen.line(V(xk - turnR, ay, PEN_Z));
     pen.setSpeed(PEN_SPEED_SWEEP);
@@ -411,7 +417,7 @@ function buildCopy(k, start) {
         } else {
             const past = col(pc, PAST_GEO);
             vtx(Pt, p, { c0: past, c1: past, size, kind: 2, phase: ph,
-                         start: flashAt[n.id] ?? -1, flash: flashAt[n.id] !== undefined ? PARENT_FLASH : 0, flashDur: PARENT_FLASH_T }, 0);
+                         start: flashAt[n.id] ?? ALWAYS, flash: flashAt[n.id] !== undefined ? PARENT_FLASH : 0, flashDur: PARENT_FLASH_T }, 0);
             addLine(L, lab.pts, { seg: lab.seg, c0: col(lc, PAST_LABEL), c1: col(lc, PAST_LABEL) });
         }
         if (n.caption) {
@@ -435,27 +441,47 @@ function buildCopy(k, start) {
                 const pastC = cols.map(x => x.clone().multiplyScalar(PAST_GEO));
                 addLine(L, pts, { seg, c0: pastC, c1: pastC });
             }
+            yield;   // (an edge is the largest step: a few hundred vertices)
         }
+        yield;
     }
 
-    // 4. the comet: smoothed pen path, then the idle loop
-    const n = pen.pts.length, w = Math.max(1, Math.round(COMET_SMOOTH / PEN_STEP));
-    const cometPts = pen.pts.map((p, i) => {
-        const a = Math.max(0, i - w), b = Math.min(n - 1, i + w);
-        const out = V();
-        for (let j = a; j <= b; j++) out.add(pen.pts[j]);
-        return out.multiplyScalar(1 / (b - a + 1));
-    });
-    cometPts[0] = pen.pts[0].clone(); cometPts[n - 1] = pen.pts[n - 1].clone();
     const loop = idleLoop(k);
-
     const lineMat = material(LINE_VERT, LINE_FRAG), pointMat = material(POINT_VERT, POINT_FRAG, { uPx });
     const group = new THREE.Group();
     const lines = new THREE.LineSegments(toGeometry(L), lineMat);
+    yield;
     const points = new THREE.Points(toGeometry(Pt), pointMat);
     for (const o of [lines, points]) { o.frustumCulled = false; group.add(o); }
-    return { k, group, mats: [lineMat, pointMat], cometPts, cometTimes: pen.times, loop,
-             loopS0: loop.sOfTopX(xk), end: end + 0.3, tPass };
+    return { k, group, mats: [lineMat, pointMat], penPts: pen.pts, penTimes: pen.times, loop,
+             loopS0: loop.sOfTopX(xk), end0: end + 0.3, tOff: 0, end: end + 0.3 };
+}
+
+// Start a built copy from `start` (local; null: at the axis entry): the
+// connector from the comet to the entry, then the copy's own pen path; the
+// comet path is smoothed over both
+function startCopy(cp, start) {
+    const entry = entryOf(cp.k);
+    let pts = cp.penPts, times = cp.penTimes, tOff = 0;
+    if (start && start.distanceTo(entry) > 0.05) {
+        const D = start.distanceTo(entry), v0 = CONNECT_SPEED * 0.4;
+        const pen = new Pen(start, v0);
+        pen.cubic(start.clone().add(V(0, -D * 0.35, 0)), entry.clone().add(V(-D * 0.35, 0, 0)), entry,
+                  u => v0 + (PEN_SPEED_AXIS - v0) * smooth(u) + (CONNECT_SPEED - PEN_SPEED_AXIS) * Math.sin(Math.PI * u) ** 2);
+        tOff = pen.t;
+        pts = [...pen.pts, ...cp.penPts.slice(1)];
+        times = [...pen.times, ...cp.penTimes.slice(1).map(t => t + tOff)];
+    }
+    // the comet: smoothed pen path, then the idle loop
+    const n = pts.length, w = Math.max(1, Math.round(COMET_SMOOTH / PEN_STEP));
+    const cometPts = pts.map((p, i) => {
+        const a = Math.max(0, i - w), b = Math.min(n - 1, i + w);
+        const out = V();
+        for (let j = a; j <= b; j++) out.add(pts[j]);
+        return out.multiplyScalar(1 / (b - a + 1));
+    });
+    cometPts[0] = pts[0].clone(); cometPts[n - 1] = pts[n - 1].clone();
+    cp.cometPts = cometPts; cp.cometTimes = times; cp.tOff = tOff; cp.end = cp.end0 + tOff;
 }
 
 // Comet position at copy time t: the pen path, then the idle loop eased on
@@ -481,10 +507,28 @@ export function createGraph({ phone: isPhone }) {
     phone = isPhone;
     const group = new THREE.Group();
     let cur = null, prev = null, time = 0;
+    const built = [], steps = [];          // built[k]: frame k, ready to start; steps[k]: its build in progress (prebuild)
+    const take = k => {                    // a built copy, or a new one (the old one may still show)
+        if (steps[k]) prebuild(k);         // (finish a build in progress)
+        const cp = built[k];
+        if (cp && cp !== cur && cp !== prev) return cp;
+        return (built[k] = buildCopy(k));
+    };
+    // Build frame k ahead, for at most budget ms (true: built)
+    function prebuild(k, budget = Infinity) {
+        if (built[k]) return true;
+        steps[k] ??= copySteps(k);
+        const t0 = performance.now();
+        for (;;) {
+            const r = steps[k].next();
+            if (r.done) { built[k] = r.value; steps[k] = null; return true; }
+            if (performance.now() - t0 > budget) return false;
+        }
+    }
     let outside = 1;                       // the outside-world fade (the warp, indoors): world.js
     const applyFade = () => {
         const fadeIn = prev ? Math.min(time / COPY_FADE, 1) : 1;
-        if (cur) cur.mats.forEach(m => { m.uniforms.uTime.value = time; m.uniforms.uFade.value = fadeIn * outside; });
+        if (cur) cur.mats.forEach(m => { m.uniforms.uTime.value = time - cur.tOff; m.uniforms.uFade.value = fadeIn * outside; });
         if (prev) {
             const f = Math.max(0, 1 - time / COPY_FADE);
             prev.mats.forEach(m => { m.uniforms.uFade.value = f * outside; });
@@ -509,7 +553,8 @@ export function createGraph({ phone: isPhone }) {
         start(k, start = null) {
             if (prev) group.remove(prev.group);
             prev = cur;
-            cur = buildCopy(k, start);
+            cur = take(k);
+            startCopy(cur, start);
             group.add(cur.group);
             time = 0;
             applyFade();
@@ -520,6 +565,9 @@ export function createGraph({ phone: isPhone }) {
         cometAt(t, out) { return cometAt(cur, t, out); },
         setOutside(v) { outside = v; applyFade(); },
         setPx(px) { uPx.value = px; },
+        // Build frame k ahead (world.js: in idle slots, `budget` ms at a time), so a tap does not stall
+        prebuild,
+        builtGroup: k => built[k]?.group ?? null,
     };
 }
 

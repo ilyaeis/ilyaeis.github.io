@@ -76,6 +76,7 @@ let loading = false;
 let lastNow = 0;
 let loadFade = 0;                     // 0 -> 1 over LOAD_FADE_IN once the room is in
 let held = false;                     // a tap waits for the room (setRoomHold)
+let sharp = false;                    // the full splat is in (the preview is replaced)
 let quiet = false;                    // the intro: no loading line unless held
 let failed = false;                   // the last load failed: no loading line (the next stop tries again)
 let resolveReady;
@@ -85,10 +86,12 @@ const _frustum = new THREE.Frustum(), _m = new THREE.Matrix4(), _sphere = new TH
 
 // Is it in, and a promise for that
 export function roomReady() { return !!group; }
+// The full splat is in (not the blurry preview)
+export function roomSharp() { return sharp; }
 export function whenRoomReady() { return ready; }
 // While held, the loading line shows wherever the camera is
 export function setRoomHold(on) { held = on; }
-registerFlat({ ready: roomReady, whenReady: whenRoomReady, hold: setRoomHold });
+registerFlat({ ready: roomReady, whenReady: whenRoomReady, hold: setRoomHold, sharp: roomSharp });
 
 // Camera distance outside the apartment box, room units (0 inside).
 // worldToRoom works before the splat is in (the frame comes from world.js)
@@ -113,7 +116,7 @@ function tick(now) {
         if (quiet) setRoomFade(1);   // the intro: no stray outside lines round the name while the room loads
         return;
     }
-    showLoading(false);
+    showLoading(held && !sharp);   // (a tap waits a moment for the full splat: the orchestrator)
     loadFade = Math.min(1, loadFade + dt / LOAD_FADE_IN);
     const fadeIn = THREE.MathUtils.smoothstep(loadFade, 0, 1);
     const a = (1 - THREE.MathUtils.smoothstep(d, FADE_FULL, FADE_START)) * (1 - getInsideFade()) * fadeIn;
@@ -188,6 +191,7 @@ async function loadRoom() {
         await room.initialized;
         group = g;
         roomMesh = room;
+        sharp = first.final;
         scene.add(g);
         g.updateMatrixWorld(true);
         resolveReady();
@@ -203,7 +207,8 @@ async function loadRoom() {
             meshes[meshes.indexOf(room)] = m;
             room.dispose();
             room = roomMesh = m;
-        }).catch(err => console.error('apartment: the full splat failed, the preview stays', err));
+            sharp = true;
+        }).catch(err => { sharp = true; console.error('apartment: the full splat failed, the preview stays', err); });   // (nothing sharper comes: walk at full speed)
         await buildObjects(g, objectsModule);
     } catch (err) {
         console.error('apartment load failed', err);

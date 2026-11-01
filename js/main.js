@@ -149,10 +149,11 @@ import * as music from './music.js';
         }
     });
 
-    // "skip the walk" (the orchestrator sets its ?go link to the first stop
-    // after the flat): in the page, the rocket morphs and the comet flies
-    // out of the flat at once (no wait for the room)
-    document.querySelector('.intro-skip')?.addEventListener('click', (e) => {
+    // "skip the walk" (the intro link and the nav link; the orchestrator sets
+    // their ?go link to the first stop after the flat): in the page, the
+    // rocket morphs and the comet flies out of the flat at once (no wait for
+    // the room); in the tour the comet leaves from where the walker is
+    for (const el of document.querySelectorAll('.intro-skip, .nav-skip')) el.addEventListener('click', (e) => {
         if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
         e.preventDefault();
         skipTheWalk();

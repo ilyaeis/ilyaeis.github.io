@@ -20,16 +20,18 @@
 // object halos and taps need a clear line of sight.
 
 import * as THREE from 'three';
-import { scene, camera, ATTRACTORS, getPaletteColor } from './attractors.js';
+import { scene, camera, ATTRACTORS, getPaletteColor, isMobile, setPixelRatioCap } from './attractors.js';
 import { stops, StopType, planePointToWorld } from './world.js';
-import { apartment, roomToWorld, worldToRoom } from './room.js';
+import { apartment, roomToWorld, worldToRoom, roomSharp } from './room.js';
 import { registerWalker, enterExplore, exitExplore, skipFlat } from './explore.js';
 
 const DEG = Math.PI / 180;
 
 // ── Tuning ─────────────────────────────────────────────────────────
 const GRID_URL = 'assets/room/walk.json';
-const SPEED_M = 1.2;                   // m/s walk speed
+const SPEED_M = 1.8;                   // m/s walk speed (a brisk walk: the tour should not drag)
+const PREVIEW_SPEED = 0.5;             // × while the blurry preview splat still shows (a slow network): walk slowly until the full one is in
+const WALK_PIXEL_RATIO = 1.25;         // phones: pixel ratio ceiling while walking (the splat fills the screen; adaptive resolution steps only after 40 slow frames)
 const ACCEL_TIME = 0.25;               // s: velocity spring (eased start and stop)
 const COLLIDE_M = 0.02;                // m: collision skin (the body radius is baked into the grid)
 const YAW_TIME = 0.18, YAW_MAX = 120 * DEG;      // auto turns: smooth time, speed cap (drag look is direct)
@@ -37,8 +39,8 @@ const PITCH_TIME = 0.12, PITCH_MAX = 120 * DEG;
 const PITCH_MIN = -60 * DEG, PITCH_TOP = 15 * DEG; // the ceiling is a black void above ~2.2 m
 const LOOK_RAD_PER_PX = 0.0045;        // drag look sensitivity (drag the world)
 const KEY_TURN = 100 * DEG;            // rad/s: arrow keys turn
-const LOOKAHEAD_M = 0.45;              // path following: carrot distance
-const ARRIVE_M = 0.5;                  // slow down within this of the goal
+const LOOKAHEAD_M = 0.6;               // path following: carrot distance (scaled with the walk speed: corners stay clear)
+const ARRIVE_M = 0.75;                 // slow down within this of the goal (the braking stays gentle at the brisker pace)
 const SNAP_M = 1.0;                    // a tap on a blocked spot walks to the nearest free cell within this
 const WALL_SOFT = 8, WALL_COST = 0.15; // A*: extra cost per cell of clearance under WALL_SOFT (paths keep off the walls)
 const GOAL_CLEAR = 3;                  // cells: a walk goal (or the start) keeps this clearance when it can
@@ -59,7 +61,7 @@ const STORE_KEY = 'rnd.collected';
 // GUIDE_YAW_MAX, also the turn to the object at the end) and stops this far
 // from the object, on the side its journey view looks from (further for a
 // low object, so the view looks down at most GUIDE_PITCH)
-const GUIDE_YAW_MAX = 70 * DEG;
+const GUIDE_YAW_MAX = 85 * DEG;
 const GUIDE_VIEW_M = 1.5;
 const GUIDE_PITCH = 40 * DEG;
 const GOAL_ROOMY = 8;                  // cells of clearance a guide goal should have
@@ -481,6 +483,7 @@ function avoidance(out) {
 
 // ── Walker step (room units) ───────────────────────────────────────
 let lastPush = 0;
+const speedNow = () => SPEED * (roomSharp() ? 1 : PREVIEW_SPEED);
 function step(dt) {
     _w.set(0, 0);
     const f = (keys.has('w') || keys.has('arrowup') ? 1 : 0) - (keys.has('s') || keys.has('arrowdown') ? 1 : 0);
@@ -490,7 +493,7 @@ function step(dt) {
     if (f || r) {
         endPath(); guide = null; slowTurn = false; hideHint();
         const sy = Math.sin(look.yaw), cy = Math.cos(look.yaw);
-        _w.set(-sy * f + cy * r, -cy * f - sy * r).normalize().multiplyScalar(SPEED);
+        _w.set(-sy * f + cy * r, -cy * f - sy * r).normalize().multiplyScalar(speedNow());
     } else if (path) {
         pathS = Math.max(pathS, projectS());
         const left = pathLen - pathS;
@@ -500,7 +503,7 @@ function step(dt) {
         while (la > cell && !clearLine(pos.x, pos.y, c[0], c[1], 0)) { la *= 0.6; c = pathPoint(Math.min(pathLen, pathS + la)); }
         _w.set(c[0] - pos.x, c[1] - pos.y);
         const d = _w.length();
-        const sp = SPEED * Math.min(1, Math.sqrt(Math.max(left, 0) / ARRIVE_R));   // eased arrival
+        const sp = speedNow() * Math.min(1, Math.sqrt(Math.max(left, 0) / ARRIVE_R));   // eased arrival
         if (d > 1e-6) _w.multiplyScalar(sp / d);
         if (left < 0.03 * M && Math.hypot(path.at(-1)[0] - pos.x, path.at(-1)[1] - pos.y) < 0.05 * M) { endPath(); arrived = true; }
         // a guided walk is there when it has (almost) stopped close to the goal
@@ -863,7 +866,7 @@ function updateTour(dt) {
             arrowEl.style.transform = `translate(-50%, -50%) rotate(${ang}rad)`;
         }
     }
-    arrowEl.hidden = !show;
+    if (arrowEl.hidden === show) arrowEl.hidden = !show;   // (no DOM write while it stays)
 }
 
 // ── Input (main.js) ────────────────────────────────────────────────
@@ -906,6 +909,9 @@ export function onDrag(dx, dy) {
 export function setKeys(set) { keys = set; }
 // Enter (not on a link or button): "Next object" in the tour
 export function onEnter() { if (tour && mode === 'walk' && nextBtn && !nextBtn.hidden) next(); }
+
+// Phones: a lower pixel ratio ceiling while walking (explore.js events)
+if (isMobile) window.addEventListener('journey:explore', e => setPixelRatioCap(e.detail?.phase === 'enter' ? WALK_PIXEL_RATIO : null));
 
 registerWalker({ canWalk, enterWalk, exitWalk, leaveInPlace, update, next, guideTo, allCollected, get touring() { return tour && mode !== 'off'; } });
 

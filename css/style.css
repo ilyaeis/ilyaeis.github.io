@@ -103,9 +103,16 @@ body {
     top: calc(0.35rem + env(safe-area-inset-top));
     right: calc(1rem + env(safe-area-inset-right));
     z-index: 10;
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-    color: #888;
+    font-size: 0.875rem;   /* 14 px: the way out (resume, skip) must read at a glance */
+    letter-spacing: 0.08em;
+    color: #c4c4c4;
+}
+/* "skip the walk" (orchestrator): shown while the visitor is in the flat (intro and tour); "skip" on phones */
+.site-nav a[hidden] { display: none; }
+.site-nav .nav-long { white-space: pre; }   /* (keeps its leading space: the link is a flex box) */
+@media (max-width: 699px) {
+    .site-nav { letter-spacing: 0.02em; }
+    .site-nav .nav-long { display: none; }
 }
 
 .site-nav a,

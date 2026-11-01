@@ -28,6 +28,8 @@ export function registerWalker(w) { walker = w; }
 export function registerFlat(f) { flat = f; }
 export function hasWalker() { return !!walker; }
 export function flatReady() { return !walker || !flat || flat.ready(); }
+// The full splat is in (else the blurry preview shows)
+export function flatSharp() { return !walker || !flat || flat.sharp(); }
 export function holdForFlat(on) { flat?.hold(on); }
 
 // 'journey:explore' { phase: 'enter' | 'leave' }: the room tools live in walk mode

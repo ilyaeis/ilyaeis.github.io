@@ -409,6 +409,8 @@ export function build(scene) {
 }
 
 // ── Per-frame controls ─────────────────────────────────────────────
+// The tunnel's meshes (world.js compiles their shaders ahead)
+export function meshes() { return streaks ? [...objects, streaks] : [...objects]; }
 export function setView(s) { if (uniforms) uniforms.uS0.value = s; }
 export function setFade(f) {
     if (!uniforms) return;

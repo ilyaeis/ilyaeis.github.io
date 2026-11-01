@@ -12,7 +12,7 @@
 // open-space flight legs as dim, slowly spinning scenery ("galaxies").
 
 import * as THREE from 'three';
-import { ATTRACTORS, rk4Step, isMobile, getPaletteColor, camera, controls } from './attractors.js';
+import { ATTRACTORS, rk4Step, isMobile, getPaletteColor, camera, controls, renderer, composer } from './attractors.js';
 import { generateTextLines } from './strokeFont.js';
 import * as tunnel from './tunnel.js';
 import { buildProjectViz, FLYBY_TEXT_BOTTOM, VIZ_HALF_W, VIZ_HALF_H, RIM_OUTER_R } from './projectViz.js';
@@ -218,9 +218,9 @@ const SCENERY_LEGS = [];   // filled from ROUTE below
 // The middle of every gap is a fast zone (the comet rushes, the tunnel
 // straightens there).
 const TUNNEL_HOP = [30, 34];
-const TUNNEL_RUSH = 120;                 // s of the first fly-by (~2 s of rush after the warp in)
-const FLYBY_GAP = 125;                   // s between a fly-by and the next project stop (and stop -> fly-by)
-const TUNNEL_EXIT_AFTER = 140;           // the tunnel ends this far after the last stop (a rush before the warp out)
+const TUNNEL_RUSH = 100;                  // s of the first fly-by (~2 s of rush after the warp in)
+const FLYBY_GAP = 90;                    // s between a fly-by and the next project stop (and stop -> fly-by)
+const TUNNEL_EXIT_AFTER = 110;           // the tunnel ends this far after the last stop (a rush before the warp out)
 const FAST_ZONE_RAMP = 48;               // s: speed / straightness ramps at each end of a fast zone
 const FAST_ZONE_MARGIN = [4, 10, 24];    // fast zones end this far from the throat / a stop or fly-by / the exit (slow there: spiral, framing, arrival, mouth)
 const TUNNEL_CLEAR = 15;                 // other stops stay this far from the tunnel axis
@@ -682,6 +682,18 @@ function buildPlanarStop(def, center, right, up, palette) {
     const segCol = [];
     const segAlpha = [];
     const segIdx = [];
+    const line = buildStopLine(new Float32Array(0), new Float32Array(0), new Float32Array(0), /* segments */ true);
+    const out = {
+        line,
+        points2d: points,
+        strokeIdx: null,
+        litVertex: 0,
+        scale,
+        halfW: maxAbsX * scale,
+        halfH: maxAbsY * scale,
+        blockMid: (minY + maxY) / 2 * scale,      // block's visual middle along `up` (the 2D origin is line 1's baseline)
+        blockHalfH: (maxY - minY) / 2 * scale
+    };
     function pushVertex(i) {
         const p = points[i];
         planePointToWorld(_vec3, center, right, up, scale, p);
@@ -691,29 +703,21 @@ function buildPlanarStop(def, center, right, up, palette) {
         segAlpha.push(1.0);
         segIdx.push(i);
     }
-    for (let i = staticFrom; i < n - 1; i++) {
-        if (points[i].c === 1 && points[i + 1].c === 1) {
-            pushVertex(i);
-            pushVertex(i + 1);
+    // The strokes' geometry: at once for the landing (it shows at the start),
+    // in an idle slot for a project label (only seen in the tunnel)
+    const fill = () => {
+        for (let i = staticFrom; i < n - 1; i++) {
+            if (points[i].c === 1 && points[i + 1].c === 1) {
+                pushVertex(i);
+                pushVertex(i + 1);
+            }
         }
-    }
-
-    return {
-        line: buildStopLine(
-            new Float32Array(segPos),
-            new Float32Array(segCol),
-            new Float32Array(segAlpha),
-            /* segments */ true
-        ),
-        points2d: points,
-        strokeIdx: new Int32Array(segIdx),
-        litVertex: 0,
-        scale,
-        halfW: maxAbsX * scale,
-        halfH: maxAbsY * scale,
-        blockMid: (minY + maxY) / 2 * scale,      // block's visual middle along `up` (the 2D origin is line 1's baseline)
-        blockHalfH: (maxY - minY) / 2 * scale
+        line.geometry.dispose();
+        line.geometry = buildStopLine(new Float32Array(segPos), new Float32Array(segCol), new Float32Array(segAlpha), true).geometry;
+        out.strokeIdx = new Int32Array(segIdx);
     };
+    if (def.type === StopType.PROJECT) vizJobs.push(fill); else fill();
+    return out;
 }
 
 // ── Attractor scenery (pre-integrated curves) ─────────────────────
@@ -764,38 +768,45 @@ function buildScenery(scene) {
             if (d > bestD) { bestD = d; center = cand.clone(); }
         }
 
-        const attr = ATTRACTORS[k % ATTRACTORS.length];
-        let s = [...attr.initialCondition];
-        const step = () => {
-            s = rk4Step(attr.derivatives, s[0], s[1], s[2], attr.dt, attr.params);
-            for (let j = 0; j < 3; j++) {
-                if (Math.abs(s[j]) > 150) s[j] *= 150 / Math.abs(s[j]);
-                if (!isFinite(s[j])) { s = [...attr.initialCondition]; break; }
-            }
-        };
-        for (let i = 0; i < SCENERY_WARMUP; i++) step();
-
-        const n = SCENERY_POINTS;
-        const positions = new Float32Array(n * 3);
-        const colors = new Float32Array(n * 3);
-        const alphas = new Float32Array(n);
-        for (let i = 0; i < n; i++) {
-            step();
-            // Relative to the origin: the line is moved to `center` so
-            // its spin pivots there.
-            positions[i * 3]     = (s[0] - attr.center[0]) * attr.scale * radius;
-            positions[i * 3 + 1] = (s[1] - attr.center[1]) * attr.scale * radius;
-            positions[i * 3 + 2] = (s[2] - attr.center[2]) * attr.scale * radius;
-            const col = getPaletteColor(attr.palette, i / (n - 1));
-            colors[i * 3] = col.r; colors[i * 3 + 1] = col.g; colors[i * 3 + 2] = col.b;
-            alphas[i] = SCENERY_ALPHA;
-        }
-
-        const line = buildStopLine(positions, colors, alphas);
+        // The curve (RK4, thousands of steps) is an idle job: only its place
+        // (above, random) must be known now (fly-by via points)
+        const line = buildStopLine(new Float32Array(0), new Float32Array(0), new Float32Array(0));
         line.position.copy(center);
         scene.add(line);
         scenery.push({ attractorIdx: k, center, radius, line });
+        vizJobs.push(() => { line.geometry.dispose(); line.geometry = sceneryCurve(k, radius); });
     }
+}
+// One galaxy curve (RK4 of attractor k), relative to its centre (the spin pivots there)
+function sceneryCurve(k, radius) {
+    const attr = ATTRACTORS[k % ATTRACTORS.length];
+    let s = [...attr.initialCondition];
+    const step = () => {
+        s = rk4Step(attr.derivatives, s[0], s[1], s[2], attr.dt, attr.params);
+        for (let j = 0; j < 3; j++) {
+            if (Math.abs(s[j]) > 150) s[j] *= 150 / Math.abs(s[j]);
+            if (!isFinite(s[j])) { s = [...attr.initialCondition]; break; }
+        }
+    };
+    for (let i = 0; i < SCENERY_WARMUP; i++) step();
+
+    const n = SCENERY_POINTS;
+    const positions = new Float32Array(n * 3);
+    const colors = new Float32Array(n * 3);
+    const alphas = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+        step();
+        // Relative to the origin: the line is moved to `center` so
+        // its spin pivots there.
+        positions[i * 3]     = (s[0] - attr.center[0]) * attr.scale * radius;
+        positions[i * 3 + 1] = (s[1] - attr.center[1]) * attr.scale * radius;
+        positions[i * 3 + 2] = (s[2] - attr.center[2]) * attr.scale * radius;
+        const col = getPaletteColor(attr.palette, i / (n - 1));
+        colors[i * 3] = col.r; colors[i * 3 + 1] = col.g; colors[i * 3 + 2] = col.b;
+        alphas[i] = SCENERY_ALPHA;
+    }
+
+    return buildStopLine(positions, colors, alphas).geometry;
 }
 
 // Per frame: galaxies spin, the tunnel moves, and the project
@@ -1168,16 +1179,34 @@ export function viasFor(from, dest) {
     return [];
 }
 
+// Shader programs for objects that are hidden now (compileAsync: with
+// KHR_parallel_shader_compile the driver compiles off the main thread).
+// The scene renders into the composer's target: compile for a render
+// target, so the program parameters (colour space, tone mapping) match.
+function precompile(scene, graph) {
+    if (!renderer?.compileAsync) return;
+    const roots = [...tunnel.meshes(), ...scenery.map(s => s.line), ...stops.filter(st => st.viz).map(st => st.viz.group),
+                   ...flybys.filter(f => f.viz).map(f => f.viz.group)];
+    if (graph) for (let k = 1; k <= graph.NFRAMES; k++) if (graph.builtGroup(k)) roots.push(graph.builtGroup(k));
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(composer.readBuffer);
+    for (const r of roots) renderer.compileAsync(r, camera, scene).catch(() => {});
+    renderer.setRenderTarget(prev);
+}
+
 // ── Build ──────────────────────────────────────────────────────────
 // The project vizzes (6 live animations, about 0.15 s of main thread on a
 // slow phone) are not needed in the flat, where the site starts: with
 // `defer` they build one per idle slot after the first frame, and
 // finishWorld() builds the rest at once (the first flight, a jump).
+// A job that returns 'more' is not done: it runs again in the next slot
+// (the graph frames build GRAPH_JOB_MS at a time, so no slot is a long task).
 const vizJobs = [];
-export function finishWorld() { while (vizJobs.length) vizJobs.shift()(); }
+const GRAPH_JOB_MS = 8;
+export function finishWorld() { while (vizJobs.length) { while (vizJobs[0]() === 'more'); vizJobs.shift(); } }
 const whenIdle = window.requestIdleCallback ? f => requestIdleCallback(f, { timeout: 1000 }) : f => setTimeout(f, 50);
 function buildVizzesLater() {
-    const step = () => { vizJobs.shift()?.(); if (vizJobs.length) whenIdle(step); };
+    const step = () => { if (vizJobs.length && vizJobs[0]() !== 'more') vizJobs.shift(); if (vizJobs.length) whenIdle(step); };
     requestAnimationFrame(() => whenIdle(step));
 }
 
@@ -1337,6 +1366,14 @@ export function buildWorld(scene, { defer = false } = {}) {
 
     tunnel.build(scene);
     buildScenery(scene);
+    // The graph's four frames: built ahead, so a tap only starts one
+    const graph = stops.find(st => st.graph)?.graph;
+    if (graph) for (let k = 1; k <= graph.NFRAMES; k++) vizJobs.push(() => graph.prebuild(k, GRAPH_JOB_MS) ? undefined : 'more');
+    // Last: compile the shaders of what is not on screen yet (the tunnel and
+    // the warp, the vizzes, the graph, the galaxies) in the background, so
+    // the first frame that shows them does not stall
+    if (defer) vizJobs.push(() => precompile(scene, graph));
+    else finishWorld();   // (the jobs above use no Math.random: the seeded route of dev/camlog.html stays)
     setInsideFade(0);
 
     const landing = stops[stops.length - 1];

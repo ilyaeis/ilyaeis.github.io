@@ -85,12 +85,12 @@ function buildText(font) {
     });
     textMats.push(nameMat, tagMat);
 
-    function makeLine(str, size, mat, y) {
+    function makeLine(str, size, mat, y, curveSegments = 6, bevelSegments = 2) {
         const geo = new TextGeometry(str, {
             font, size, depth: size * 0.3,
-            curveSegments: 6,
+            curveSegments,
             bevelEnabled: true, bevelThickness: size * 0.02,
-            bevelSize: size * 0.015, bevelSegments: 2
+            bevelSize: size * 0.015, bevelSegments
         });
         geo.computeBoundingBox();
         const bb = geo.boundingBox;
@@ -105,7 +105,10 @@ function buildText(font) {
     }
 
     makeLine('Ilja Safronovs', NAME_SIZE, nameMat, 0.10);
-    makeLine('3D reconstruction and computer vision · Giraffe360 · Riga', TAGLINE_SIZE, tagMat, -0.06);
+    // The long tagline in its own task (each line is a long extrusion on a
+    // slow phone); it is small, so fewer curve and bevel steps do not show.
+    // The text fades in, so the second line never pops.
+    setTimeout(() => makeLine('3D reconstruction and computer vision · Giraffe360 · Riga', TAGLINE_SIZE, tagMat, -0.06, 4, 1), 0);
 }
 
 // ── Build: icons (LinkedIn, GitHub) ────────────────────────────────

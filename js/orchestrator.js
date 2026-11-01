@@ -79,7 +79,10 @@ const arrivePos = new THREE.Vector3(); // VIEW camera spot of the destination (f
 let arriveBlend = true;    // this flight arrives from the front: blend the camera into the VIEW pose
 let flyby = null;          // the fly-by the current flight spirals round (world.flybys entry)
 let shiftBack = true;      // screen shift restored after the fly-by
+let shiftOffAt = 0;        // s into the flight when the screen shift goes (a fly-by flight), 0: done
 let travelWeightedLen = 0; // path length with the fly-by slowdown weights
+let travelClock = 0;       // the flight's own time: phaseTime, but faster during a skip
+let skip = null;           // a skip: { c0, c1, R, a } (clock span, top rate, ramp length in clock s)
 let headingOverride = null; // camera heading for this frame (fly-by framing), else cometDir
 const _camDir = new THREE.Vector3();
 const _hR = new THREE.Vector3(), _hU = new THREE.Vector3();
@@ -108,7 +111,7 @@ const COMET_CAPACITY = isMobile ? 600 : 1200;
 
 // Travel — stops are 30-50 units apart now, so the comet moves fast
 const TRAVEL_SPEED = 9.0;            // world units per second
-const TRAVEL_MIN = 5.0;              // seconds
+const TRAVEL_MIN = 4.0;              // seconds
 // Tunnel flights: every timing (pace, eases, arrival blend, warp) is scaled
 // by this, so the layout stays and the whole tunnel runs faster (0.5 = 2x)
 const TUNNEL_TIME_SCALE = 0.5;
@@ -142,14 +145,16 @@ const LOOP_SETTLE_RATE = 1.5;        // how fast the fly-off eases onto the orbi
 // the element's own stroke trajectory ONCE (the same points that drew
 // it), then settles into the viewing loop. Bold letter strokes (c=1)
 // glow; faint connectors (c=0) stay dim — matching the static geometry.
-const TRACE_DURATION = 3.0;          // seconds for the single trajectory pass
+const TRACE_DURATION = 1.5;          // seconds for the single trajectory pass
 const TRACE_MAX_PER_FRAME = 300;     // stroke-point budget cap per frame
 const TRACE_STROKE_INTENSITY = 1.4;  // bold strokes (c=1) → HDR/bloom
 const TRACE_LINK_INTENSITY = 0.4;    // faint pen-travel strokes (c=0)
 
+// A tap at a stop with a panel leaves soon (the panel stays readable; a
+// visitor who reads longer just taps later)
 const VIEW_TAP_DELAY = {
-    [StopType.PROJECT]: 2.0,
-    [StopType.OBJECT]: 2.0,
+    [StopType.PROJECT]: 0.5,
+    [StopType.OBJECT]: 0.5,
     [StopType.LANDING]: 1.5,
     [StopType.GRAPH]: GRAPH_EARLY_TAP
 };
@@ -163,7 +168,7 @@ const COLLECTED_KEY = 'rnd.collected';
 
 // Object stops (the apartment): the comet traces the halo ring once, then
 // rides it, slowing from the trace pace to the loop pace (no speed jump)
-const OBJECT_TRACE_DURATION = 3.0;   // s for the ring trace (one turn)
+const OBJECT_TRACE_DURATION = 1.5;   // s for the ring trace (one turn)
 const OBJECT_TRACE_INTENSITY = 0.9;  // the traced ring is a subtle accent indoors (no bloom)
 const OBJECT_LOOP_PERIOD = 8.0;      // s per turn once settled
 const OBJECT_LOOP_EASE = 1.5;        // s: time constant of that slow-down
@@ -185,13 +190,14 @@ const PROJECT_LOOP_PAD = 0.28;       // loop runs this far outside the frame
 // the viz (a helix leg round the tunnel axis), then rejoins it. The camera
 // frames the viz meanwhile (focus + tunnel heading), then turns back.
 const FLYBY_SPAN = 5;                // s: the helix runs over fly-by s +- this
-const FLYBY_TURNS = 1.5;             // turns over the helix leg
+const FLYBY_TURNS = 1;                  // turns over the helix leg
 const FLYBY_PAD = 0.35;              // helix radius = viz half-diagonal + this
 const FLYBY_RAMP = 0.45;             // share of the helix leg where the radius grows (and shrinks at the end)
-const FLYBY_SLOW = 1.6;              // path weight 1 + this at the fly-by: the comet is ~3.5x slower mid-spiral
+const FLYBY_SLOW = 0.5;              // path weight 1 + this at the fly-by
 const FLYBY_SLOW_H = 14;             // s: half-width of that slow bump
-const FLYBY_SPIRAL_W = 5.5;           // the spiral leg is this much slower again in the middle
+const FLYBY_SPIRAL_W = 2;            // the spiral leg is this much slower again in the middle
 const FLYBY_CAM_DIST = 4.6;          // chase distance while framing a fly-by (the camera offset is ~2% longer: stay under controls.maxDistance 5, or OrbitControls clamps and kinks the path)
+const SHIFT_OFF_DELAY = 1.2;         // s: a flight with a fly-by drops the panel shift this late (after the hand-off turn)
 const FLYBY_GLOW = 0.9;              // extra comet intensity while it spirals round a fly-by
 const TUNNEL_EASE_TIME = 1.8 * TUNNEL_TIME_SCALE; // s to reach (and leave) the cruise pace in a tunnel flight
 const WARP_IN_EASE = 2.0;            // × that on the warp in: the comet turns from the graph to the throat while still slow (the chase camera swings less)
@@ -220,6 +226,18 @@ const WARP_COMET = 1.2;              // extra comet intensity at the peak
 const WARP_FADE_PRE = 2.2 * TUNNEL_TIME_SCALE; // s: the worlds cross-fade from this long before the jump
 const WARP_FADE_POST = 0.4 * TUNNEL_TIME_SCALE; // ... to this long after it (reversed on the way out)
 
+// Skip: a tap during a flight makes the flight's own clock run faster (up
+// to SKIP_RATE x), until the arrival blend starts, where it is back to 1 x:
+// the comet rushes on along its own path (no cut, no camera jump) and the
+// arrival is the normal one. The rate is a smooth bump over the clock
+// (SKIP_RAMP s of real time up and down), so the speed never jumps.
+const SKIP_RATE = 4;                 // top clock rate
+const SKIP_TIME = 1.0;               // s of real time the skip aims for (the rate cap may make it longer)
+const SKIP_RAMP = 0.3;               // s (real time) of the ramp up and of the ramp down
+const SKIP_MIN_LEFT = 1.2;           // s of flight before the arrival blend: under this a tap does nothing
+const SKIP_HINT_AFTER = 0.6;         // s into a flight before "tap to skip" shows ...
+const SKIP_HINT_LEFT = 2.0;          // ... and only while this much of the flight is left before the arrival
+
 
 // Leaving the walk (leaveFlat): the comet starts this far ahead of the eye
 // and below it (room units), and the walk's FOV eases back over FOV_EASE s
@@ -229,9 +247,13 @@ const FOV_EASE = 0.6;
 
 // Rocket → comet morph duration (3D rocket — see intro3d.js)
 const ROCKET_MORPH_DURATION = intro.CHARGE_DURATION;
+// The first tap waits at most this long for the full splat (after the preview)
+const SHARP_WAIT = 2.0;
+let sharpWait = 0;
 
 // DOM refs
 let tapPromptEl = null;
+let navSkipEl = null;      // the nav's "skip the walk": shown while the visitor is in the flat
 let introLinksEl = null;   // "skip the walk · resume" under the first prompt
 let skipWalk = false;      // the intro's "skip the walk": after the morph, leave the flat at once
 
@@ -240,6 +262,7 @@ let skipWalk = false;      // the intro's "skip the walk": after the morph, leav
 // (world.js); a jump or the first flight builds the rest at once
 export function init({ deferViz = false } = {}) {
     tapPromptEl = document.querySelector('.tap-prompt');
+    navSkipEl = document.querySelector('.nav-skip');
     trail = createTrailSystem(COMET_CAPACITY);
     buildWorld(scene, { defer: deferViz }); // the dim world exists from frame one
     // The site starts in the flat: the intro camera is the landing VIEW pose
@@ -291,16 +314,19 @@ export function init({ deferViz = false } = {}) {
     else if (q.has('leg') && Number.isInteger(legQ) && legQ >= 1 && stops[legQ]) { jumpTo(legQ - 1); setupTravel(legQ); }
     else if (q.has('portal') && stops.some(st => st.portal)) jumpTo(stops.findIndex(st => st.portal));
     else {
-        showTapPrompt();
+        showTapPrompt('first');   // "tap or press Enter" (index.html)
         // Skip the walk: a real link (?go) to the first stop after the flat;
         // main.js turns its click into skipTheWalk()
         introLinksEl = document.querySelector('.intro-links');
         const skip = introLinksEl?.querySelector('.intro-skip');
+        const after = stops[afterFlatIndex()];
+        const skipHref = '?go=' + (after.frames?.[0].id ?? after.id);
         if (skip) {
-            const after = stops[afterFlatIndex()];
-            skip.href = '?go=' + (after.frames?.[0].id ?? after.id);
+            skip.href = skipHref;
             introLinksEl.hidden = false;
         }
+        if (navSkipEl) navSkipEl.href = skipHref;
+        setNavSkip(true);
         emitIntro('enter');   // room.js loads the flat now
     }
     if (q.has('explore')) explore.enterExplore(true);   // dev: with ?go=<apartment stop or contact>
@@ -326,12 +352,16 @@ function simulateUntil(done, maxSeconds) {
 }
 
 export function onTap() { tapPending = true; }
-// The intro's "skip the walk": the rocket morphs, then the comet leaves the flat
+// "skip the walk" (the intro link, the nav): in the intro the rocket morphs,
+// then the comet leaves the flat; during the morph it leaves right after;
+// in the tour it leaves from where the walker is
 export function skipTheWalk() {
-    if (phase !== Phase.INTRO) return;
-    skipWalk = true;
-    tapPending = true;
+    if (phase === Phase.INTRO) { skipWalk = true; tapPending = true; }
+    else if (phase === Phase.ROCKET_EXIT) skipWalk = true;
+    else if (phase === Phase.EXPLORE && explore.touring()) explore.skipFlat();
 }
+// The nav's "skip the walk" shows while the visitor is in the flat (the intro, the tour)
+function setNavSkip(on) { if (navSkipEl) navSkipEl.hidden = !on; }
 
 // 'journey:intro' { phase: 'enter' | 'leave' }: the intro shows (room.js loads the flat) or ends (the first tap)
 function emitIntro(phaseName) { window.dispatchEvent(new CustomEvent('journey:intro', { detail: { phase: phaseName } })); }
@@ -386,6 +416,7 @@ export function jumpTo(n, frame = 1) {
     if (stops[n].type === StopType.OBJECT && explore.hasWalker() && phase !== Phase.EXPLORE) { walkAt(n); return; }   // objects are walked to
     explore.leaveNow();
     intro.hideIntro(); hideTapPrompt();
+    setNavSkip(false);
     stopIndex = n;
     const stop = stops[n];
     setHaloFocus(stop); snapHaloFocus();
@@ -410,14 +441,31 @@ function setInside(f) { setInsideFade(f); }
 // Stops with an HTML panel beside them (screen shift, fit)
 function hasPanel(stop) { return stop.type === StopType.PROJECT || stop.type === StopType.OBJECT || stop.type === StopType.GRAPH; }
 
-function showTapPrompt() { if (tapPromptEl) tapPromptEl.classList.add('visible'); }
+function showTapPrompt(kind = 'continue') {
+    if (!tapPromptEl) return;
+    setPromptText(kind);
+    tapPromptEl.classList.add('visible');
+}
 // (the intro links and the first prompt's key hint go with the first prompt:
 // they never come back)
 function hideTapPrompt() {
     if (!tapPromptEl) return;
     tapPromptEl.classList.remove('visible');
     if (introLinksEl) introLinksEl.hidden = true;
-    if (tapPromptEl.textContent !== 'tap to continue') tapPromptEl.textContent = 'tap to continue';
+    setPromptText('continue');
+}
+// "tap to continue" at a stop; "tap to skip" during a long flight (with
+// " or press Enter" for keyboards: the key hint hides on touch screens)
+let promptKind = 'first';
+function setPromptText(kind) {
+    if (promptKind === kind || !tapPromptEl) return;
+    promptKind = kind;
+    if (kind === 'skip') {
+        const key = document.createElement('span');
+        key.className = 'key-hint';
+        key.textContent = ' or press Enter';
+        tapPromptEl.replaceChildren('tap', key, ' to skip');
+    } else tapPromptEl.textContent = 'tap to continue';
 }
 
 function enterPhase(newPhase) {
@@ -736,6 +784,7 @@ function stepFaceAlign(dt) {
 // after the flat. The walk's wider FOV eases back (updateTravel).
 export function leaveFlat() {
     const dest = afterFlatIndex();
+    setNavSkip(false);
     if (REDUCED_MOTION.matches) {
         // no lift flight: straight to the graph (the walk's FOV goes back at once)
         if (phase === Phase.EXPLORE) { emitStop('leave', { to: dest }); explore.leaveInPlace(); }
@@ -789,6 +838,7 @@ export function walkAt(i) {
     tunnel.setFade(0); setInside(0);
     clearTrail(trail);
     explore.enterAtObject(i);
+    setNavSkip(true);
     return { ok: true, object: stops[i].id };
 }
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -833,6 +883,7 @@ export function setupTravel(destIdx) {
         travelDuration = THREE.MathUtils.clamp(travelWeightedLen / TUNNEL_SPEED + tunnelEase, TRAVEL_MIN, TUNNEL_TRAVEL_MAX);
     }
     fromFlat = false;
+    travelClock = 0; skip = null;
     fovEase.x = camera.fov; fovEase.v = 0;
     if (warp) {
         warp.g = legEndShare(warp.leg);
@@ -858,9 +909,12 @@ export function setupTravel(destIdx) {
     // (the face-align glide in VIEW goes round the side instead)
     arriveBlend = travelTangent(0.999, _vA).dot(dest.normal) > ARRIVE_MIN_DOT;
     cam.setFollowDistance(followFrom);
-    // A fly-by is framed centred: the panel shift comes back after it
+    // A fly-by is framed centred: the panel shift comes back after it. It
+    // goes SHIFT_OFF_DELAY s into the flight, so its turn does not add to
+    // the departure's hand-off turn
     shiftBack = !flyby;
-    cam.setScreenShift(hasPanel(dest) && !flyby);
+    shiftOffAt = flyby ? SHIFT_OFF_DELAY : 0;
+    if (!flyby) cam.setScreenShift(hasPanel(dest));
     enterPhase(Phase.TRAVEL);
 }
 
@@ -1058,6 +1112,10 @@ function updateIntro(dt) {
     // An early tap waits for the flat ("loading the flat · n %"), then goes on
     // (the tap stays pending). Skipping the walk does not wait.
     if (!skipWalk && !explore.flatReady()) { explore.holdForFlat(true); return; }
+    // ... and a moment for the full splat (a fast network): the blurry
+    // preview should not show while the visitor walks (walk.js walks slowly
+    // until the swap, if it takes longer)
+    if (!skipWalk && !explore.flatSharp() && (sharpWait += dt) < SHARP_WAIT) { explore.holdForFlat(true); return; }
     explore.holdForFlat(false);
     tapPending = false;
     emitIntro('leave');
@@ -1142,12 +1200,18 @@ function cameraAnchor(time, out) {
 
 // ── TRAVEL (Bezier arc to the next stop) ───────────────────────────
 function updateTravel(dt) {
+    // A tap skips ahead (the clock runs faster); "tap to skip" on long flights
+    if (tapPending) { tapPending = false; startSkip(); }
+    const c0 = travelClock, c1 = advanceClock(dt);
+    const hint = !skip && c1 > SKIP_HINT_AFTER && arriveClock() - c1 > SKIP_HINT_LEFT;
+    if (hint) showTapPrompt('skip');
+    else if (promptKind === 'skip') hideTapPrompt();
     // Eased path parameter so motion accelerates and decelerates instead
     // of jumping to constant speed the instant the comet departs.
-    // phaseTime is the start of this frame; draw up to its end
-    const t = travelEase(Math.min((phaseTime + dt) / travelDuration, 1));
-    const prevT = travelEase(Math.min(phaseTime / travelDuration, 1));
-    const w = warp ? updateWarp(phaseTime + dt, t) : 0;
+    // c0 is the start of this frame (flight clock); draw up to its end c1
+    const t = travelEase(Math.min(c1 / travelDuration, 1));
+    const prevT = travelEase(Math.min(c0 / travelDuration, 1));
+    const w = warp ? updateWarp(c1, t) : 0;
     const sHead = easeC2 ? travelS(t) : 0;
     const k = flyby ? flybyFraming(sHead) : 0;
     // Rush: a gentle sense of speed at the fast zones (ring pulses, streaks, FOV)
@@ -1168,7 +1232,7 @@ function updateTravel(dt) {
     travelPoint(t, cometPos); // the head's true position, for the next leg
     audioState.speed = dt > 0 ? Math.min(_prevHead.distanceTo(cometPos) / dt / 30, 1) : 0;
     audioState.rush = rush; audioState.warp = w;
-    cameraAnchor(phaseTime + dt, worldPos);
+    cameraAnchor(c1, worldPos);
     travelTangent(t, cometDir);
     if (easeC2) {
         tunnel.updateStreaks(dt, cometPos, cometDir, Math.max(w, RUSH_STREAKS * rush));
@@ -1182,13 +1246,13 @@ function updateTravel(dt) {
         camera.updateProjectionMatrix();
     }
     // Arrival: blend into the VIEW pose over the last ARRIVE_BLEND of the time
-    const x = Math.min((phaseTime + dt) / travelDuration, 1);
+    const x = Math.min(c1 / travelDuration, 1);
     const dest = stops[stopIndex];
     if (!arriveBlend) {
         cam.setArrival(null, null, 0);
     } else if (easeC2 && dest.tunnelS != null) {
         // in the tunnel: over the last ARRIVE_TIME s (the flights are long; the rush is over by then)
-        cam.setArrival(null, null, THREE.MathUtils.smootherstep(phaseTime + dt, travelDuration - ARRIVE_TIME, travelDuration));
+        cam.setArrival(null, null, THREE.MathUtils.smootherstep(c1, travelDuration - ARRIVE_TIME, travelDuration));
     } else {
         cam.setArrival(null, null, THREE.MathUtils.smootherstep(x, 1 - ARRIVE_BLEND, 1));
     }
@@ -1210,6 +1274,7 @@ function updateTravel(dt) {
         worldPos.lerp(_vA, ride);
         if (k > 0) headingOverride = _camDir.copy(cometDir).lerp(flyby.T, k).normalize();
     }
+    if (shiftOffAt && phaseTime + dt >= shiftOffAt) { shiftOffAt = 0; cam.setScreenShift(false); }
     if (!shiftBack && sHead > flyby.s + FLYBY_SPAN) {   // as the camera swings back, so the panel layout is set before the arrival
         shiftBack = true;
         cam.setScreenShift(hasPanel(stops[stopIndex]));
@@ -1219,6 +1284,42 @@ function updateTravel(dt) {
         enterView();
         stepFaceAlign(dt); // the camera keeps moving on the hand-off frame
     }
+}
+
+// ── Skip (a tap during a flight) ───────────────────────────────────
+// Flight clock where the arrival blend starts (the skip ends there)
+function arriveClock() {
+    const dest = stops[stopIndex];
+    if (!arriveBlend) return travelDuration - 1;
+    if (easeC2 && dest.tunnelS != null) return travelDuration - ARRIVE_TIME;
+    return travelDuration * (1 - ARRIVE_BLEND);
+}
+function startSkip() {
+    if (skip) return;
+    const c1 = arriveClock(), left = c1 - travelClock;
+    if (left < SKIP_MIN_LEFT) return;
+    // top rate for about SKIP_TIME s of real time: the two ramps take
+    // SKIP_RAMP each (at the mean rate (1 + R) / 2), the middle (left - 2a) / R
+    const R = THREE.MathUtils.clamp((left - SKIP_RAMP) / (SKIP_TIME - SKIP_RAMP), 1, SKIP_RATE);
+    if (R < 1.5) return;
+    skip = { c0: travelClock, c1, R, a: SKIP_RAMP * (1 + R) / 2 };
+    hideTapPrompt();
+}
+// Clock rate at clock c: 1 + (R - 1) x a bump that ramps up from c0 and back
+// down to c1 (smoothstep: the comet's acceleration has no step)
+function skipRate(c) {
+    if (!skip || c >= skip.c1) return 1;
+    const up = THREE.MathUtils.smoothstep(c, skip.c0, skip.c0 + skip.a);
+    const down = 1 - THREE.MathUtils.smoothstep(c, skip.c1 - skip.a, skip.c1);
+    return 1 + (skip.R - 1) * Math.min(up, down);
+}
+// Advance the flight clock by dt of real time (sub-stepped during a skip)
+function advanceClock(dt) {
+    if (!skip) return (travelClock += dt);
+    const n = 4;
+    for (let i = 0; i < n; i++) travelClock += skipRate(travelClock) * dt / n;
+    if (travelClock >= skip.c1) skip = null;
+    return travelClock;
 }
 
 // Fly-by framing weight 0..1 over the comet's arc parameter s (a function
