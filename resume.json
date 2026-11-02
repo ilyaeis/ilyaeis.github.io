@@ -5,7 +5,7 @@
     "label": "R&D engineer, 3D reconstruction. Giraffe360, Riga, Latvia.",
     "email": "ilya.safronos@gmail.com",
     "url": "https://ilyaeis.github.io/",
-    "summary": "I work on 3D Gaussian splatting at Giraffe360: training from sparse panoramas, in PyTorch and CUDA. Most of my work starts with a reconstruction that looks wrong. I find out why, then I test fixes in training runs until one is good enough for production. I mentored a junior engineer and led three engineers on a new 3D reconstruction feature. Next, I want to grow into leading a team.",
+    "summary": "I work on 3D Gaussian splatting at Giraffe360: training from sparse panoramas, in PyTorch and CUDA. Most of my work starts with a reconstruction that looks wrong. I find the cause and fix it in our training code. I mentored a junior engineer and led three engineers on a new 3D reconstruction feature. Next, I want to grow into leading a team.",
     "location": {
       "city": "Riga",
       "countryCode": "LV"
@@ -29,18 +29,20 @@
       "url": "https://www.giraffe360.com/",
       "location": "Riga",
       "startDate": "2025",
-      "summary": "Giraffe360 makes cameras and software for real-estate virtual tours. The R&D team builds the 3D reconstruction pipeline behind the 3D videos.",
+      "summary": "Giraffe360 makes cameras and software for real-estate virtual tours. I am in the R&D team, on the 3D reconstruction pipeline.",
       "highlights": [
-        "Windows, outdoor views and mirrors were blurry in our 3D videos. I found the cause and tested fixes in controlled training runs until the haze, floaters and flicker were gone. The fix builds on the team's earlier window masks. It has been the default for PRO camera projects since June 2026. Before and after: https://www.instagram.com/p/DZsNRB8o772/",
-        "Wrote the Gaussian pruning and relocation rules in our training defaults (Jan to Jul 2026). They build on Taming 3DGS (Mallick et al., 2024) and the team's influence tracking: each Gaussian is scored by how much it adds to the rendered images, and the least useful ones are removed or moved.",
-        "Implemented Analytic-Splatting (Liang et al., 2024) in gsplat, with CUDA forward and backward passes. We use it in a downsampling step (June 2026). I also cut GPU idle time in training.",
-        "Looped drone video, one flight per room. It was my idea at the Feb 2026 hackathon, where 3 of my ideas were recognised out of 51. I wrote the camera path, restructured the video pipeline and agreed the look with the designers. It is a product now: https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/",
-        "Exterior orbital videos (Oct 2026): the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline. Earlier I fixed the camera height in rooms on a half floor, for all video types.",
-        "Led three engineers on a new 3D reconstruction feature (Oct 2026). I wrote most of the code, reviewed and merged their work, and cut the release. It runs in production. Since September 2026 I cut the releases of our 3D pipeline.",
-        "Mentored a junior engineer on a new depth method (denser LiDAR depth). The work is mostly his. Our splat training has used it since October 2026.",
-        "Tools the team uses: an experiment runner, so anyone can start and track a training on a local GPU through an AI agent (March 2026); an MCP server in Node.js for the team task board, with authentication (June 2026); ground-truth datasets and checks for splat quality (July 2026). I led the move of our 3DGS code into one monorepo, with a code-size check (July 2026).",
-        "A Rust/wgpu splat viewer that other apps can embed and control. It swaps and combines PLY scenes live and renders point clouds (May 2026). A side-by-side comparison tool with optional camera sync (Jan 2026).",
-        "Prototypes: correct reflections in mirrors, meshes from splats, a stage that cuts the splat count for viewers, a fly-in video intro. I also got Difix and NVIDIA's fixer running on our GPUs so the team could evaluate them (Feb 2026).",
+        "Blurry windows, outdoor views and mirrors in our 3D videos. I found the cause and tested fixes in training runs until the haze and floaters were gone. Builds on the team's earlier window masks. Default for PRO camera projects since June 2026. Before and after: https://www.instagram.com/p/DZsNRB8o772/",
+        "Our training defaults use my Gaussian pruning and relocation rules (Jan to Jul 2026). They build on Taming 3DGS (Mallick et al., 2024) and the team's influence tracking: a Gaussian that adds little to the renders gets pruned or moved.",
+        "Implemented Analytic-Splatting (Liang et al., 2024) in gsplat, CUDA forward and backward passes. We use it for downsampling.",
+        "Cut GPU idle time in training.",
+        "Looped drone video, one flight per room. My idea from the Feb 2026 hackathon (3 of my ideas were recognised out of 51). I wrote the camera path and reworked the video pipeline. The look was worked out with the designers. It is a product now: https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/",
+        "Exterior orbital videos (Oct 2026): the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline.",
+        "Fixed the camera height in rooms on a half floor, for all video types. A long-standing bug.",
+        "Led three engineers on a new 3D reconstruction feature (Oct 2026). Most of the code is mine; I reviewed and merged theirs and cut the release. In production. I have cut the releases of our 3D pipeline since September 2026.",
+        "Mentored a junior engineer on a new depth method (denser LiDAR depth). Mostly his work. Our splat training has run on it since October 2026.",
+        "Team tools. An experiment runner: an AI agent starts and tracks trainings on a local GPU. An MCP server (Node.js) for our task board. Ground-truth datasets and checks for splat quality. I also led the move of our 3DGS code into one monorepo, with a code-size check (2026).",
+        "A Rust/wgpu splat viewer that other apps can embed and control (May 2026). It swaps and combines PLY scenes live, and shows point clouds. Before that, a side-by-side comparison tool with camera sync.",
+        "Prototypes: mirror reflections done right, meshes from splats, a stage that cuts the splat count for viewers, a fly-in video intro. Got Difix and NVIDIA's fixer running on our GPUs for the team to try (Feb 2026).",
         "Jul to Oct 2025: a small service that wrote tour narration with the OpenAI API and AWS S3."
       ]
     }
@@ -62,7 +64,7 @@
     },
     {
       "institution": "AI Talent Program (Ponder)",
-      "area": "C++, Python, maths and AI, with mentors from industry. It led to the Giraffe360 job.",
+      "area": "C++, Python, maths and AI, with mentors from industry. That is how I got the Giraffe360 job.",
       "studyType": "Program",
       "startDate": "2024-11",
       "endDate": "2025-01",
@@ -90,7 +92,7 @@
       "name": "Portfolio site",
       "startDate": "2025",
       "endDate": "2026",
-      "description": "A splat of a real flat that I trained with gsplat MCMC on the public Zip-NeRF \"london\" scene (Barron et al., 2023, CC BY 4.0). 30k steps, about 18 minutes on one RTX 3090, 28.3 dB PSNR on held-out views. A 1 MB preview loads first, then a 350k-splat model. three.js and Spark, no build step.",
+      "description": "A splat of a real flat, trained with gsplat MCMC on the public Zip-NeRF \"london\" scene (Barron et al., 2023, CC BY 4.0). 30k steps, about 18 minutes on one RTX 3090, 28.3 dB PSNR on held-out views. A 1 MB preview loads first, then the 350k-splat model. three.js and Spark, no build step.",
       "url": "https://ilyaeis.github.io/",
       "keywords": ["Gaussian splatting", "gsplat", "three.js", "Spark", "WebGL"]
     },
@@ -111,7 +113,7 @@
     {
       "name": "load-balancing-experiments",
       "startDate": "2026",
-      "description": "DNS round robin and anycast measured from Riga, a queueing simulation of balancing policies, consistent, rendezvous and Maglev hashing, a small load balancer with health checks, packet capture. An RTU networks project.",
+      "description": "For an RTU networks course: DNS round robin and anycast measured from Riga, a queueing simulation of balancing policies, consistent, rendezvous and Maglev hashing, a small load balancer with health checks, packet capture.",
       "url": "https://github.com/ilyaeis/load-balancing-experiments",
       "keywords": ["Python"]
     },
@@ -130,7 +132,7 @@
     },
     {
       "name": "Coding-agent harness",
-      "description": "Private, own time. A master session plans and checks the work, worker sessions run in their own git worktrees."
+      "description": "Private, own time. One master session plans and checks the work; workers run in their own git worktrees."
     },
     {
       "name": "projects_with_NEAT",
