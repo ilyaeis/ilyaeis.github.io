@@ -10,7 +10,7 @@ The design came from `~/Desktop/brain/reports/portfolio-site/design/` (`notes.md
 
 ## Files
 
-- `index.html` — the page. All text is in the HTML. `<head>`: meta, OG/twitter tags (`og-image.png?v=3`), canonical, favicon, JSON-LD `Person` (`@id` `https://ilyaeis.github.io/#me`, shared with `resume.html`), the import map. Section ids: `#work`, `#flat`, `#tools`, `#projects`, `#contact` (`llms.txt` links them).
+- `index.html` — the page. All text is in the HTML. `<head>`: meta, OG/twitter tags (`og-image.png?v=4`), canonical, favicon, JSON-LD `Person` (`@id` `https://ilyaeis.github.io/#me`, shared with `resume.html`), the import map. Section ids: `#work`, `#flat`, `#tools`, `#projects`, `#contact` (`llms.txt` links them).
 - `css/style.css` — the page style. Colour tokens on `:root` (`--bg #121110`, `--fg`, `--fg-2`, `--line`, `--bg-2`, `--accent #f2b85a` amber, from the lamps of the splat). One font: Inter from Google Fonts.
 - `js/page.js` — the only script the page loads. It inserts the Instagram embed and loads `js/flat.js` when each comes near the view.
 - `js/flat.js` — the flat viewer: three.js + Spark, drag to look round from a fixed spot by the sofa.

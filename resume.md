@@ -8,7 +8,7 @@ R&D engineer, 3D reconstruction · Giraffe360 · Riga, Latvia
 
 ilya.safronos@gmail.com · [GitHub](https://github.com/ilyaeis) · [LinkedIn](https://www.linkedin.com/in/i%C4%BCja-safronovs-eis)
 
-I work on 3D Gaussian splatting from sparse panoramas at Giraffe360 (PyTorch, CUDA). Most of my work: a reconstruction looks wrong, I find out why, then I test fixes in training runs until one is good enough for production. I mentored a junior engineer, then led three engineers on a new 3D reconstruction feature; both are in production. I want to lead a team next.
+I work on 3D Gaussian splatting from sparse panoramas at Giraffe360 (PyTorch, CUDA). Most of my work: a reconstruction looks wrong, I find out why, then I test fixes in training runs until one is good enough for production. I mentored a junior engineer, then led three engineers on a new 3D reconstruction feature; both are in production. Next, I want to grow into leading a team.
 
 ## Experience
 
@@ -23,7 +23,7 @@ Riga · 2025 – present. Giraffe360 makes cameras and software for real-estate 
 - **The looped drone video (one flight per room) started as my hackathon idea; it is a product now. I also built the exterior orbital videos (Oct 2026).** [Giraffe360 post](https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)
   Looped drone: a special mention at the Feb 2026 hackathon (3 of my ideas were recognised out of 51); I built its camera-path algorithm. Exterior orbital videos: I built the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline. For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed the camera height in rooms on a half floor, for all video types.
 - **Led three engineers on a new 3D reconstruction feature, now in production (Oct 2026).**
-  I wrote most of the code, reviewed and merged the others’ work, and cut the release. Since September 2026 I also cut our 3D pipeline’s releases. I want to lead a team next.
+  I wrote most of the code, reviewed and merged the others’ work, and cut the release. Since September 2026 I also cut our 3D pipeline’s releases. Next, I want to grow into leading a team.
 - **Mentored a junior engineer on a new depth method; it is now in production.**
   Mostly his work, on denser LiDAR depth; our splat training has used it since October 2026. Over time, teammates came to me with their pipeline questions.
 - **Built an experiment runner driven by an AI agent, an MCP server for the team task board, and a harness for coding agents.**
