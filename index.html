@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ilja Safronovs, R&amp;D engineer, 3D Gaussian splatting (Riga)</title>
-<meta name="description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting (PyTorch, CUDA) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained; you can look around in it.">
+<meta name="description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting from 360° panoramas and LiDAR (PyTorch, CUDA, COLMAP) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained.">
 <meta name="author" content="Ilja Safronovs">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#121110">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ilyaeis.github.io/">
 <meta property="og:title" content="Ilja Safronovs, R&amp;D engineer, 3D Gaussian splatting (Riga)">
-<meta property="og:description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting (PyTorch, CUDA) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained; you can look around in it.">
+<meta property="og:description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting from 360° panoramas and LiDAR (PyTorch, CUDA, COLMAP) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained.">
 <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=4">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -32,11 +32,11 @@
     "url": "https://ilyaeis.github.io/",
     "email": "ilya.safronos@gmail.com",
     "jobTitle": "R&D Engineer",
-    "description": "R&D engineer at Giraffe360 in Riga. Works on 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA).",
+    "description": "R&D engineer at Giraffe360 in Riga. Works on 3D Gaussian splatting from sparse panoramas and LiDAR depth (PyTorch, CUDA, COLMAP).",
     "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
     "alumniOf": { "@type": "CollegeOrUniversity", "name": "Riga Technical University" },
     "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
-    "knowsAbout": ["3D Gaussian splatting", "3D reconstruction", "computer vision", "PyTorch", "CUDA", "gsplat", "Python", "C++"],
+    "knowsAbout": ["3D Gaussian splatting", "3D reconstruction", "structure from motion", "computer vision", "PyTorch", "CUDA", "gsplat", "COLMAP", "Python", "C++"],
     "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
 }
 </script>
@@ -82,7 +82,7 @@
       </div>
     </li>
     <li>
-      <p>Our training defaults use my Gaussian pruning and relocation rules (built on Taming 3DGS).</p>
+      <p>Our training defaults use my Gaussian pruning and relocation rules (MCMC training, built on Taming 3DGS). I also wrote the CUDA kernels for Analytic-Splatting in gsplat.</p>
     </li>
     <li>
       <p>The looped drone video started as my hackathon idea. Now it is a product.</p>
@@ -114,7 +114,7 @@
   <h2>Tools</h2>
   <div class="sec-body">
   <p class="lead">My team uses two tools I built: an experiment runner driven by an AI agent, and an MCP server for our task board.</p>
-  <p class="detail skills">PyTorch, CUDA, gsplat, Python, C++.</p>
+  <p class="detail skills">PyTorch, CUDA, gsplat, COLMAP, Python, C++.</p>
   </div>
 </section>
 

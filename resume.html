@@ -6,7 +6,7 @@
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
     <title>Ilja Safronovs, resume: R&amp;D engineer, 3D reconstruction</title>
-    <meta name="description" content="Resume of Ilja Safronovs, R&amp;D engineer at Giraffe360 in Riga. 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA); he fixes what looks wrong in the 3D videos.">
+    <meta name="description" content="Resume of Ilja Safronovs, R&amp;D engineer at Giraffe360 in Riga. 3D Gaussian splatting from sparse 360° panoramas and LiDAR depth (PyTorch, CUDA, COLMAP); he fixes what looks wrong in the 3D videos.">
     <meta name="author" content="Ilja Safronovs">
     <meta name="theme-color" content="#121110">
     <meta name="color-scheme" content="dark light">
@@ -21,7 +21,7 @@
     <meta property="og:type" content="profile">
     <meta property="og:url" content="https://ilyaeis.github.io/resume.html">
     <meta property="og:title" content="Ilja Safronovs, resume: R&amp;D engineer, 3D reconstruction">
-    <meta property="og:description" content="R&amp;D engineer at Giraffe360 in Riga. 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA); he fixes what looks wrong in the 3D videos.">
+    <meta property="og:description" content="R&amp;D engineer at Giraffe360 in Riga. 3D Gaussian splatting from sparse 360° panoramas and LiDAR depth (PyTorch, CUDA, COLMAP); he fixes what looks wrong in the 3D videos.">
     <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=4">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -39,7 +39,7 @@
             "@id": "https://ilyaeis.github.io/#me",
             "name": "Ilja Safronovs",
             "alternateName": "ilyaeis",
-            "description": "R&D engineer at Giraffe360 in Riga. Works on 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA).",
+            "description": "R&D engineer at Giraffe360 in Riga. Works on 3D Gaussian splatting from sparse panoramas and LiDAR depth (PyTorch, CUDA, COLMAP).",
             "url": "https://ilyaeis.github.io/",
             "email": "ilya.safronos@gmail.com",
             "jobTitle": "R&D Engineer, 3D reconstruction",
@@ -53,7 +53,7 @@
             "hasOccupation": [{
                 "@type": "Role",
                 "roleName": "R&D Engineer",
-                "startDate": "2025",
+                "startDate": "2025-07-01",
                 "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
                 "hasOccupation": {
                     "@type": "Occupation",
@@ -73,7 +73,7 @@
                     "recognizedBy": { "@type": "Organization", "name": "Ponder" }
                 }
             ],
-            "knowsAbout": ["3D Gaussian splatting", "3D reconstruction", "computer vision", "PyTorch", "CUDA", "Python", "C++", "Rust", "Dart", "Flutter", "JavaScript", "Monte Carlo methods"],
+            "knowsAbout": ["3D Gaussian splatting", "3D reconstruction", "structure from motion", "bundle adjustment", "computer vision", "PyTorch", "CUDA", "gsplat", "COLMAP", "Python", "C++", "Rust", "JavaScript"],
             "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
         }
     }
@@ -100,23 +100,23 @@
             <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me">linkedin.com/in/iļja-safronovs-eis</a>
             <span class="print">ilyaeis.github.io</span>
         </p>
-        <p class="summary">I work on 3D Gaussian splatting at Giraffe360: training from sparse panoramas, in PyTorch and CUDA. Most of my work starts with a reconstruction that looks wrong. <strong>I find the cause and fix it in our training code.</strong> I mentored a junior engineer and led three engineers on a new 3D reconstruction feature. <strong>Next, I want to grow into leading a team.</strong></p>
+        <p class="summary">I work on 3D Gaussian splatting at Giraffe360: a pipeline that turns sparse 360° panoramas and LiDAR scans into splats, in PyTorch and CUDA. Most of my work starts with a reconstruction that looks wrong. <strong>I find the cause and fix it in our training code.</strong> I pick each fix in controlled training runs against the old default. Two papers went from PDF to my code: Taming 3DGS in PyTorch and Analytic-Splatting in CUDA. I mentored a junior engineer and led three engineers on a new 3D reconstruction feature. <strong>Next, I want to grow into leading a team.</strong></p>
     </header>
 
     <section>
         <h2>Experience</h2>
         <div class="job">
-            <p class="head"><span><strong>Giraffe360</strong>, R&amp;D engineer</span> <span class="dates">Riga, <time datetime="2025">2025</time> to present</span></p>
-            <p class="note">Giraffe360 makes cameras and software for real-estate virtual tours. I am in the R&amp;D team, on the 3D reconstruction pipeline.</p>
+            <p class="head"><span><strong>Giraffe360</strong>, R&amp;D engineer</span> <span class="dates">Riga, <time datetime="2025-07">Jul 2025</time> to present</span></p>
+            <p class="note">Giraffe360 makes cameras and software for real-estate virtual tours. I am in the R&amp;D team, on the 3D reconstruction pipeline: camera poses from structure from motion and bundle adjustment (COLMAP), Gaussian splat training with gsplat, and the camera paths of the videos.</p>
             <ul>
                 <li><strong>Blurry windows, outdoor views and mirrors in our 3D videos.</strong> I found the cause and tested fixes in training runs until the haze and floaters were gone. Builds on the team's earlier window masks. <strong>Default in all Giraffe360 Gaussian splat videos since June 2026.</strong> Before and after: <a href="https://www.instagram.com/p/DZsNRB8o772/">instagram.com/p/DZsNRB8o772</a></li>
-                <li><strong>Our training defaults use my Gaussian pruning and relocation rules</strong> (Jan to Jul 2026). They build on Taming 3DGS (Mallick et al., 2024) and the team's influence tracking: a Gaussian that adds little to the renders gets pruned or moved.</li>
-                <li><strong>Implemented Analytic-Splatting (Liang et al., 2024) in gsplat</strong>, CUDA forward and backward passes. We use it for downsampling.</li>
-                <li>Cut GPU idle time in training.</li>
+                <li><strong>Our training defaults use my Gaussian pruning and relocation rules</strong> (Jan to Jul 2026), inside an MCMC training strategy. They build on Taming 3DGS (Mallick et al., 2024), which I had implemented from the paper, and on the team's influence tracking: a Gaussian that adds little to the renders gets pruned or relocated. Together, the Jul 2026 default set, which includes my relocation rule, trains 13 to 16 % fewer Gaussians at equal or better quality.</li>
+                <li><strong>Implemented Analytic-Splatting (Liang et al., 2024) in gsplat</strong>: CUDA forward and backward kernels, written from the paper. We use it for downsampling.</li>
+                <li>Made training faster: 8.6 % on an RTX 3090 at the same quality, by dropping a per-step opacity cull; on one large scene a step went from 117.6 to 68.1 ms (42 % less) with PSNR unchanged.</li>
+                <li><strong>Mentored a junior engineer on a new depth method</strong> (denser LiDAR depth). Mostly his work. Our splat training has used it as its depth prior since October 2026.</li>
+                <li><strong>Led three engineers on a new 3D reconstruction feature</strong> (Oct 2026). Most of the code is mine, from the camera poses (SfM and bundle adjustment) to the training recipe; I reviewed and merged theirs and cut the release. In production. I have cut the releases of our 3D pipeline since September 2026.</li>
                 <li><strong>Looped drone video</strong>, one flight per room. My idea from the Feb 2026 hackathon (I submitted 6 ideas; 3 of them were among the 51 recognised). I wrote the camera path and reworked the video pipeline. The look was worked out with the designers. <strong>It is a product now</strong>: <a href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">instagram.com/giraffe360/reel/Dd9ODBVIHhE</a></li>
                 <li>Fixed the camera height in rooms on a half floor, for all video types. A long-standing bug.</li>
-                <li><strong>Led three engineers on a new 3D reconstruction feature</strong> (Oct 2026). Most of the code is mine; I reviewed and merged theirs and cut the release. In production. I have cut the releases of our 3D pipeline since September 2026.</li>
-                <li><strong>Mentored a junior engineer on a new depth method</strong> (denser LiDAR depth). Mostly his work. Our splat training has run on it since October 2026.</li>
                 <li><strong>Team tools.</strong> An experiment runner: an AI agent starts and tracks trainings on a local GPU. An MCP server (Node.js) for our task board. Ground-truth datasets and checks for splat quality. I also led the move of our 3DGS code into one monorepo, with a code-size check (2026).</li>
                 <li><strong>A Rust/wgpu splat viewer that other apps can embed and control</strong> (May 2026). It swaps and combines PLY scenes live, and shows point clouds. Before that, a side-by-side comparison tool with camera sync.</li>
                 <li><strong>Prototypes</strong>: mirror reflections done right, meshes from splats, a stage that cuts the splat count for viewers, a fly-in video intro. Got Difix and NVIDIA's fixer running on our GPUs for the team to try (Feb 2026).</li>
@@ -140,20 +140,18 @@
         <ul>
             <li><strong>Portfolio site</strong> (2026): <a href="https://ilyaeis.github.io/#flat">ilyaeis.github.io</a>. A live Gaussian splat of a flat that I trained with gsplat on public Zip-NeRF photos, 18 minutes on one RTX 3090.</li>
             <li><a href="https://github.com/ilyaeis/sort_visualization"><strong>sort_visualization</strong></a> (2022, C++/SFML): 16 sorting algorithms animated as columns, points, circles, spirals and pyramids. The same C++ runs <a href="apps/sorting/">in the browser</a>, compiled to WebAssembly.</li>
-            <li><a href="https://github.com/ilyaeis/monte-carlo-finance"><strong>monte-carlo-finance</strong></a> (2026, Python): option pricing with variance reduction, GARCH volatility, VaR backtests with the Kupiec test, efficient frontier, CAPM. From RTU coursework.</li>
-            <li><a href="https://github.com/ilyaeis/load-balancing-experiments"><strong>load-balancing-experiments</strong></a> (2026, Python), for an RTU networks course: DNS round robin and anycast measured from Riga, a queueing simulation of balancing policies, consistent, rendezvous and Maglev hashing, a small load balancer with health checks, packet capture.</li>
-            <li><a href="https://github.com/ilyaeis/crypto-quant-lab"><strong>crypto-quant-lab</strong></a> (2026, Python): backtests of drift and volatility-targeting rules on 6 coins with a 1% fee.</li>
-            <li><strong>flow</strong> (2026, Dart/Flutter, private): offline workout tracker. Live rest timers, volume and load (ACWR) analysis, JSON/CSV/PDF export, CI with golden-image tests.</li>
             <li><a href="https://github.com/ilyaeis/claude-harness"><strong>Coding-agent harness</strong></a> (own time): one master session plans and checks the work; workers run in their own git worktrees.</li>
+            <li><a href="https://github.com/ilyaeis/monte-carlo-finance"><strong>monte-carlo-finance</strong></a> (2026, Python): option pricing with variance reduction, GARCH volatility, VaR backtests with the Kupiec test, efficient frontier, CAPM. From RTU coursework.</li>
             <li><a href="https://github.com/ilyaeis/projects_with_NEAT"><strong>projects_with_NEAT</strong></a> (2025, Python): NEAT agents that learn Flappy Bird and Pong.</li>
-            <li><a href="https://github.com/ilyaeis/RTU_program_parser"><strong>RTU_program_parser</strong></a> (2025, Python, with Aleksejs Peņkovs): scrapes the RTU timetable and finds extra lectures that fit your schedule.</li>
             <li><strong>Offline Graphing Calculator</strong> (2023, with Iļja Volinskis): 4th of 27 entries in the Riga Business School programming competition for school students.</li>
+            <li>Also: <a href="https://github.com/ilyaeis/load-balancing-experiments">load-balancing-experiments</a> (2026, Python, RTU networks course: DNS, queueing, consistent hashing), <a href="https://github.com/ilyaeis/crypto-quant-lab">crypto-quant-lab</a> (2026, Python, trading-rule backtests), flow (2026, Dart/Flutter, private: offline workout tracker with golden-image tests in CI), <a href="https://github.com/ilyaeis/RTU_program_parser">RTU_program_parser</a> (2025, Python, with Aleksejs Peņkovs: finds extra RTU lectures that fit your schedule).</li>
             <li class="screen">Older: <a href="https://github.com/ilyaeis/Snake_plus_Maze_Path_algorithm_gen_2">Snake with a maze generator</a> (Pygame, 2024), <a href="https://github.com/ilyaeis/bezier-curve-js">bezier-curve-js</a> (2023).</li>
         </ul>
     </section>
 
     <section>
         <h2>Skills</h2>
+        <p class="line">3D: Gaussian splatting with gsplat (MCMC, pruning and relocation, custom CUDA kernels), SfM and bundle adjustment with COLMAP, equirectangular and fisheye camera models, LiDAR depth priors.</p>
         <p class="line">Python, C++, CUDA, PyTorch, gsplat, Rust/wgpu, Dart/Flutter, JavaScript/three.js, Java, SQL.</p>
         <p class="line">Linux, Docker, Git and GitLab CI, AWS S3, Node.js (MCP servers), OpenAI API.</p>
         <p class="line">Latvian, English, Russian.</p>
