@@ -8,7 +8,7 @@ I work on 3D Gaussian splatting at Giraffe360: a pipeline that turns sparse 360Â
 
 ## Experience
 
-**Giraffe360**, R&D engineer. Riga, 2025 to present.
+**Giraffe360**, R&D engineer. Riga, Jul 2025 to present.
 
 Giraffe360 makes cameras and software for real-estate virtual tours. I am in the R&D team, on the 3D reconstruction pipeline: camera poses from structure from motion and bundle adjustment (COLMAP), Gaussian splat training with gsplat, and the camera paths of the videos.
 
