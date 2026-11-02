@@ -4,7 +4,7 @@ R&D engineer, 3D reconstruction. Giraffe360, Riga, Latvia.
 
 ilya.safronos@gmail.com | [github.com/ilyaeis](https://github.com/ilyaeis) | [linkedin.com/in/iļja-safronovs-eis](https://www.linkedin.com/in/i%C4%BCja-safronovs-eis) | [ilyaeis.github.io](https://ilyaeis.github.io/)
 
-I work on 3D Gaussian splatting at Giraffe360: a pipeline that turns sparse 360° panoramas and LiDAR scans into splats, in PyTorch and CUDA. Most of my work starts with a reconstruction that looks wrong. **I find the cause and fix it in our training code.** I pick each fix in controlled training runs against the old default. Two papers went from PDF to my code: Taming 3DGS in PyTorch and Analytic-Splatting in CUDA. I mentored a junior engineer and led three engineers on a new 3D reconstruction feature. **Next, I want to grow into leading a team.**
+I work on 3D Gaussian splatting at Giraffe360: a pipeline that turns sparse 360° panoramas and LiDAR scans into splats, in PyTorch and CUDA. **I find the cause and fix it in our training code.** I mentored a junior engineer and led three engineers on a new 3D reconstruction feature. **Next, I want to grow into leading a team.**
 
 ## Experience
 
