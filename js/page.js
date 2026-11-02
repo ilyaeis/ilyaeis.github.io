@@ -1,10 +1,9 @@
-// Page script: the Instagram embed (loaded when its proof scrolls near), and
-// the flat card (flat.js, three.js and Spark) loaded only when the card scrolls near.
+// Lazy loads: the Instagram embed and the flat viewer (flat.js), each when
+// its box is within NEAR px of the viewport.
 
-// Instagram embed: nothing from instagram.com loads until the box is within
-// NEAR px of the viewport. The placeholder has the embed's size from the start
-// (measured: height = 1.25 * width + 210 for the plain /embed/ of a 4:5 post),
-// so nothing jumps; the iframe then reports its exact height (MEASURE message).
+// Instagram: the placeholder gets the embed's size up front (measured:
+// height = 1.25 * width + 210 for a plain /embed/ of a 4:5 post), so nothing
+// jumps. The iframe then posts its real height (MEASURE).
 const NEAR = '600px 0px';
 const IG_ORIGIN = 'https://www.instagram.com';
 const embeds = new Map();   // iframe window -> box
@@ -39,12 +38,12 @@ for (const box of document.querySelectorAll('.embed-box[data-src]')) {
         embeds.set(frame.contentWindow, box);
         box.classList.add('loaded');
     }, { rootMargin: NEAR });
-    // after the page's own load, so first paint and the fonts come first
+    // after load, so the first paint and the fonts come first
     if (document.readyState === 'complete') io.observe(box);
     else addEventListener('load', () => io.observe(box), { once: true });
 }
 
-// The flat: zero splat bytes and no three.js until the card is near the view.
+// The flat: no three.js and no splat bytes until the card is near.
 const stage = document.getElementById('flat-stage');
 if (stage && window.WebGLRenderingContext) {
     const io = new IntersectionObserver(entries => {

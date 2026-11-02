@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ilja Safronovs — R&amp;D Engineer, 3D reconstruction</title>
-<meta name="description" content="I find why 3D reconstructions look wrong, and I ship the fix. R&amp;D engineer in 3D Gaussian splatting at Giraffe360, Riga. Drag a Gaussian splat of a flat that I trained.">
+<title>Ilja Safronovs, R&amp;D engineer, 3D Gaussian splatting (Riga)</title>
+<meta name="description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting (PyTorch, CUDA) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained; you can look around in it.">
 <meta name="author" content="Ilja Safronovs">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#121110">
@@ -12,11 +12,10 @@
 <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
 <link rel="canonical" href="https://ilyaeis.github.io/">
 
-<!-- Social previews -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ilyaeis.github.io/">
-<meta property="og:title" content="Ilja Safronovs — R&amp;D Engineer, 3D reconstruction">
-<meta property="og:description" content="I find why 3D reconstructions look wrong, and I ship the fix. R&amp;D engineer in 3D Gaussian splatting at Giraffe360, Riga. Drag a Gaussian splat of a flat that I trained.">
+<meta property="og:title" content="Ilja Safronovs, R&amp;D engineer, 3D Gaussian splatting (Riga)">
+<meta property="og:description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting (PyTorch, CUDA) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained; you can look around in it.">
 <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=3">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -33,12 +32,12 @@
     "url": "https://ilyaeis.github.io/",
     "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
     "email": "ilya.safronos@gmail.com",
-    "jobTitle": "R&D Engineer, 3D reconstruction",
-    "description": "R&D engineer in 3D Gaussian splatting at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix.",
+    "jobTitle": "R&D Engineer",
+    "description": "R&D engineer at Giraffe360 in Riga. Works on 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA).",
     "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
     "alumniOf": { "@type": "CollegeOrUniversity", "name": "Riga Technical University" },
     "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
-    "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "PyTorch", "CUDA", "gsplat", "Python", "C++", "WebAssembly", "Monte Carlo methods", "GARCH", "Value at Risk", "Load balancing", "Neuroevolution", "Model Context Protocol", "AI agents"],
+    "knowsAbout": ["3D Gaussian splatting", "3D reconstruction", "computer vision", "PyTorch", "CUDA", "gsplat", "Python", "C++"],
     "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
 }
 </script>
@@ -47,9 +46,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap">
 <link rel="stylesheet" href="css/style.css">
-<!-- No script, no viewer: the poster stays, and the drag hint goes. -->
 <noscript><style>.flat-status { display: none; }</style></noscript>
-<!-- js/flat.js (loaded only near the flat card) needs all three: Spark imports three/addons/. -->
+<!-- import map for js/flat.js; Spark needs three/addons/ too -->
 <script type="importmap">
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js",
@@ -64,53 +62,49 @@
 
 <section class="hero">
   <div class="who">
-    <p><strong>Ilja Safronovs</strong><br><span class="kicker">R&amp;D Engineer &middot; 3D Gaussian splatting &middot; Giraffe360, Riga</span></p>
+    <p><strong>Ilja Safronovs</strong><br><span class="kicker">R&amp;D engineer at Giraffe360, Riga. 3D Gaussian splatting.</span></p>
   </div>
-  <h1>I find why 3D reconstructions look wrong, and I&nbsp;ship the&nbsp;fix.</h1>
+  <h1>I fix what looks wrong in 3D&nbsp;reconstructions.</h1>
   <p class="actions">
-    <a class="btn btn-primary" href="resume.pdf">Resume (PDF)</a>
+    <a class="btn" href="resume.pdf">Resume (PDF)</a>
     <a class="btn" href="mailto:ilya.safronos@gmail.com">Email</a>
   </p>
 </section>
 
-<section class="sec" id="proof">
-  <h2>Proof</h2>
+<section class="sec" id="work">
+  <h2>Work</h2>
   <div class="sec-body">
-  <ol class="proof">
+  <ul class="proof">
     <li>
-      <p>Fixed blurry windows, outdoor views and mirrors in Giraffe360's 3D videos for PRO camera projects. In production since June 2026.</p>
+      <p>Giraffe360's 3D videos had blurry windows, outdoor views and mirrors. I found the cause and fixed it. In production for PRO camera projects since June 2026.</p>
       <div class="embed">
         <div class="embed-box" data-src="https://www.instagram.com/p/DZsNRB8o772/embed/" data-title="Giraffe360 post: before and after" aria-label="Giraffe360 post: before and after (loads when near)"></div>
         <a class="small-link" href="https://www.instagram.com/p/DZsNRB8o772/">Open on Instagram &nearr;</a>
       </div>
     </li>
     <li>
-      <p>My Gaussian pruning and relocation rules, built on Taming 3DGS, are production defaults.</p>
+      <p>Our training defaults use my Gaussian pruning and relocation rules (built on Taming 3DGS).</p>
     </li>
     <li>
-      <p>My hackathon idea, a looped drone flight per room, is now a shipped video product.</p>
-      <p class="detail"><a class="small-link" href="https://www.instagram.com/reel/Dd9ODBVIHhE/">Watch the reel &nearr;</a></p>
+      <p>The looped drone video started as my hackathon idea. Now it is a product.</p>
+      <p class="detail"><a class="small-link" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">Reel &nearr;</a></p>
     </li>
-  </ol>
-  </div>
-</section>
-
-<section class="sec" id="leading">
-  <h2>Leading</h2>
-  <div class="sec-body">
-  <p class="lead">I mentored a junior engineer, then led a team of three on a new 3D reconstruction feature; both are in production. I want to grow toward leading a team.</p>
+    <li>
+      <p>I mentored a junior engineer, then led three engineers on a new 3D reconstruction feature. Both are in production. I want to lead a team next.</p>
+    </li>
+  </ul>
   </div>
 </section>
 
 <section class="sec sec-flat" id="flat">
-  <h2>Flat</h2>
+  <h2>Splat</h2>
   <div class="sec-body">
-  <p class="display">I trained this flat. Drag it.</p>
-  <p class="lead-sm">Gaussian splatting with gsplat: 18 minutes on one RTX 3090.</p>
+  <p class="display">A flat I trained.</p>
+  <p class="lead-sm">gsplat, 18 minutes on one RTX 3090.</p>
   </div>
   <figure class="flat">
-    <div class="flat-stage" id="flat-stage" aria-label="3D view of the flat. Drag to look around." role="img">
-      <img class="flat-poster" src="assets/room/poster.jpg" width="1200" height="675" alt="A living room with bay windows, rendered from the Gaussian splat" decoding="async" loading="lazy">
+    <div class="flat-stage" id="flat-stage" aria-label="The flat, as a 3D splat. Drag to look around." role="img">
+      <img class="flat-poster" src="assets/room/poster.jpg" width="1200" height="675" alt="Living room of the flat, seen from the sofa" decoding="async" loading="lazy">
       <p class="flat-status" aria-live="polite">Drag to look around</p>
     </div>
     <figcaption>Zip-NeRF &ldquo;london&rdquo; scene (Barron et al., 2023, CC BY 4.0). Rendered with Spark.</figcaption>
@@ -120,19 +114,19 @@
 <section class="sec" id="tools">
   <h2>Tools</h2>
   <div class="sec-body">
-  <p class="lead">AI tools my team uses: an agent-driven experiment runner and an MCP server for the task board.</p>
-  <p class="detail skills">PyTorch &middot; CUDA &middot; gsplat &middot; Python &middot; C++</p>
+  <p class="lead">My team uses two tools I built: an experiment runner driven by an AI agent, and an MCP server for our task board.</p>
+  <p class="detail skills">PyTorch, CUDA, gsplat, Python, C++.</p>
   </div>
 </section>
 
 <section class="sec" id="projects">
-  <h2>Projects</h2>
+  <h2>Side projects</h2>
   <div class="sec-body">
   <ul class="plain projects">
     <li><a href="apps/sorting/">Sorting visualizer</a> <span>16 algorithms, C++ to WebAssembly</span></li>
-    <li><a href="https://github.com/ilyaeis/monte-carlo-finance">monte-carlo-finance</a> <span>Option pricing, GARCH, VaR</span></li>
-    <li><a href="https://github.com/ilyaeis/load-balancing-experiments">load-balancing-experiments</a> <span>DNS, queueing, load balancing</span></li>
-    <li><a href="https://github.com/ilyaeis/projects_with_NEAT">projects_with_NEAT</a> <span>Neuroevolution: Flappy Bird, Pong</span></li>
+    <li><a href="https://github.com/ilyaeis/monte-carlo-finance">monte-carlo-finance</a> <span>option pricing, GARCH, VaR backtests</span></li>
+    <li><a href="https://github.com/ilyaeis/load-balancing-experiments">load-balancing-experiments</a> <span>seven experiments on DNS and load balancing</span></li>
+    <li><a href="https://github.com/ilyaeis/projects_with_NEAT">projects_with_NEAT</a> <span>NEAT agents learn Flappy Bird and Pong</span></li>
   </ul>
   </div>
 </section>
@@ -142,7 +136,7 @@
   <div class="sec-body">
   <p class="contact-mail"><a href="mailto:ilya.safronos@gmail.com">ilya.safronos@gmail.com</a></p>
   <p class="actions">
-    <a class="btn btn-primary" href="resume.pdf">Resume (PDF)</a>
+    <a class="btn" href="resume.pdf">Resume (PDF)</a>
     <a class="btn" href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me">LinkedIn</a>
     <a class="btn" href="https://github.com/ilyaeis" rel="me">GitHub</a>
   </p>

@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Personal portfolio site (GitHub Pages, `ilyaeis.github.io`). The home page is one column of plain text that sells Ilja as an R&D engineer in 3D Gaussian splatting. Order: name and role line, the claim (h1), Resume (PDF) and Email, three proofs, Leading, the flat card (a live Gaussian splat of a flat he trained: the only image and the only 3D on the page), Tools, four side projects, Contact, a credits line. Dark theme only. No framework, no build step, no tests. three.js (0.180.0) and Spark (`@sparkjsdev/spark` 2.4.0, the splat renderer) load from a CDN through the import map in `index.html`, and only when the flat card is near.
+Personal portfolio site (GitHub Pages, `ilyaeis.github.io`). The home page is one column of plain text that sells Ilja as an R&D engineer in 3D Gaussian splatting. Order: name and role line, the claim (h1), Resume (PDF) and Email, Work (four items: three results and the mentoring/leading line), the flat card (a live Gaussian splat of a flat he trained: the only image and the only 3D on the page), Tools, four side projects, Contact, a credits line. Dark theme only. No framework, no build step, no tests. three.js (0.180.0) and Spark (`@sparkjsdev/spark` 2.4.0, the splat renderer) load from a CDN through the import map in `index.html`, and only when the flat card is near.
 
 The design came from `~/Desktop/brain/reports/portfolio-site/design/` (`notes.md`: design rules and decisions; `proto/`: the approved prototype).
 
 ## Files
 
-- `index.html` — the page. All text is in the HTML. `<head>`: meta, OG/twitter tags (`og-image.png?v=3`), canonical, favicon, JSON-LD `Person` (`@id` `https://ilyaeis.github.io/#me`, shared with `resume.html`), the import map. Section ids: `#proof`, `#leading`, `#flat`, `#tools`, `#projects`, `#contact` (`llms.txt` links them).
+- `index.html` — the page. All text is in the HTML. `<head>`: meta, OG/twitter tags (`og-image.png?v=3`), canonical, favicon, JSON-LD `Person` (`@id` `https://ilyaeis.github.io/#me`, shared with `resume.html`), the import map. Section ids: `#work`, `#flat`, `#tools`, `#projects`, `#contact` (`llms.txt` links them).
 - `css/style.css` — the page style. Colour tokens on `:root` (`--bg #121110`, `--fg`, `--fg-2`, `--line`, `--bg-2`, `--accent #f2b85a` amber, from the lamps of the splat). One font: Inter from Google Fonts.
 - `js/page.js` — the only script the page loads. It inserts the Instagram embed and loads `js/flat.js` when each comes near the view.
 - `js/flat.js` — the flat viewer: three.js + Spark, drag to look round from a fixed spot by the sofa.
@@ -28,7 +28,7 @@ The same facts appear in several places. When one changes, update all of them:
 - `llms.txt` (its summary paragraph and the anchor list).
 
 Rules:
-- Proof 01 says "for PRO camera projects" (never "every").
+- The windows fix says "for PRO camera projects" (never "every").
 - The page gives no splat count. The resume may name the 350k lite model.
 - Dates are year-only where the month is unknown. Add months in `resume.html`, its JSON-LD, `resume.md` and `resume.json`.
 - Regenerate both PDFs after any `resume.html` change: serve the site, then `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume.pdf "http://localhost:PORT/resume.html?expand=1"` and `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume-dark.pdf "http://localhost:PORT/resume.html?expand=1&print=dark"`. Each must stay 2 pages (`pdfinfo`). The resume page offers the PDF that matches the visitor's colour scheme; Ctrl+P keeps the white print style.
@@ -72,5 +72,6 @@ node shoot.mjs --compare out/OLD out/NAME      # A left, B right
 
 - Plain HTML, CSS and ES modules. No build step, no framework.
 - Text: short lines, one idea per line. The detail lives in the resume PDF, not on the page.
+- Voice: plain, his own. No slogans, no "I find X, and I ship Y" lines, no em-dashes, no numbered proofs, no middle-dot separators, no uppercase tracked labels. Lists may be uneven.
 - Touch targets at least 44 px. Inline links that are not buttons get the hit box from padding with a negative margin, so the text rhythm does not change.
 - Old `?go=` deep links have no redirects; they land on the page top.

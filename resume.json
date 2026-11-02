@@ -2,11 +2,11 @@
   "$schema": "https://raw.githubusercontent.com/jsonresume/jsonresume.org/master/packages/schema/schema.json",
   "basics": {
     "name": "Ilja Safronovs",
-    "label": "R&D Engineer / 3D reconstruction · Giraffe360 · Riga, Latvia",
+    "label": "R&D engineer, 3D reconstruction · Giraffe360 · Riga, Latvia",
     "email": "ilya.safronos@gmail.com",
     "url": "https://ilyaeis.github.io/",
     "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
-    "summary": "I find why 3D reconstructions look wrong, and I ship the fix. I work on 3D Gaussian splatting from sparse panoramas at Giraffe360 (PyTorch, CUDA). I find the root cause, test fixes in controlled training runs, and ship the best one. I mentored a junior engineer, then led a team of three engineers on a new 3D reconstruction feature, now in production. I want to grow toward leading a team.",
+    "summary": "I fix what looks wrong in 3D reconstructions. I work on 3D Gaussian splatting from sparse panoramas at Giraffe360 (PyTorch, CUDA). Most of my work: a reconstruction looks wrong, I find out why, then I test fixes in training runs until one is good enough for production. I mentored a junior engineer, then led three engineers on a new 3D reconstruction feature; both are in production. I want to lead a team next.",
     "location": {
       "city": "Riga",
       "countryCode": "LV"
@@ -32,16 +32,16 @@
       "startDate": "2025",
       "summary": "Giraffe360 makes cameras and software for real-estate virtual tours.",
       "highlights": [
-        "Fixed blurry windows, outdoor views and mirrors in Giraffe360’s 3D videos for PRO camera projects; in production since June 2026. — I found the root cause, then tested fixes in controlled training runs to cut haze, floaters and flicker. The best setup became the default in June 2026. It builds on the team’s earlier window masks. Giraffe360 showed the result in a public post. (https://www.instagram.com/p/DZsNRB8o772/)",
-        "My Gaussian pruning and relocation rules, built on Taming 3DGS, are production defaults. — Jan–Jul 2026, in our sparse-panorama 3DGS pipeline: influence-based pruning and relocation, building on Taming 3DGS (Mallick et al., 2024) and the team’s influence tracking. It measures how much each Gaussian adds to the rendered images, then removes or moves the least useful ones. June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes, used in a downsampling step. I also cut GPU idle time in training.",
-        "Turned my hackathon idea, a looped drone flight per room, into a shipped video product; built the exterior orbital videos (Oct 2026). — Looped drone: a special mention at the Feb 2026 hackathon (3 of my ideas were recognised out of 51); I built its camera-path algorithm. Exterior orbital videos: I built the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline. For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed the camera height in rooms on a half floor, for all video types. (https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)",
-        "Led a team of three engineers on a new 3D reconstruction feature, now in production (Oct 2026). — I wrote most of the code, reviewed and merged the others’ work, and cut the release. Since September 2026 I also cut our 3D pipeline’s releases. I want to grow toward leading a team.",
-        "Mentored a junior engineer on a new depth method; it is now in production. — Mostly his work, on denser LiDAR depth; our splat training has used it since October 2026. Over time, teammates came to me with their pipeline questions.",
-        "AI automation: an agent-driven experiment runner, an MCP server for the team task board, a coding-agent harness. — March 2026: an experiment runner, so every teammate can run and track training on a local GPU through an AI agent. June 2026: an MCP server (Node.js), so AI agents can read and write the team task board, with authentication; colleagues use it. In my own time: a harness for coding agents; a master session plans and checks the work, and worker sessions run in their own git worktrees (private repo).",
-        "Built an embeddable Rust/wgpu splat viewer and a comparison tool. — A Rust/wgpu viewer (May 2026) that any app can embed and control, and a multi-view comparison tool (Jan 2026). The viewer also swaps and combines PLY scenes live, and renders point clouds. The comparison tool opens each reconstruction in its own window, with optional camera sync.",
-        "Prototypes: mirror reflections, meshes from splats, lighter splats. — Working prototypes: correct reflections in mirrors (June 2026), mesh generation from splats, a stage that cuts the splat count for viewers (May 2026), and a fly-in video intro. Feb 2026: I made Difix and NVIDIA’s fixer run on the shared GPUs, so the team could evaluate them.",
-        "Team tooling: ground-truth validation for splat quality, and one 3DGS monorepo. — July 2026: ground-truth datasets and validation tools, so every teammate can check splat quality against known ground truth. July 2026: I led the restructuring into one 3DGS monorepo, with a code-size check.",
-        "Jul–Oct 2025: a small LLM service that wrote tour narration. — It used the OpenAI API and AWS S3."
+        "Fixed the blurry windows, outdoor views and mirrors in Giraffe360’s 3D videos (PRO camera projects). In production since June 2026. I found the cause, then tested fixes in controlled training runs until the haze, floaters and flicker were gone. The best setup became the default in June 2026. It builds on the team’s earlier window masks. Giraffe360 showed the result in a public post. (https://www.instagram.com/p/DZsNRB8o772/)",
+        "Our training defaults use my Gaussian pruning and relocation rules (built on Taming 3DGS). Jan–Jul 2026, in our sparse-panorama 3DGS pipeline: influence-based pruning and relocation, building on Taming 3DGS (Mallick et al., 2024) and the team’s influence tracking. It measures how much each Gaussian adds to the rendered images, then removes or moves the least useful ones. June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes, used in a downsampling step. I also cut GPU idle time in training.",
+        "The looped drone video (one flight per room) started as my hackathon idea; it is a product now. I also built the exterior orbital videos (Oct 2026). Looped drone: a special mention at the Feb 2026 hackathon (3 of my ideas were recognised out of 51); I built its camera-path algorithm. Exterior orbital videos: I built the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline. For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed the camera height in rooms on a half floor, for all video types. (https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)",
+        "Led three engineers on a new 3D reconstruction feature, now in production (Oct 2026). I wrote most of the code, reviewed and merged the others’ work, and cut the release. Since September 2026 I also cut our 3D pipeline’s releases. I want to lead a team next.",
+        "Mentored a junior engineer on a new depth method; it is now in production. Mostly his work, on denser LiDAR depth; our splat training has used it since October 2026. Over time, teammates came to me with their pipeline questions.",
+        "Built an experiment runner driven by an AI agent, an MCP server for the team task board, and a harness for coding agents. March 2026: an experiment runner, so every teammate can run and track training on a local GPU through an AI agent. June 2026: an MCP server (Node.js), so AI agents can read and write the team task board, with authentication; colleagues use it. In my own time: a harness for coding agents; a master session plans and checks the work, and worker sessions run in their own git worktrees (private repo).",
+        "Built an embeddable Rust/wgpu splat viewer and a comparison tool. A Rust/wgpu viewer (May 2026) that any app can embed and control, and a multi-view comparison tool (Jan 2026). The viewer also swaps and combines PLY scenes live, and renders point clouds. The comparison tool opens each reconstruction in its own window, with optional camera sync.",
+        "Prototypes: mirror reflections, meshes from splats, lighter splats. Working prototypes: correct reflections in mirrors (June 2026), mesh generation from splats, a stage that cuts the splat count for viewers (May 2026), and a fly-in video intro. Feb 2026: I made Difix and NVIDIA’s fixer run on the shared GPUs, so the team could evaluate them.",
+        "Team tooling: ground-truth validation for splat quality, and one 3DGS monorepo. July 2026: ground-truth datasets and validation tools, so every teammate can check splat quality against known ground truth. July 2026: I led the restructuring into one 3DGS monorepo, with a code-size check.",
+        "Jul–Oct 2025: a small LLM service that wrote tour narration. It used the OpenAI API and AWS S3."
       ]
     }
   ],
@@ -212,7 +212,7 @@
     {
       "name": "Research",
       "keywords": [
-        "reading and implementing papers",
+        "implementing papers",
         "controlled experiments",
         "ground-truth evaluation"
       ]
@@ -233,7 +233,7 @@
       "keywords": [
         "LLM APIs (OpenAI)",
         "MCP servers (Node.js)",
-        "agent-driven experiment runners",
+        "experiment runners for agents",
         "coding-agent harnesses"
       ]
     },
@@ -265,6 +265,6 @@
   "meta": {
     "canonical": "https://ilyaeis.github.io/resume.html",
     "version": "v1.0.0",
-    "lastModified": "2026-11-01"
+    "lastModified": "2026-11-02"
   }
 }

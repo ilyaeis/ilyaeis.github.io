@@ -1,6 +1,6 @@
 # Ilja Safronovs
 
-> R&D Engineer / 3D reconstruction at Giraffe360, Riga, Latvia. He finds why 3D reconstructions look wrong, and ships the fix. He works on 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA). In production: the windows and mirrors fix (3D videos for PRO camera projects, since June 2026), his Gaussian pruning and relocation rules (production defaults), the looped drone and the exterior orbital videos. He mentored a junior engineer, then led a team of three engineers on a new 3D reconstruction feature, now in production. AI automation: an agent-driven experiment runner, an MCP server for the team task board and a coding-agent harness. Studies Financial Engineering at Riga Technical University. The resume files below hold the full text. There is no separate llms-full.txt, because resume.md is already the full text.
+> R&D engineer at Giraffe360 in Riga, Latvia. Works on 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA). In production: a fix for blurry windows, outdoor views and mirrors in the 3D videos of PRO camera projects (since June 2026), his Gaussian pruning and relocation rules (the training defaults), the looped drone video and the exterior orbital videos. He mentored a junior engineer, then led three engineers on a new 3D reconstruction feature, now in production. He also built an experiment runner driven by an AI agent and an MCP server for the team task board. Studies Financial Engineering at Riga Technical University. resume.md below is the full text.
 
 ## Resume
 
@@ -12,17 +12,16 @@
 
 ## Portfolio
 
-- [Portfolio](https://ilyaeis.github.io/): one page of plain text with one live 3D card. Each section has an anchor:
-  - [#proof](https://ilyaeis.github.io/#proof): three results in production (the windows and mirrors fix, the pruning and relocation rules, the looped drone video).
-  - [#leading](https://ilyaeis.github.io/#leading): mentoring, leading a team of three.
-  - [#flat](https://ilyaeis.github.io/#flat): a live Gaussian splat of a real flat that he trained with gsplat (public Zip-NeRF "london" scene, CC BY 4.0); drag to look around.
-  - [#tools](https://ilyaeis.github.io/#tools): AI tools for his team, and his stack.
+- [Portfolio](https://ilyaeis.github.io/): one page of text with one live 3D card. Section anchors:
+  - [#work](https://ilyaeis.github.io/#work): the windows and mirrors fix, the pruning and relocation rules, the looped drone video, mentoring and leading three engineers.
+  - [#flat](https://ilyaeis.github.io/#flat): a Gaussian splat of a flat he trained with gsplat (the public Zip-NeRF "london" scene, CC BY 4.0); drag to look around.
+  - [#tools](https://ilyaeis.github.io/#tools): the two tools his team uses, and his stack.
   - [#projects](https://ilyaeis.github.io/#projects): four side projects.
   - [#contact](https://ilyaeis.github.io/#contact): email, resume PDF, LinkedIn, GitHub.
 
 ## Apps
 
-- [Sorting visualizer](https://ilyaeis.github.io/apps/sorting/): sort_visualization in the browser, 16 algorithms in five layouts. The algorithms are the original C++ compiled to WebAssembly; the drawing is a JavaScript port.
+- [Sorting visualizer](https://ilyaeis.github.io/apps/sorting/): sort_visualization in the browser, 16 algorithms in five layouts. The original C++ compiled to WebAssembly; the drawing is a JavaScript port.
 
 ## Optional
 
