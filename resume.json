@@ -35,7 +35,7 @@
         "Our training defaults use my Gaussian pruning and relocation rules (Jan to Jul 2026). They build on Taming 3DGS (Mallick et al., 2024) and the team's influence tracking: a Gaussian that adds little to the renders gets pruned or moved.",
         "Implemented Analytic-Splatting (Liang et al., 2024) in gsplat, CUDA forward and backward passes. We use it for downsampling.",
         "Cut GPU idle time in training.",
-        "Looped drone video, one flight per room. My idea from the Feb 2026 hackathon (3 of my ideas were recognised out of 51). I wrote the camera path and reworked the video pipeline. The look was worked out with the designers. It is a product now: https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/",
+        "Looped drone video, one flight per room. My idea from the Feb 2026 hackathon (I submitted 6 ideas; 3 of them were among the 51 recognised). I wrote the camera path and reworked the video pipeline. The look was worked out with the designers. It is a product now: https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/",
         "Exterior orbital videos (Oct 2026): the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline.",
         "Fixed the camera height in rooms on a half floor, for all video types. A long-standing bug.",
         "Led three engineers on a new 3D reconstruction feature (Oct 2026). Most of the code is mine; I reviewed and merged theirs and cut the release. In production. I have cut the releases of our 3D pipeline since September 2026.",
