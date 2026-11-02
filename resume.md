@@ -2,109 +2,91 @@
 
 ![Iļja Safronovs](https://ilyaeis.github.io/assets/photo/headshot.jpg)
 
-R&D Engineer — 3D reconstruction & computer vision · Giraffe360 · Riga, Latvia
+R&D engineer, 3D reconstruction · Giraffe360 · Riga, Latvia
+
+**I fix what looks wrong in 3D reconstructions.**
 
 ilya.safronos@gmail.com · [GitHub](https://github.com/ilyaeis) · [LinkedIn](https://www.linkedin.com/in/i%C4%BCja-safronovs-eis)
 
-I work on 3D reconstruction and computer vision: Gaussian splatting pipelines, benchmarking systems that measure every change, and continuous research that turns the best new papers into production code. Financial Engineering student at RTU.
+I work on 3D Gaussian splatting from sparse panoramas at Giraffe360 (PyTorch, CUDA). Most of my work: a reconstruction looks wrong, I find out why, then I test fixes in training runs until one is good enough for production. I mentored a junior engineer, then led three engineers on a new 3D reconstruction feature; both are in production. Next, I want to grow into leading a team.
 
 ## Experience
 
-### Giraffe360 — R&D Engineer
+### Giraffe360, R&D engineer
 
 Riga · 2025 – present. Giraffe360 makes cameras and software for real-estate virtual tours.
 
-- **Solved blurry windows and mirrors in sparse-panorama 3DGS.** [Giraffe360 post](https://www.instagram.com/p/DZsNRB8o772/)
-  Fixed blurry windows, outdoor views and mirrors; in production since June 2026. This was the main long-standing quality problem, and I found its root cause myself. I ran 140+ controlled training runs first, then a month-long campaign of 600+ experiments to cut haze, floaters and flicker. The winning setup shipped as the default on June 1, 2026, and Giraffe360 showcased it publicly.
-- **Shipped the looped drone video, from idea to production.** [Giraffe360 post](https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)
-  I proposed it, restructured the video pipeline so it is easy to extend, then built the loop on it; agreed the look with designers; launched Oct 2026. I built the camera-path algorithm. It was one of my ideas awarded at the internal hackathon in Feb 2026 (special mention).
-- **Led the team that built outdoor splats and orbital videos.**
-  2 weeks to show first results, 3 weeks to push good ones to production. I led the team. I built the toolkit that prepares the exterior splats: it rotates the scene to the correct orientation, selects the largest fragment and crops it. A per-frame outdoor-view video pipeline then renders the orbital video around the property.
-- **Influence accumulation: my densification method, still the team’s best.**
-  I found the research, implemented it, tested it and pushed it to production in Jan 2026. It is still the team’s best densification method. It measures how much each Gaussian contributes to the image during training and relocates the least useful ones, instead of adding new detail everywhere. This improves quality while keeping the model efficient. I implemented it partly with AI-assisted coding, and when the team moved to a new training approach, I ported it there.
-- **Implemented Analytic-Splatting in gsplat at CUDA level.**
-  June 2026: exact per-pixel Gaussian integration, which reduces aliasing. I wrote both the computation and its training part, and used it in a downsampling algorithm. I also sped up training by measuring and reducing GPU idle time.
-- **Built tools to measure 3DGS quality against known ground truth.**
-  Validation tools and ground-truth datasets (July 2026) to check quality against known truth. Before, quality was checked only with no-reference metrics. In March 2026 I also built an experiment runner, so every teammate can run and track training experiments on a local GPU, driven by an AI agent.
+- **Fixed the blurry windows, outdoor views and mirrors in Giraffe360’s 3D videos (PRO camera projects). In production since June 2026.** [Giraffe360 post](https://www.instagram.com/p/DZsNRB8o772/)
+  I found the cause, then tested fixes in controlled training runs until the haze, floaters and flicker were gone. The best setup became the default in June 2026. It builds on the team’s earlier window masks. Giraffe360 showed the result in a public post.
+- **Our training defaults use my Gaussian pruning and relocation rules (built on Taming 3DGS).**
+  Jan–Jul 2026, in our sparse-panorama 3DGS pipeline: influence-based pruning and relocation, building on Taming 3DGS (Mallick et al., 2024) and the team’s influence tracking. It measures how much each Gaussian adds to the rendered images, then removes or moves the least useful ones. June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes, used in a downsampling step. I also cut GPU idle time in training.
+- **The looped drone video (one flight per room) started as my hackathon idea; it is a product now. I also built the exterior orbital videos (Oct 2026).** [Giraffe360 post](https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)
+  Looped drone: a special mention at the Feb 2026 hackathon (3 of my ideas were recognised out of 51); I built its camera-path algorithm. Exterior orbital videos: I built the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline. For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed the camera height in rooms on a half floor, for all video types.
+- **Led three engineers on a new 3D reconstruction feature, now in production (Oct 2026).**
+  I wrote most of the code, reviewed and merged the others’ work, and cut the release. Since September 2026 I also cut our 3D pipeline’s releases. Next, I want to grow into leading a team.
+- **Mentored a junior engineer on a new depth method; it is now in production.**
+  Mostly his work, on denser LiDAR depth; our splat training has used it since October 2026. Over time, teammates came to me with their pipeline questions.
+- **Built an experiment runner driven by an AI agent, an MCP server for the team task board, and a harness for coding agents.**
+  March 2026: an experiment runner, so every teammate can run and track training on a local GPU through an AI agent. June 2026: an MCP server (Node.js), so AI agents can read and write the team task board, with authentication; colleagues use it. In my own time: a harness for coding agents; a master session plans and checks the work, and worker sessions run in their own git worktrees (private repo).
 
 More about this role:
 
-- **Mentored a junior engineer; together we replaced our depth algorithm.**
-  Our depth estimates were poor. I mentored one junior engineer, and together we built a new depth algorithm (mostly his work): minima matching plus OMNI-DC to densify LiDAR depth. Depth is now good, and the whole team uses the new method. Over time, teammates came to me with their pipeline questions.
-- **Led the pipeline restructuring and created a 3DGS monorepo.**
-  Led the restructuring (July 2026) and created a monorepo for all 3DGS extensions and client apps: duplication removed, defects fixed. Cleaning up the drone camera path exposed three hidden defects: for example, the camera jerked away when two highlighted features sat close together, and its tilt could drift outside the allowed range. The cleanup also let me fix a long-standing camera-path bug: in rooms higher or lower than the rest of the storey, the camera sat too low and showed the floor. The fix shipped for all video types.
 - **Built an embeddable Rust/wgpu splat viewer and a comparison tool.**
-  Rust/wgpu viewer (May 2026) that any app can embed and control, plus a multi-view comparison tool (Jan 2026). In July 2026 I added single-view PLY comparison to the new viewer: folder browsing, live scene swapping and combining several scenes. It also renders ordinary point-cloud PLY files. The comparison tool loads reconstructions from experiment-tracking tasks and opens each in its own window with optional camera sync, so teams can compare from any viewpoint, not only through video.
-- **Prototyped two new video concepts: correct mirror reflections and a fly-in intro.**
-  Two working prototypes (June 2026): correct reflections in mirrors, and a fly-in video intro. The fly-in shot starts high above the property with the ceilings removed and all rooms visible, then descends and blends into an eye-level walkthrough of the real splat.
-- **Worked on mesh generation and point-count reduction for viewers.**
-  Mesh generation from splats, combined with Gaussian splats; a point-count reduction stage (May 2026) for viewers. The reduction stage cuts the number of splats while keeping the major details. Viewers and compressed scene files need it, so that every client device can run at least some level of detail. It is a prototype on a separate branch.
-- **Made diffusion-based artifact fixing runnable on shared GPUs.**
-  Made a diffusion-based artifact-fixing tool (Difix, then NVIDIA Fixer) run remotely on shared GPUs in Feb 2026. Before, it ran out of memory on every local machine, so nobody on the team could evaluate it. Running it on shared GPUs turned it from a black box into something the team can test.
-- **Three hackathon ideas recognized; the looped drone shipped.**
-  Internal hackathon, Feb 2026: three of my ideas recognized, two with special mentions. One of them, a looped drone in each room (special mention), then became a shipped feature.
-- **Built an MCP server for the team task board.**
-  An MCP server (June 2026, Node.js) so AI agents and tools can read and write the team task board. It covers projects, tasks and decisions, with authentication and a one-time setup, and colleagues use it. I also added a compact graph view of the task tree with detailed cards (assignee, status, age, project members).
-- **Earlier: a small LLM service that wrote tour narration.**
-  Jul–Oct 2025: a small LLM service that wrote tour narration (OpenAI API, AWS, S3).
+  A Rust/wgpu viewer (May 2026) that any app can embed and control, and a multi-view comparison tool (Jan 2026). The viewer also swaps and combines PLY scenes live, and renders point clouds. The comparison tool opens each reconstruction in its own window, with optional camera sync.
+- **Prototypes: mirror reflections, meshes from splats, lighter splats.**
+  Working prototypes: correct reflections in mirrors (June 2026), mesh generation from splats, a stage that cuts the splat count for viewers (May 2026), and a fly-in video intro. Feb 2026: I made Difix and NVIDIA’s fixer run on the shared GPUs, so the team could evaluate them.
+- **Team tooling: ground-truth validation for splat quality, and one 3DGS monorepo.**
+  July 2026: ground-truth datasets and validation tools, so every teammate can check splat quality against known ground truth. July 2026: I led the restructuring into one 3DGS monorepo, with a code-size check.
+- **Jul–Oct 2025: a small LLM service that wrote tour narration.**
+  It used the OpenAI API and AWS S3.
 
 ## Education
 
-### Riga Technical University — Professional Bachelor, Financial Engineering
+### Riga Technical University, Professional Bachelor, Financial Engineering
 
-2024 – 2028 (expected)
-
-- **Maths, statistics and programming applied to finance.**
-  Qualification: senior data analysis specialist. Maths, statistics and programming applied to finance.
-  Coursework: mathematical analysis and algebra, probability and statistics, econometrics, time-series analysis, stochastic analysis, Monte Carlo methods, portfolio analysis, actuarial mathematics, data structures and algorithms, databases/SQL, computer networks, programming (Java, C++).
+2024 – 2028 (expected). Probability, statistics, stochastic analysis, Monte Carlo methods, algorithms, databases.
 
 ### AI Talent Program (Ponder)
 
-Nov 2024 – Jan 2025 · Mākslīgā intelekta talantu programma
+Nov 2024 – Jan 2025. C++, Python, maths and AI with industry mentors; it led to the Giraffe360 role.
 
-- **Selective program in C++, Python, maths and AI.**
-  Selective program: C++, Python, maths and AI development with industry mentors. Theory of AI: its history, neural network architectures (CNNs, transformers, GANs, VAEs), computer vision and reinforcement learning. Led to the Giraffe360 role.
+### Riga State Classical Gymnasium, Programming and Mathematics track
 
-### Riga State Classical Gymnasium — Programming and Mathematics track
-
-Rīgas Valsts klasiskā ģimnāzija
-
-- **State mathematics olympiads and the Small Mathematics University.**
-  Specialised track in programming and mathematics (today named “Programming + AI”). Latvian state mathematics olympiads; completed the Small Mathematics University (Mazā matemātikas universitāte) at the University of Latvia.
+State mathematics olympiads; Small Mathematics University (University of Latvia).
 
 ## Projects
 
-- **load-balancing-experiments — seven experiments on DNS, queueing and load balancing.** [code](https://github.com/ilyaeis/load-balancing-experiments)
-  (2026, Python) Seven reproducible experiments for an RTU networks project: DNS round robin and anycast measured from Riga, a queueing simulation of load-balancing policies (“power of two choices”), consistent / rendezvous / Maglev hashing, a mini load balancer with health checks, packet capture.
-- **flow — offline workout tracker in Dart/Flutter, in daily use.**
-  (2026, Dart/Flutter, private) Log sets with live timers; analysis of volume, load (ACWR), records and body measurements; custom formulas, JSON/CSV/PDF export, CI with golden-image tests. In daily use.
-- **monte-carlo-finance — option pricing, volatility and risk models in Python.** [code](https://github.com/ilyaeis/monte-carlo-finance)
-  (2026, Python) Monte Carlo option pricing with variance reduction (up to 1,900x), GARCH volatility, VaR backtests with the Kupiec test, efficient frontier from 30,000 portfolios and CAPM; a study project from RTU courses.
-- **Portfolio journey — this tap-driven WebGL site in three.js.** [code](./)
-  (2025–26, three.js) A tap-driven WebGL world: RK4-integrated strange attractors, a single-stroke vector font, bloom, one continuous comet trail. No build step.
-- **Offline Graphing Calculator — 4th place of 27 in a school competition.**
+- **Portfolio site: a live Gaussian splat of a real flat that I trained (gsplat).** [site](https://ilyaeis.github.io/)
+  (2025–26, three.js, Spark, no build step) I trained the public Zip-NeRF “london” scene (Barron et al., 2023, CC BY 4.0) with gsplat MCMC: 30k steps in about 18 min on one RTX 3090, 28.3 dB PSNR on held-out views. The page is plain text with one live card: a 1 MB preview loads first, then a 350k-splat model, and the visitor drags to look around. Nothing 3D loads until the card is near. The site also has llms.txt.
+- **sort_visualization: 16 sorting algorithms in C++/SFML; runs in the browser (WebAssembly).** [run it](https://ilyaeis.github.io/apps/sorting/) · [code](https://github.com/ilyaeis/sort_visualization)
+  (2022, C++/SFML) 16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control. The browser version runs the original algorithms, compiled to WebAssembly.
+- **Offline Graphing Calculator: 4th place of 27 in a school competition.**
   (2023, with Iļja Volinskis) Graphing calculator that works offline; 4th place of 27 entries in the Riga Business School (RTU) programming competition for secondary school students (10 Jun 2023).
+- **monte-carlo-finance: option pricing, volatility and risk models in Python.** [code](https://github.com/ilyaeis/monte-carlo-finance)
+  (2026, Python) Monte Carlo option pricing with variance reduction (up to 1,900x), GARCH volatility, VaR backtests with the Kupiec test, efficient frontier from 30,000 portfolios and CAPM; a study project from RTU courses.
+- **load-balancing-experiments: seven experiments on DNS, queueing and load balancing.** [code](https://github.com/ilyaeis/load-balancing-experiments)
+  (2026, Python) Seven reproducible experiments for an RTU networks project: DNS round robin and anycast measured from Riga, a queueing simulation of load-balancing policies (“power of two choices”), consistent / rendezvous / Maglev hashing, a mini load balancer with health checks, packet capture.
 
 More projects:
 
-- **crypto-quant-lab — 59 backtested trading-rule versions on 6 coins.** [code](https://github.com/ilyaeis/crypto-quant-lab)
+- **flow: offline workout tracker in Dart/Flutter, with CI and golden-image tests.**
+  (2026, Dart/Flutter, private) Log sets with live timers; analysis of volume, load (ACWR), records and body measurements; custom formulas, JSON/CSV/PDF export, CI with golden-image tests.
+- **crypto-quant-lab: 59 backtested trading-rule versions on 6 coins.** [code](https://github.com/ilyaeis/crypto-quant-lab)
   (2026, Python) 59 backtested versions of drift and volatility-targeting rules on 6 coins with a 1% fee. The source was recovered from Python 3.12 bytecode, and all 153 functions were verified.
-- **projects_with_NEAT — neuroevolution agents that learn Flappy Bird and Pong.** [code](https://github.com/ilyaeis/projects_with_NEAT)
+- **projects_with_NEAT: neuroevolution agents that learn Flappy Bird and Pong.** [code](https://github.com/ilyaeis/projects_with_NEAT)
   (2025, Python) Neuroevolution (NEAT) agents that learn Flappy Bird and Pong; a documented attempt at multi-snake survival.
-- **RTU_program_parser — finds extra RTU lectures that fit your schedule.** [code](https://github.com/ilyaeis/RTU_program_parser)
+- **RTU_program_parser: finds extra RTU lectures that fit your schedule.** [code](https://github.com/ilyaeis/RTU_program_parser)
   (2025, Python/Selenium/pandas, with Aleksejs Peņkovs) Scrapes the RTU timetable and finds extra lectures that fit a student’s own schedule; exports to Excel.
-- **Snake + maze generator — maze generation, terrain and path-finding in Pygame.** [code](https://github.com/ilyaeis/Snake_plus_Maze_Path_algorithm_gen_2)
+- **Snake + maze generator: maze generation, terrain and path-finding in Pygame.** [code](https://github.com/ilyaeis/Snake_plus_Maze_Path_algorithm_gen_2)
   (2024–25, Python/Pygame) DFS maze generation, dynamic terrain (lava, forest, rivers), BFS path-finding.
-- **bezier-curve-js — interactive Bezier-curve drawing tool.** [code](https://github.com/ilyaeis/bezier-curve-js)
+- **bezier-curve-js: interactive Bezier-curve drawing tool.** [code](https://github.com/ilyaeis/bezier-curve-js)
   (2023, JavaScript) Interactive Bezier-curve drawing tool.
-- **sort_visualization — 16 sorting algorithms animated in C++/SFML.** [code](https://github.com/ilyaeis/sort_visualization)
-  (2022, C++/SFML) 16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control.
 
 ## Skills
 
-- 3D & vision: Gaussian splatting, 3D reconstruction, computer vision, depth estimation, anti-aliasing, mesh generation, diffusion-based artifact fixing, PyTorch, CUDA kernels
-- Research: paper-to-production, benchmarking and evaluation
+- 3D & vision: 3D Gaussian splatting (gsplat, CUDA kernels), 3D reconstruction from sparse views, computer vision, depth densification, mesh generation, 3D camera paths, splat viewers (Rust/wgpu, three.js/Spark), PyTorch
+- Research: implementing papers, controlled experiments, ground-truth evaluation
 - Languages: Python, C++, Dart/Flutter, JavaScript, Java, SQL
-- Tools: Linux, Docker, Git/GitLab CI, AWS S3, Pygame, Selenium, pandas
-- Other: OpenAI API / LLM prompting, neuroevolution (NEAT), three.js/WebGL
+- AI automation: LLM APIs (OpenAI), MCP servers (Node.js), experiment runners for agents, coding-agent harnesses
+- Tools: Linux, Docker, Git/GitLab CI, AWS S3, three.js/WebGL, Pygame, Selenium, pandas
 - Spoken: Latvian, English, Russian

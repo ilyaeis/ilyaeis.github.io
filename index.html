@@ -1,232 +1,154 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <link rel="icon" href="favicon.ico" sizes="any">
-    <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
-    <title>Ilja Safronovs — Portfolio</title>
-    <meta name="description" content="Ilja Safronovs — R&amp;D engineer in 3D reconstruction and computer vision at Giraffe360: Gaussian splatting pipelines, benchmarking, continuous research. Financial Engineering student at Riga Technical University. Interactive WebGL portfolio; plain resume at /resume.html.">
-    <meta name="author" content="Ilja Safronovs">
-    <meta name="theme-color" content="#0a0a0a">
-    <meta name="agent-api" content="window.journey v1; tools also via document.modelContext; docs: /llms.txt#journey">
-    <link rel="canonical" href="https://ilyaeis.github.io/">
-    <link rel="me" href="https://github.com/ilyaeis">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ilja Safronovs, R&amp;D engineer, 3D Gaussian splatting (Riga)</title>
+<meta name="description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting (PyTorch, CUDA) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained; you can look around in it.">
+<meta name="author" content="Ilja Safronovs">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#121110">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="canonical" href="https://ilyaeis.github.io/">
 
-    <!-- Social previews -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://ilyaeis.github.io/">
-    <meta property="og:title" content="Ilja Safronovs — Portfolio">
-    <meta property="og:description" content="Ilja Safronovs — R&amp;D engineer (3D reconstruction and computer vision) at Giraffe360, Riga. An interactive WebGL journey; tap to fly through.">
-    <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta name="twitter:card" content="summary_large_image">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ilyaeis.github.io/">
+<meta property="og:title" content="Ilja Safronovs, R&amp;D engineer, 3D Gaussian splatting (Riga)">
+<meta property="og:description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting (PyTorch, CUDA) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained; you can look around in it.">
+<meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=4">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ilyaeis.github.io/assets/og-image.png?v=4">
 
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "Person",
-        "@id": "https://ilyaeis.github.io/#me",
-        "subjectOf": { "@id": "https://ilyaeis.github.io/resume.html" },
-        "name": "Ilja Safronovs",
-        "url": "https://ilyaeis.github.io/",
-        "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
-        "email": "ilya.safronos@gmail.com",
-        "jobTitle": "R&D Engineer, 3D reconstruction & computer vision",
-        "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
-        "alumniOf": { "@type": "CollegeOrUniversity", "name": "Riga Technical University" },
-        "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
-        "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "Benchmarking", "Mesh Generation", "PyTorch", "CUDA", "Python", "C++", "Dart", "Flutter", "JavaScript", "Financial Engineering", "Monte Carlo methods", "GARCH", "Value at Risk", "AWS S3", "OpenAI API", "Prompt Engineering", "Large Language Models"],
-        "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
-    }
-    </script>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "@id": "https://ilyaeis.github.io/#me",
+    "subjectOf": { "@id": "https://ilyaeis.github.io/resume.html" },
+    "name": "Ilja Safronovs",
+    "url": "https://ilyaeis.github.io/",
+    "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
+    "email": "ilya.safronos@gmail.com",
+    "jobTitle": "R&D Engineer",
+    "description": "R&D engineer at Giraffe360 in Riga. Works on 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA).",
+    "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
+    "alumniOf": { "@type": "CollegeOrUniversity", "name": "Riga Technical University" },
+    "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
+    "knowsAbout": ["3D Gaussian splatting", "3D reconstruction", "computer vision", "PyTorch", "CUDA", "gsplat", "Python", "C++"],
+    "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
+}
+</script>
 
-    <link rel="stylesheet" href="css/style.css">
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-            "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.4.0/spark.module.js"
-        }
-    }
-    </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<noscript><style>.flat-status { display: none; }</style></noscript>
+<!-- import map for js/flat.js; Spark needs three/addons/ too -->
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+    "@sparkjsdev/spark": "https://cdn.jsdelivr.net/npm/@sparkjsdev/spark@2.4.0/dist/spark.module.min.js"
+} }
+</script>
 </head>
 <body>
-    <canvas id="attractor" tabindex="-1"></canvas>
 
-    <!-- The visible experience is rendered in 3D; this mirror of its
-         content is for crawlers, link previews and screen readers -->
-    <header class="visually-hidden">
-        <h1>Ilja Safronovs — 3D reconstruction and computer vision · Giraffe360 · Riga</h1>
-        <p>Creative. Adaptive. Curious. This portfolio is an interactive
-           WebGL journey: a glowing comet corkscrews out of the intro and
-           flies through a pre-built world. It spirals once around my three
-           traits (Creative, Adaptive, Curious), lighting the words as it
-           traces them, then swings past strange attractors drifting like
-           galaxies to my work first: the Giraffe360 rock (each rock has a
-           short description; tap or press Enter to continue), then a dive into a 3D
-           Gaussian splat of a real apartment (Zip-NeRF "london" scene,
-           CC BY 4.0), where six splat objects stand for my Giraffe360
-           R&amp;D work. You can walk through the flat and collect them; in
-           walk mode a depth lens colours the splat by distance, and a
-           measure tool gives approximate metric distances (about ±3 %).
-           The comet leaves through the window to my education rocks, then
-           warps into a glowing tunnel where my projects run as live
-           visualizations (sorting algorithms, a graphing calculator, a
-           workout tracker; Monte Carlo price paths, a load balancer and a
-           NEAT network fly past), warps out, dives back through the
-           apartment roof and lands at my contact details in the living
-           room.</p>
-        <h2>Work</h2>
-        <ul>
-            <li>2025 — Giraffe360, R&amp;D Engineer in Riga: 3D reconstruction
-                and computer vision (3DGS reconstruction from sparse panorama
-                views), benchmarking and continuous research</li>
-        </ul>
-        <h2>R&amp;D at Giraffe360 (the apartment stops)</h2>
-        <ul>
-            <li>3DGS reconstruction pipeline: 3D Gaussian Splatting reconstruction
-                from sparse panorama views; influence accumulation, a densification
-                method I found, built, tested and shipped (Jan 2026), still the
-                team’s best; Analytic-Splatting in gsplat at CUDA level (June 2026);
-                led the pipeline restructuring and created a 3DGS monorepo, which
-                let me fix a long-standing camera-path bug</li>
-            <li>Windows, outdoor views and mirrors: fixed blurry windows, outdoor
-                views and mirrors after 140+ controlled training runs, then 600+
-                more experiments; shipped on 1 June 2026
-                (<a href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post</a>).
-                Led the team that built exterior splats and orbital outdoor videos.</li>
-            <li>Benchmarking and evaluation: validation tools and ground-truth
-                datasets; an experiment runner for local GPUs driven by an AI agent;
-                diffusion-based artifact fixing (Difix, then NVIDIA Fixer) on shared GPUs</li>
-            <li>Meshes and viewers: mesh generation from splats; a point-count
-                reduction stage; an embeddable Rust/wgpu splat viewer; a multi-view
-                comparison tool</li>
-            <li>MCP server, mentoring, ideas: an MCP server for the team task board
-                (Node.js); mentored one junior engineer on a new depth algorithm
-                (mostly his work: minima matching plus OMNI-DC to densify LiDAR
-                depth), now used by the whole team; the looped drone video, my
-                hackathon idea (awarded a special mention), launched by Giraffe360
-                in Oct 2026 (<a href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">reel</a>)</li>
-            <li>Tour narration (Jul – Oct 2025): a small LLM service that wrote
-                tour narration (OpenAI API, AWS, S3)</li>
-        </ul>
-        <h2>Education</h2>
-        <ul>
-            <li>Riga State Classical Gymnasium (Rīgas Valsts klasiskā ģimnāzija), Programming and Mathematics track
-                (today named "Programming + AI"); Latvian state mathematics olympiads;
-                Small Mathematics University (Mazā matemātikas universitāte) at the University of Latvia</li>
-            <li>Nov 2024 – Jan 2025 — AI Talent Program (Ponder, Mākslīgā intelekta talantu
-                programma): selective program with training in C++, Python,
-                maths and AI development; theory of AI: its history, neural
-                network architectures (CNNs, transformers, GANs, VAEs),
-                computer vision and reinforcement learning; it led to the
-                Giraffe360 role</li>
-            <li>2024 — Riga Technical University, professional bachelor in Financial
-                Engineering (data analysis qualification), expected 2028</li>
-        </ul>
-        <h2>Project milestones</h2>
-        <ul>
-            <li>2026 — load-balancing-experiments (RTU networks project, Python)</li>
-            <li>2026 — flow, offline workout tracker (Dart, Flutter)</li>
-            <li>2026 — monte-carlo-finance, Monte Carlo Methods in Finance: option pricing, GARCH volatility, VaR backtests (Python)</li>
-            <li>2025 — projects_with_NEAT, neuroevolution agents that learn games (Python)</li>
-            <li>2023 — Offline Graphing Calculator, 4th place in the Riga Business
-                School (RTU) programming competition for secondary school
-                students, built with Iļja Volinskis</li>
-            <li>2022 — sort_visualization, sorting algorithm visualizer (C++, SFML)</li>
-        </ul>
-        <h2>Strange attractors in the background</h2>
-        <ul>
-            <li>Lorenz</li>
-            <li>Rössler</li>
-            <li>Thomas</li>
-            <li>Aizawa</li>
-            <li>Halvorsen</li>
-        </ul>
-        <h2>Projects</h2>
-        <ul>
-            <li><a href="https://github.com/ilyaeis/load-balancing-experiments">load-balancing-experiments</a> — reproducible load-balancing experiments (Python)</li>
-            <li>flow — offline workout tracker (Dart, Flutter)</li>
-            <li><a href="https://github.com/ilyaeis/monte-carlo-finance">monte-carlo-finance</a> — Monte Carlo option pricing, GARCH volatility, VaR backtests, efficient frontier (Python)</li>
-            <li><a href="https://github.com/ilyaeis/crypto-quant-lab">crypto-quant-lab</a> — 59 backtested drift and volatility-targeting rules on 6 coins (Python)</li>
-            <li><a href="https://github.com/ilyaeis/projects_with_NEAT">projects_with_NEAT</a> — neuroevolution agents that learn games (Python)</li>
-            <li>Offline Graphing Calculator — offline graphing calculator; 4th place in the Riga Business School (RTU) programming competition (2023)</li>
-            <li><a href="https://github.com/ilyaeis/RTU_program_parser">RTU_program_parser</a> — timetable scraper (Python, Selenium, pandas)</li>
-            <li><a href="https://github.com/ilyaeis/Snake_plus_Maze_Path_algorithm_gen_2">Snake_plus_Maze_Path_algorithm_gen_2</a> — maze generation and path-finding (Python, Pygame)</li>
-            <li><a href="https://github.com/ilyaeis/bezier-curve-js">bezier-curve-js</a> — interactive Bezier-curve tool (JavaScript)</li>
-            <li><a href="https://github.com/ilyaeis/sort_visualization">sort_visualization</a> — sorting algorithm visualizer (C++, SFML);
-                <a href="apps/sorting/">run it in the browser</a> (the original algorithms compiled to WebAssembly)</li>
-        </ul>
-        <h2>Get in touch</h2>
-        <p>
-            <a href="resume.html">Resume</a>
-            <a href="https://github.com/ilyaeis">GitHub</a>
-            <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis">LinkedIn</a>
-            <a href="mailto:ilya.safronos@gmail.com">ilya.safronos@gmail.com</a>
-        </p>
-    </header>
+<main>
 
-    <nav class="site-nav" aria-label="Links">
-        <a href="resume.html">resume</a>
-        <a href="https://github.com/ilyaeis" rel="me">github</a>
-        <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me">linkedin</a>
-    </nav>
-    <noscript><p class="fallback">This page needs JavaScript/WebGL. <a href="resume.html">Open the plain resume.</a></p></noscript>
+<section class="hero">
+  <div class="who">
+    <p><strong>Ilja Safronovs</strong><br><span class="kicker">R&amp;D engineer at Giraffe360, Riga. 3D Gaussian splatting.</span></p>
+  </div>
+  <h1>I fix what looks wrong in 3D&nbsp;reconstructions.</h1>
+  <p class="actions">
+    <a class="btn" href="resume.pdf">Resume (PDF)</a>
+    <a class="btn" href="mailto:ilya.safronos@gmail.com">Email</a>
+  </p>
+</section>
 
-    <div class="tap-prompt">tap<span class="key-hint"> or press Enter</span></div>
-    <p class="intro-links" hidden><a class="intro-skip" href="?go=splatting&amp;mode=fly">skip to work</a> · <a href="resume.html">resume</a></p>
+<section class="sec" id="work">
+  <h2>Work</h2>
+  <div class="sec-body">
+  <ul class="proof">
+    <li>
+      <p>Giraffe360's 3D videos had blurry windows, outdoor views and mirrors. I found the cause and fixed it. In production for PRO camera projects since June 2026.</p>
+      <div class="embed">
+        <div class="embed-box" data-src="https://www.instagram.com/p/DZsNRB8o772/embed/" data-title="Giraffe360 post: before and after" aria-label="Giraffe360 post: before and after (loads when near)"></div>
+        <a class="small-link" href="https://www.instagram.com/p/DZsNRB8o772/">Open on Instagram &nearr;</a>
+      </div>
+    </li>
+    <li>
+      <p>Our training defaults use my Gaussian pruning and relocation rules (built on Taming 3DGS).</p>
+    </li>
+    <li>
+      <p>The looped drone video started as my hackathon idea. Now it is a product.</p>
+      <p class="detail"><a class="small-link" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">Reel &nearr;</a></p>
+    </li>
+    <li>
+      <p>I mentored a junior engineer, then led three engineers on a new 3D reconstruction feature. Both are in production. Next, I want to grow into leading a team.</p>
+    </li>
+  </ul>
+  </div>
+</section>
 
-    <p class="room-loading" role="status"></p>
-    <p class="room-credit" hidden>Apartment: "london" scene, Zip-NeRF dataset (Barron et al. 2023), CC BY 4.0, reconstructed with gsplat</p>
-
-    <div class="room-tools" role="toolbar" aria-label="Room tools" hidden>
-        <div class="room-tools-row">
-            <button type="button" data-tool="depth" aria-pressed="false" disabled>Depth</button>
-            <button type="button" data-tool="measure" aria-pressed="false" disabled>Measure</button>
-            <button type="button" class="room-tools-mark" hidden>Mark</button>
-        </div>
-        <p class="room-tools-hint" aria-live="polite">Try the depth lens</p>
+<section class="sec sec-flat" id="flat">
+  <h2>Splat</h2>
+  <div class="sec-body">
+  <p class="display">A flat I trained.</p>
+  <p class="lead-sm">gsplat, 18 minutes on one RTX 3090.</p>
+  </div>
+  <figure class="flat">
+    <div class="flat-stage" id="flat-stage" aria-label="The flat, as a 3D splat. Drag to look around." role="img">
+      <img class="flat-poster" src="assets/room/poster.jpg" width="1200" height="675" alt="Living room of the flat, seen from the sofa" decoding="async" loading="lazy">
+      <p class="flat-status" aria-live="polite">Drag to look around</p>
     </div>
-    <div class="room-tools-cross" hidden></div>
+    <figcaption>Zip-NeRF &ldquo;london&rdquo; scene (Barron et al., 2023, CC BY 4.0). Rendered with Spark.</figcaption>
+  </figure>
+</section>
 
-    <aside class="stop-panel" aria-live="polite" hidden>
-        <p class="stop-panel-dates"></p>
-        <h2 class="stop-panel-title"></h2>
-        <p class="stop-panel-subtitle"></p>
-        <ul class="stop-panel-items"></ul>
-        <a class="stop-panel-more" href="resume.html"></a>
-        <a class="stop-panel-portal" href="apps/sorting/" hidden></a>
-        <div class="stop-panel-actions">
-            <button type="button" class="walk-btn walk-explore" hidden>Explore the flat</button>
-            <button type="button" class="walk-btn walk-collect" hidden>Collect</button>
-        </div>
-    </aside>
+<section class="sec" id="tools">
+  <h2>Tools</h2>
+  <div class="sec-body">
+  <p class="lead">My team uses two tools I built: an experiment runner driven by an AI agent, and an MCP server for our task board.</p>
+  <p class="detail skills">PyTorch, CUDA, gsplat, Python, C++.</p>
+  </div>
+</section>
 
-    <!-- A project app opened through a portal (js/dimension.js) -->
-    <div class="dimension" role="dialog" aria-modal="true" aria-labelledby="dimension-title" hidden>
-        <div class="dimension-bar">
-            <button class="dimension-back" type="button">&larr; back to the journey</button>
-            <span class="dimension-title" id="dimension-title"></span>
-            <a class="dimension-tab" href="apps/sorting/" target="_blank" rel="noopener">new tab</a>
-        </div>
-        <p class="dimension-status">loading&hellip;</p>
-    </div>
+<section class="sec" id="projects">
+  <h2>Side projects</h2>
+  <div class="sec-body">
+  <ul class="plain projects">
+    <li><a href="apps/sorting/">Sorting visualizer</a> <span>16 algorithms, C++ to WebAssembly</span></li>
+    <li><a href="https://github.com/ilyaeis/monte-carlo-finance">monte-carlo-finance</a> <span>option pricing, GARCH, VaR backtests</span></li>
+    <li><a href="https://github.com/ilyaeis/load-balancing-experiments">load-balancing-experiments</a> <span>seven experiments on DNS and load balancing</span></li>
+    <li><a href="https://github.com/ilyaeis/projects_with_NEAT">projects_with_NEAT</a> <span>NEAT agents learn Flappy Bird and Pong</span></li>
+  </ul>
+  </div>
+</section>
 
-    <!-- Walk mode (js/walk.js): the landing's explore button, and the HUD while walking -->
-    <button type="button" class="walk-ui walk-btn walk-explore walk-explore-float" hidden>Explore the flat</button>
-    <div class="walk-ui walk-hud" hidden>
-        <button type="button" class="walk-btn walk-back">Back to the journey</button>
-        <span class="walk-count" aria-live="polite" title="objects collected"><span aria-hidden="true">0 / 6</span><span class="visually-hidden">0 of 6 objects collected</span></span>
-    </div>
+<section class="sec" id="contact">
+  <h2>Contact</h2>
+  <div class="sec-body">
+  <p class="contact-mail"><a href="mailto:ilya.safronos@gmail.com">ilya.safronos@gmail.com</a></p>
+  <p class="actions">
+    <a class="btn" href="resume.pdf">Resume (PDF)</a>
+    <a class="btn" href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me">LinkedIn</a>
+    <a class="btn" href="https://github.com/ilyaeis" rel="me">GitHub</a>
+  </p>
+  </div>
+</section>
 
-    <script type="module" src="js/stopPanel.js"></script>
-    <script type="module" src="js/room.js"></script>
-    <script type="module" src="js/depthTool.js"></script>
-    <script type="module" src="js/dimension.js"></script>
-    <script type="module" src="js/agentApi.js"></script>
-    <script type="module" src="js/main.js"></script>
+</main>
+
+<footer class="foot">
+  <p>With the R&amp;D team at Giraffe360. Methods build on Taming 3DGS (Mallick et al., 2024) and Analytic-Splatting (Liang et al., 2024).</p>
+</footer>
+
+<script type="module" src="js/page.js"></script>
 </body>
 </html>

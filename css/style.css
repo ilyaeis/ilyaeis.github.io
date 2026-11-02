@@ -1,622 +1,111 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* Dark only: the splat is a dim room, it looks like a hole on white.
+   8 px grid, 64 rem container, 40 rem text measure, 11 rem label rail. */
+
+:root {
+  --bg: #121110;
+  --bg-2: #1c1a17;
+  --fg: #f3efe8;
+  --fg-2: #b4ada2;      /* muted: 7.2:1 on bg */
+  --line: #2c2824;
+  --accent: #f2b85a;    /* the lamps in the flat */
+  --wide: 64rem;
+  --measure: 40rem;
+  --rail: 11rem;
+  --gutter: 16px;
+  --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-body {
-    background-color: #0a0a0a;
-    color: #e0e0e0;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    overflow: hidden;
-    height: 100vh;
-    height: 100dvh;
-    touch-action: none;
-}
+* { box-sizing: border-box; }
+html { background: var(--bg); color: var(--fg); font-family: var(--font);
+  -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { margin: 0; line-height: 1.5; font-size: 1.0625rem; }
+@media (min-width: 700px) { body { font-size: 1.125rem; } }
 
-/* Attractor canvas — fixed, fullscreen behind text.
-   Stars are rendered in 3D inside this canvas's scene.
-   mix-blend-mode: screen keeps the body tone showing through black. */
-#attractor {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    z-index: 1;
-    mix-blend-mode: screen;
-}
+a { color: inherit; text-decoration-color: color-mix(in srgb, var(--fg-2) 60%, transparent); text-underline-offset: 0.18em; }
+a:hover { text-decoration-color: var(--accent); }
+a:focus-visible, button:focus-visible, .flat-stage:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+p { margin: 0; }
+.muted { color: var(--fg-2); font-weight: 400; }
 
-/* Visually-hidden heading — the visible intro is rendered in 3D */
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-}
 
-#attractor:focus { outline: none; }   /* focusable (tabindex -1) so focus can return to it; Enter / Space go on */
+main { max-width: var(--wide); margin: 0 auto; padding: 0 var(--gutter); }
 
-/* Tap prompt */
-.tap-prompt {
-    position: fixed;
-    bottom: calc(2.5rem + env(safe-area-inset-bottom));
-    left: 50%;
-    transform: translateX(-50%);
-    color: #888;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 0.85rem;
-    font-weight: 300;
-    letter-spacing: 0.1em;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-    z-index: 10;
-    pointer-events: none;
-    user-select: none;
-}
+/* hero */
+.hero { padding: 48px 0 48px; }
+@media (min-width: 700px) { .hero { padding: 72px 0 80px; } }
+.who { font-size: 1.0625rem; line-height: 1.4; margin-bottom: 28px; }
+.who strong { font-weight: 600; font-size: 1.125rem; }
+@media (min-width: 700px) { .who { margin-bottom: 36px; } .who strong { font-size: 1.25rem; } }
+.kicker { color: var(--fg-2); font-weight: 500; }
+h1 { font-size: clamp(2.375rem, 3.2vw + 1.4rem, 4.5rem); line-height: 1.04; letter-spacing: -0.03em;
+  font-weight: 600; margin: 0 0 8px; max-width: 16ch; text-wrap: balance; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 32px; }
 
-/* The first prompt: " or press Enter" for keyboards, not on touch screens */
-@media (pointer: coarse) { .tap-prompt .key-hint { display: none; } }
+.btn { display: inline-flex; align-items: center; min-height: 48px; padding: 0 18px; border-radius: 4px;
+  border: 1px solid var(--fg-2); text-decoration: none; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
 
-.tap-prompt.visible {
-    opacity: 1;
-    animation: pulse-prompt 2s ease-in-out infinite;
+/* sections: label rail + body on desktop */
+.sec { padding: 40px 0; border-top: 1px solid var(--line); }
+.sec-body { max-width: var(--measure); }
+@media (min-width: 900px) {
+  .sec { padding: 48px 0; display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); column-gap: 32px; }
+  .sec > h2 { grid-column: 1; margin: 0; padding-top: 0.5rem; }
+  .sec > .sec-body, .sec > .flat { grid-column: 2; }
 }
+h2 { font-size: 1rem; color: var(--fg-2); font-weight: 500; margin: 0 0 20px; }
+h3 { font-size: 1.125rem; font-weight: 600; margin: 40px 0 12px; }
+.lead { font-size: 1.375rem; line-height: 1.4; letter-spacing: -0.012em; text-wrap: pretty; }
+.lead-sm { font-size: 1.125rem; line-height: 1.5; color: var(--fg-2); text-wrap: pretty; max-width: 36rem; }
+@media (min-width: 700px) { .lead { font-size: 1.625rem; } .lead-sm { font-size: 1.25rem; } }
+.display { font-size: clamp(1.75rem, 1.6vw + 1.2rem, 2.5rem); line-height: 1.1; letter-spacing: -0.025em; font-weight: 600; margin: 0 0 16px; }
+.detail { color: var(--fg-2); font-size: 1rem; line-height: 1.5; margin-top: 10px; text-wrap: pretty; }
+@media (min-width: 700px) { .detail { font-size: 1.0625rem; } }
+.skills { margin-top: 20px; }
 
-@keyframes pulse-prompt {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
-}
+/* work list */
+.proof { list-style: none; margin: 0; padding: 0; }
+.proof li { padding: 28px 0; border-top: 1px solid var(--line); }
+.proof li:first-child { border-top: 0; padding-top: 0; }
+.proof li > p:first-child { font-size: 1.375rem; line-height: 1.38; letter-spacing: -0.012em; text-wrap: pretty; }
+@media (min-width: 700px) { .proof li > p:first-child { font-size: 1.625rem; } }
+.small-link { color: var(--fg-2); white-space: nowrap; display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px; margin: -12px 0; }
 
-/* Intro only: "skip to work · resume" under the first prompt */
-.intro-links {
-    position: fixed;
-    bottom: calc(0.5rem + env(safe-area-inset-bottom));
-    left: 50%;
-    transform: translateX(-50%);
-    margin: 0;
-    color: #666;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 0.8rem;
-    font-weight: 300;
-    letter-spacing: 0.08em;
-    white-space: nowrap;
-    z-index: 10;
-}
-.intro-links[hidden] { display: none; }
-.intro-links a {
-    display: inline-block;
-    padding: 0.75rem 0.4rem;   /* 44 px tap target */
-    color: #9a9a9a;
-    text-decoration: none;
-}
-.intro-links a:hover, .intro-links a:focus-visible { color: #fff; outline: none; text-decoration: underline; }
+/* Instagram embed: placeholder at the final size, iframe when near (page.js) */
+.embed { margin-top: 20px; }
+.embed-box { width: 100%; max-width: 400px; border-radius: 6px; overflow: hidden; background: var(--bg-2);
+  border: 1px solid var(--line); box-sizing: content-box; }
+.embed-box iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+.embed .small-link { margin-top: 2px; }
 
-/* Corner nav — persistent HTML links above the canvas */
-.site-nav {
-    position: fixed;
-    /* links are 44 px tall (tap target); top/right undo the padding so the text stays put */
-    top: calc(0.35rem + env(safe-area-inset-top));
-    right: calc(1rem + env(safe-area-inset-right));
-    z-index: 10;
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-    color: #888;
-}
+/* plain lists */
+.plain { list-style: none; margin: 0; padding: 0; }
+.plain li { padding: 14px 0; border-top: 1px solid var(--line); }
+.plain li:first-child { border-top: 0; padding-top: 0; }
+.projects a { font-weight: 600; display: inline-block; padding: 12px 0; margin: -12px 0; }
+.projects span { color: var(--fg-2); }
+@media (min-width: 700px) { .projects li { display: grid; grid-template-columns: 17rem 1fr; column-gap: 20px; } }
 
-.site-nav a {
-    color: inherit;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    min-height: 2.75rem;
-    padding: 0 0.5rem;
-    margin-left: 0.4rem;
-    /* readable over the bright room */
-    text-shadow: 0 0 8px #000, 0 0 2px #000;
-}
+/* the flat */
+.sec-flat .flat { margin: 28px 0 0; }
+.flat-stage { position: relative; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: #000;
+  touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+.flat-stage.dragging { cursor: grabbing; }
+@media (max-width: 699px) { .flat-stage { aspect-ratio: 4 / 3; } }
+.flat-stage canvas, .flat-poster { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+.flat-poster { transition: opacity 0.8s ease; }
+.flat-stage.live .flat-poster { opacity: 0; pointer-events: none; }
+.flat-status { position: absolute; left: 14px; bottom: 12px; margin: 0; font-size: 0.9375rem; font-weight: 500; color: var(--fg);
+  background: rgba(18, 17, 16, 0.78); padding: 8px 12px; border-radius: 4px; pointer-events: none; z-index: 2; }
+.flat-status:empty { display: none; }
+figcaption { margin-top: 12px; font-size: 0.9375rem; color: var(--fg-2); }
 
-.site-nav a:hover,
-.site-nav a:focus-visible {
-    color: #e0e0e0;
-    outline: 1px solid #888;
-}
+/* contact */
+.contact-mail { font-size: clamp(1.5rem, 1.4vw + 1rem, 2.5rem); font-weight: 600; letter-spacing: -0.025em; word-break: break-word; line-height: 1.2; }
+.contact-mail a { text-decoration-color: var(--accent); display: inline-block; padding: 8px 0; margin: -8px 0; }
+#contact .actions { margin-top: 24px; }
 
-/* Shown only when JavaScript is off */
-.fallback {
-    position: fixed;
-    top: 50%;
-    left: 0;
-    right: 0;
-    z-index: 10;
-    text-align: center;
-    padding: 0 1rem;
-}
+.foot { max-width: var(--wide); margin: 0 auto; padding: 0 var(--gutter); color: var(--fg-2); font-size: 0.9375rem; }
+.foot p { border-top: 1px solid var(--line); padding: 32px 0 48px; }
 
-.fallback a {
-    color: inherit;
-}
-
-/* Milestone panel — HTML text beside the rock. Filled by js/stopPanel.js.
-   The media query string must match PANEL_SIDE_QUERY in js/camera.js. */
-.stop-panel {
-    position: fixed;
-    z-index: 5;
-    color: #e0e0e0;
-    opacity: 0;
-    pointer-events: none;
-    letter-spacing: 0.04em;
-    transition: opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s;
-    display: flex;
-    flex-direction: column;
-}
-
-.stop-panel.visible {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-}
-
-.stop-panel[hidden] { display: none; }
-.stop-panel [hidden] { display: none; }
-
-.stop-panel-dates {
-    color: #888;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    margin-bottom: 0.6rem;
-}
-
-.stop-panel-title {
-    font-size: 1.5rem;
-    font-weight: 300;
-    letter-spacing: 0.04em;
-    line-height: 1.25;
-    color: #f0f0f0;
-}
-
-.stop-panel-subtitle {
-    color: #aaa;
-    font-size: 0.9rem;
-    font-weight: 300;
-    margin-top: 0.4rem;
-}
-
-.stop-panel-items {
-    list-style: none;
-    margin-top: 1.5rem;
-    /* only the list scrolls: title and "more" link stay visible */
-    flex: 0 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    touch-action: pan-y;
-}
-
-/* Scroll hint: a fade at the bottom while there is more to read.
-   Chrome/Edge/Safari 26 (scroll-driven animation); older browsers show none. */
-.stop-panel-items::after {
-    content: '';
-    display: block;
-    position: sticky;
-    bottom: 0;
-    height: 1.75rem;
-    margin-top: -1.75rem;
-    background: linear-gradient(180deg, rgba(10, 10, 10, 0), rgba(10, 10, 10, 0.92));
-    opacity: 0;
-    pointer-events: none;
-}
-
-@supports (animation-timeline: scroll()) {
-    .stop-panel-items::after {
-        animation: items-more linear both;
-        animation-timeline: scroll(self);
-    }
-}
-
-@keyframes items-more {
-    0%, 85% { opacity: 1; }
-    100% { opacity: 0; }
-}
-
-.stop-panel-items li {
-    letter-spacing: 0.02em;
-    font-size: 0.95rem;
-    font-weight: 300;
-    line-height: 1.5;
-    color: #c8c8c8;
-    padding-left: 0.9rem;
-    border-left: 1px solid #3a3a3a;
-}
-
-.stop-panel-items li + li { margin-top: 0.8rem; }
-
-.stop-panel a {
-    color: inherit;
-    text-decoration: none;
-    border-bottom: 1px solid #555;
-}
-
-/* Item links: 44 px tap target (negative margin keeps the layout compact); the underline is a background so padding does not push it away */
-.stop-panel-items a {
-    display: inline-block;
-    padding: 0.65rem 0;
-    margin: -0.45rem 0;
-    border-bottom: 0;
-    background: linear-gradient(#555, #555) 0 calc(100% - 0.65rem) / 100% 1px no-repeat;
-}
-
-.stop-panel a:hover,
-.stop-panel a:focus-visible {
-    color: #fff;
-    border-bottom-color: #aaa;
-    outline: 1px solid #888;
-    outline-offset: 2px;
-}
-
-.stop-panel a.stop-panel-more {
-    display: inline-block;
-    align-self: flex-start;
-    margin-top: 0.9rem;
-    padding: 0.8rem 0;
-    border-bottom: 0;
-    color: #888;
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-}
-
-.stop-panel-more::after { content: ' \2192'; }
-.stop-panel a.stop-panel-more[hidden] { display: none; }
-
-/* Bottom layout (default): rock above, panel below */
-.stop-panel {
-    left: 0;
-    right: 0;
-    bottom: 0;
-    max-height: 52vh;
-    overflow: hidden;
-    padding: 1rem 1.25rem calc(3.25rem + env(safe-area-inset-bottom));
-    transform: translateY(18px);
-    background: linear-gradient(180deg, rgba(10, 10, 10, 0), rgba(10, 10, 10, 0.85) 25%);
-}
-.stop-panel-title { font-size: 1.25rem; }
-.stop-panel-items { margin-top: 0.8rem; }
-.stop-panel-items li { font-size: 0.875rem; line-height: 1.45; }
-.stop-panel-items li + li { margin-top: 0.45rem; }
-
-/* Tap prompt while a panel is open: small pill at the very bottom, never over the text */
-body.panel-open .tap-prompt {
-    bottom: calc(0.5rem + env(safe-area-inset-bottom));
-    font-size: 0.75rem;
-    padding: 0.2rem 0.7rem;
-    background: rgba(10, 10, 10, 0.85);
-    border-radius: 999px;
-}
-
-/* Side layout: panel on the right, rock on the left */
-@media (min-width: 700px) and (orientation: landscape) {
-    .stop-panel {
-        left: auto;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        width: min(46vw, 540px);
-        max-height: none;
-        overflow: visible;
-        justify-content: center;
-        padding: 3rem 3.5rem 3rem 2.5rem;
-        transform: translateX(18px);
-        background: linear-gradient(90deg, rgba(10, 10, 10, 0), rgba(10, 10, 10, 0.75) 30%);
-    }
-    .stop-panel[hidden] { display: none; }
-    .stop-panel-title { font-size: 1.5rem; }
-    .stop-panel-items { margin-top: 1.5rem; }
-    .stop-panel-items li { font-size: 0.95rem; line-height: 1.5; }
-    .stop-panel-items li + li { margin-top: 0.8rem; }
-    /* the stop sits in the left half: centre the prompt under it */
-    body.panel-open .tap-prompt {
-        left: 25%;
-        bottom: calc(2.5rem + env(safe-area-inset-bottom));
-        font-size: 0.85rem;
-        padding: 0;
-        background: none;
-    }
-}
-
-/* Short landscape (phones): title below the nav, list scrolls inside the panel */
-@media (min-width: 700px) and (orientation: landscape) and (max-height: 500px) {
-    .stop-panel {
-        justify-content: flex-start;
-        overflow: hidden;
-        padding: 3.4rem 1.25rem 1rem 1.5rem;
-    }
-    .stop-panel-title { font-size: 1.15rem; }
-    .stop-panel-items { margin-top: 0.8rem; }
-    .stop-panel-items li { font-size: 0.85rem; }
-    .stop-panel-items li + li { margin-top: 0.5rem; }
-    body.panel-open .tap-prompt { bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .stop-panel { transition: none; }
-}
-
-.stop-panel.visible { transform: none; }
-
-/* Portal link in the panel (panel.portal): opens the project app (js/dimension.js) */
-.stop-panel a.stop-panel-portal {
-    display: inline-block;
-    align-self: flex-start;
-    margin-top: 0.9rem;
-    padding: 0.55rem 1rem;
-    border: 1px solid #ff9a3c;
-    border-radius: 999px;
-    color: #ffd9a8;
-    font-size: 0.85rem;
-    letter-spacing: 0.08em;
-    box-shadow: 0 0 14px rgba(255, 63, 207, 0.35);
-}
-.stop-panel a.stop-panel-portal::after { content: ' \2197'; }
-.stop-panel a.stop-panel-portal:hover,
-.stop-panel a.stop-panel-portal:focus-visible { color: #fff; border-color: #ffe7a3; }
-.stop-panel a.stop-panel-portal[hidden] { display: none; }
-.stop-panel a.stop-panel-portal + .stop-panel-more { margin-top: 0.3rem; }
-
-/* The dimension: a project app over the scene. The fade time matches FADE_MS in js/dimension.js */
-.dimension {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    background: #07040d;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.45s ease;
-}
-.dimension[hidden] { display: none; }
-.dimension.visible { opacity: 1; pointer-events: auto; }
-.dimension-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: calc(0.25rem + env(safe-area-inset-top)) calc(0.75rem + env(safe-area-inset-right)) 0.25rem calc(0.75rem + env(safe-area-inset-left));
-    font-size: 0.8rem;
-    letter-spacing: 0.08em;
-    color: #aaa;
-    border-bottom: 1px solid #2a2033;
-}
-.dimension-back {
-    min-height: 2.75rem;
-    padding: 0 0.6rem;
-    background: none;
-    border: 0;
-    color: #e0e0e0;
-    font: inherit;
-    letter-spacing: inherit;
-    cursor: pointer;
-}
-.dimension-title { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.dimension-tab { color: inherit; display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 0.4rem; }
-.dimension-back:hover, .dimension-back:focus-visible,
-.dimension-tab:hover, .dimension-tab:focus-visible { color: #fff; outline: 1px solid #888; }
-.dimension-status { position: absolute; top: 50%; left: 0; right: 0; text-align: center; color: #888; letter-spacing: 0.1em; font-size: 0.85rem; }
-.dimension-status[hidden] { display: none; }
-.dimension-frame { flex: 1; width: 100%; border: 0; background: transparent; }
-@media (prefers-reduced-motion: reduce) {
-    .dimension { transition: none; }
-}
-
-/* The apartment is still loading (js/room.js): a small calm line over the stop */
-.room-loading {
-    position: fixed;
-    top: calc(3.4rem + env(safe-area-inset-top));
-    left: 50%;
-    transform: translateX(-50%);
-    margin: 0;
-    color: #aaa;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 0.8rem;
-    font-weight: 300;
-    letter-spacing: 0.08em;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.4s ease, visibility 0s linear 0.4s;
-    z-index: 10;
-    pointer-events: none;
-    user-select: none;
-}
-.room-loading.visible { opacity: 1; visibility: visible; transition: opacity 0.4s ease; }
-/* Side layout: over the stop, left of the panel */
-@media (min-width: 700px) and (orientation: landscape) {
-    body.panel-open .room-loading { left: 25%; }
-}
-
-/* Credit for the apartment splat (CC BY 4.0), shown at the apartment stops and the landing */
-.room-credit {
-    position: fixed;
-    left: 1rem;
-    bottom: 0.8rem;
-    max-width: 22rem;
-    margin: 0;
-    color: #999;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 0.7rem;
-    font-weight: 300;
-    line-height: 1.35;
-    z-index: 10;
-    pointer-events: none;
-    user-select: none;
-}
-
-@media (max-width: 699px) {
-    .room-credit { left: 0; right: 0; max-width: none; text-align: center; font-size: 0.68rem; bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
-    .tap-prompt { bottom: calc(3.4rem + env(safe-area-inset-bottom)); }
-}
-/* Side layout: the credit sits at the bottom left, under the stop: the prompt goes above it */
-@media (min-width: 700px) and (orientation: landscape) {
-    body:has(.room-credit:not([hidden])) .tap-prompt { bottom: calc(3.6rem + env(safe-area-inset-bottom)); }
-}
-/* Bottom panel layout (not the side query): the credit would cover the panel text */
-@media (max-width: 699px), (orientation: portrait) {
-    body.panel-open .room-credit { display: none; }
-}
-
-/* Room tools (js/depthTool.js): depth lens + measure, at the apartment stops and the landing */
-.room-tools {
-    position: fixed;
-    top: calc(0.35rem + env(safe-area-inset-top));
-    left: calc(0.75rem + env(safe-area-inset-left));
-    z-index: 10;
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-    color: #888;
-}
-.room-tools[hidden] { display: none; }
-.room-tools-row { display: flex; gap: 0.4rem; }
-.room-tools button {
-    min-height: 2.75rem;
-    min-width: 2.75rem;
-    padding: 0 0.9rem;
-    font: inherit;
-    letter-spacing: inherit;
-    color: #c8c8c8;
-    background: rgba(10, 10, 10, 0.6);
-    border: 1px solid #444;
-    border-radius: 999px;
-    cursor: pointer;
-}
-.room-tools button[hidden] { display: none; }
-.room-tools button:disabled { opacity: 0.4; cursor: default; }
-.room-tools button[aria-pressed="true"],
-.room-tools .room-tools-mark {
-    color: #0a0a0a;
-    background: #ffd36b;
-    border-color: #ffd36b;
-}
-.room-tools button:focus-visible { outline: 1px solid #aaa; outline-offset: 2px; }
-.room-tools-hint {
-    margin-top: 0.35rem;
-    padding-left: 0.3rem;
-    font-size: 0.72rem;
-    text-shadow: 0 0 8px #000, 0 0 2px #000;
-    pointer-events: none;
-}
-/* Depth lens legend: near .. far in metres */
-.room-tools-legend {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin-top: 0.3rem;
-    padding-left: 0.3rem;
-    font-size: 0.68rem;
-    letter-spacing: 0.06em;
-    color: #bbb;
-    text-shadow: 0 0 8px #000, 0 0 2px #000;
-    pointer-events: none;
-}
-.room-tools-legend[hidden] { display: none; }
-.room-tools-legend i { display: block; width: 7rem; height: 0.45rem; border-radius: 0.25rem; }
-/* Narrow screens: below the walk HUD (nav row, then the back button) */
-@media (max-width: 699px) {
-    .room-tools { top: calc(6.4rem + env(safe-area-inset-top)); }
-}
-
-.room-tools-label {
-    position: fixed;
-    z-index: 6;
-    transform: translate(-50%, -140%);
-    padding: 0.2rem 0.55rem;
-    border-radius: 0.3rem;
-    background: rgba(10, 10, 10, 0.8);
-    color: #ffd36b;
-    font-size: 0.85rem;
-    font-weight: 600;
-    white-space: nowrap;
-    pointer-events: none;
-}
-.room-tools-label[hidden] { display: none; }
-
-/* Phone crosshair at the screen centre (the lens and the Mark ray) */
-.room-tools-cross {
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    z-index: 6;
-    width: 22px;
-    height: 22px;
-    margin: -11px 0 0 -11px;
-    pointer-events: none;
-}
-.room-tools-cross[hidden] { display: none; }
-.room-tools-cross::before,
-.room-tools-cross::after {
-    content: '';
-    position: absolute;
-    background: #fff;
-    opacity: 0.85;
-    box-shadow: 0 0 3px #000;
-}
-.room-tools-cross::before { left: 10px; top: 0; width: 2px; height: 22px; }
-.room-tools-cross::after { top: 10px; left: 0; width: 22px; height: 2px; }
-
-/* Walk mode (js/walk.js): explore / collect / back buttons, the HUD under the nav.
-   Buttons are at least 44 px tall (tap target). */
-.walk-btn {
-    min-height: 2.75rem;
-    padding: 0 1.1rem;
-    border: 1px solid #555;
-    border-radius: 999px;
-    background: rgba(10, 10, 10, 0.7);
-    color: #e0e0e0;
-    font: inherit;
-    font-size: 0.85rem;
-    letter-spacing: 0.08em;
-    cursor: pointer;
-}
-.walk-btn:hover,
-.walk-btn:focus-visible { border-color: #aaa; color: #fff; outline: none; }
-.walk-btn:disabled { cursor: default; color: #9c9; border-color: #4a6a4a; }
-.walk-btn[hidden],
-.walk-ui[hidden] { display: none; }
-
-.stop-panel-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    margin-top: 0.9rem;
-}
-.stop-panel-actions:not(:has(.walk-btn:not([hidden]))) { display: none; }
-
-/* The landing has no panel: the explore button sits above the tap prompt */
-.walk-explore-float {
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: calc(5rem + env(safe-area-inset-bottom));
-    z-index: 10;
-}
-
-.walk-hud {
-    position: fixed;
-    top: calc(3.3rem + env(safe-area-inset-top));
-    right: calc(1rem + env(safe-area-inset-right));
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-}
-.walk-count {
-    color: #ccc;
-    font-size: 0.9rem;
-    letter-spacing: 0.12em;
-    text-shadow: 0 0 8px #000, 0 0 2px #000;
-    font-variant-numeric: tabular-nums;
-}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .flat-poster { transition: none; } }

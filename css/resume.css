@@ -1,4 +1,4 @@
-/* Resume — dark, minimal, matches the journey page. Print rules at the end
+/* Resume — dark, minimal, matches the home page. Print rules at the end
    give a classic A4 layout on white. Colours are tokens so the optional
    light theme and print only swap the palette. */
 
@@ -224,6 +224,13 @@ h1 {
 
 .sep { color: var(--muted); margin: 0 0.15em; }
 
+.pitch {
+    margin-top: 0.35rem;
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: var(--fg-strong);
+}
+
 .contact {
     margin-top: 0.6rem;
     display: flex;
@@ -318,6 +325,13 @@ h3 .role {
 }
 
 .meta { color: var(--muted); }
+
+/* A one-line entry (no details to open) */
+.line {
+    margin-top: 0.4rem;
+    font-size: 0.95rem;
+    color: var(--fg);
+}
 
 .note {
     color: var(--muted);
@@ -568,6 +582,11 @@ dl.skills dd { color: var(--fg); }
         color: var(--fg);
     }
 
+    .pitch {
+        margin-top: 2pt;
+        font-size: 10.5pt;
+    }
+
     .identity { gap: 4mm; }
     .avatar {
         width: 24mm;
@@ -625,6 +644,7 @@ dl.skills dd { color: var(--fg); }
     .row .meta { font-size: 9pt; color: var(--muted); text-align: right; }
 
     .sub { font-size: 9pt; color: var(--muted); }
+    .line { margin-top: 2pt; font-size: 9.5pt; color: var(--fg); }
 
     ul { margin-top: 3pt; }
     li { margin-top: 3pt; padding-left: 9pt; break-inside: avoid; }
@@ -648,6 +668,8 @@ dl.skills dd { color: var(--fg); }
         color: var(--fg-strong);
     }
     details.item > summary::before { display: none; }
+    /* Only the main headlines are bold; "More" items are regular. */
+    details.group details.item > summary { font-weight: 400; }
     .item > summary .print { font-weight: 400; font-size: 9pt; color: var(--muted); }
     .why { padding: 0; margin-top: 1pt; font-size: 9pt; line-height: 1.38; color: var(--muted); }
     .why .meta { font-size: 9pt; }
