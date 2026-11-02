@@ -56,8 +56,8 @@ State mathematics olympiads; Small Mathematics University (University of Latvia)
 
 ## Projects
 
-- **Portfolio site: a walkable Gaussian splat of a real flat that I trained (gsplat, 730k splats).** [site](https://ilyaeis.github.io/)
-  (2025–26, three.js, Spark, no build step) I trained the public Zip-NeRF “london” scene (Barron et al., 2023, CC BY 4.0) with gsplat MCMC: 30k steps in about 18 min on one RTX 3090, 28.3 dB PSNR on held-out views. The web gets 730k splats, and phones get a 350k lite model. The visitor walks the flat to four objects that stand for my R&D work, then a tunnel where two projects run as live visualizations. The page exposes a small agent API (window.journey, WebMCP tools) and llms.txt.
+- **Portfolio site: a live Gaussian splat of a real flat that I trained (gsplat).** [site](https://ilyaeis.github.io/)
+  (2025–26, three.js, Spark, no build step) I trained the public Zip-NeRF “london” scene (Barron et al., 2023, CC BY 4.0) with gsplat MCMC: 30k steps in about 18 min on one RTX 3090, 28.3 dB PSNR on held-out views. The page is plain text with one live card: a 1 MB preview loads first, then a 350k-splat model, and the visitor drags to look around. Nothing 3D loads until the card is near. The site also has llms.txt.
 - **sort_visualization — 16 sorting algorithms in C++/SFML; runs in the browser (WebAssembly).** [run it](https://ilyaeis.github.io/apps/sorting/) · [code](https://github.com/ilyaeis/sort_visualization)
   (2022, C++/SFML) 16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control. The browser version runs the original algorithms, compiled to WebAssembly.
 - **Offline Graphing Calculator — 4th place of 27 in a school competition.**

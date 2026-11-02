@@ -3,11 +3,9 @@
 // shuffle, the sort, with 2 s pauses. The steps come from the original C++
 // (worker.js); drawer.js draws them as ArrayDrawer.cpp did.
 // Keys as in the original: Right / D faster, Left / A normal speed, Esc menu.
-// Inside the portfolio (?embed=1) Esc at the menu closes the app.
 import { drawArray, LAYOUTS, THEMES, SCREEN, rgb } from './drawer.js';
 
 const q = new URLSearchParams(location.search);
-const EMBED = q.has('embed');
 // get_sorts_table_origin(): the menu table, in its order
 const TABLE = ['Bubble', 'Insertion', 'Gnome', 'Selection', 'Odd-Even', 'Count', 'Pigeonhole', 'Radix',
                'Comb', 'Shell', 'Merge', 'Quick', 'Pancake', 'Cocktail', 'Heap', 'Stooge'];
@@ -18,7 +16,6 @@ const FASTER = 10, MAX_SPEED = 500;      // faster_const, max_speed (vector_leng
 const $ = (s) => document.querySelector(s);
 const canvas = $('#view'), ctx = canvas.getContext('2d');
 const menu = $('#menu'), controls = $('#controls'), stage = $('#stage');
-document.body.classList.toggle('embed', EMBED);
 
 // ── Worker (the C++ algorithms) ────────────────────────────────────
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
@@ -157,7 +154,6 @@ function faster() { speed = speed === 1 ? FASTER : Math.min(speed + FASTER, MAX_
 function normal() { speed = 1; dirty = true; }
 function escape() {
     if (running) toMenu();
-    else if (EMBED) parent.postMessage({ type: 'journey:exit' }, location.origin);
 }
 
 document.addEventListener('keydown', (e) => {

@@ -1,283 +1,160 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <link rel="icon" href="favicon.ico" sizes="any">
-    <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
-    <title>Ilja Safronovs — R&amp;D Engineer / 3D Reconstruction</title>
-    <meta name="description" content="Ilja Safronovs, R&amp;D engineer in 3D reconstruction at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA). The portfolio is a Gaussian splat of a real flat that I trained; plain resume at /resume.html.">
-    <meta name="author" content="Ilja Safronovs">
-    <meta name="theme-color" content="#0a0a0a">
-    <meta name="agent-api" content="window.journey v1; tools also via document.modelContext; docs: /llms.txt#journey">
-    <link rel="canonical" href="https://ilyaeis.github.io/">
-    <link rel="me" href="https://github.com/ilyaeis">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ilja Safronovs — R&amp;D Engineer, 3D reconstruction</title>
+<meta name="description" content="I find why 3D reconstructions look wrong, and I ship the fix. R&amp;D engineer in 3D Gaussian splatting at Giraffe360, Riga. Drag a Gaussian splat of a flat that I trained.">
+<meta name="author" content="Ilja Safronovs">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#121110">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="canonical" href="https://ilyaeis.github.io/">
 
-    <!-- Social previews -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://ilyaeis.github.io/">
-    <meta property="og:title" content="Ilja Safronovs — R&amp;D Engineer / 3D Reconstruction">
-    <meta property="og:description" content="R&amp;D engineer in 3D reconstruction at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA). Walk a Gaussian splat of a real flat that I trained.">
-    <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=3">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content="https://ilyaeis.github.io/assets/og-image.png?v=3">
+<!-- Social previews -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ilyaeis.github.io/">
+<meta property="og:title" content="Ilja Safronovs — R&amp;D Engineer, 3D reconstruction">
+<meta property="og:description" content="I find why 3D reconstructions look wrong, and I ship the fix. R&amp;D engineer in 3D Gaussian splatting at Giraffe360, Riga. Drag a Gaussian splat of a flat that I trained.">
+<meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=3">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ilyaeis.github.io/assets/og-image.png?v=3">
 
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "Person",
-        "@id": "https://ilyaeis.github.io/#me",
-        "subjectOf": { "@id": "https://ilyaeis.github.io/resume.html" },
-        "name": "Ilja Safronovs",
-        "url": "https://ilyaeis.github.io/",
-        "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
-        "email": "ilya.safronos@gmail.com",
-        "jobTitle": "R&D Engineer, 3D reconstruction",
-        "description": "R&D engineer in 3D reconstruction at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix: 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA).",
-        "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
-        "alumniOf": { "@type": "CollegeOrUniversity", "name": "Riga Technical University" },
-        "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
-        "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "Depth Estimation", "Mesh Generation", "PyTorch", "CUDA", "Python", "C++", "Dart", "Flutter", "JavaScript", "Financial Engineering", "Monte Carlo methods", "GARCH", "Value at Risk", "AWS S3", "OpenAI API", "Large Language Models", "Model Context Protocol", "AI agents", "Experiment tracking"],
-        "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
-    }
-    </script>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "@id": "https://ilyaeis.github.io/#me",
+    "subjectOf": { "@id": "https://ilyaeis.github.io/resume.html" },
+    "name": "Ilja Safronovs",
+    "url": "https://ilyaeis.github.io/",
+    "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
+    "email": "ilya.safronos@gmail.com",
+    "jobTitle": "R&D Engineer, 3D reconstruction",
+    "description": "R&D engineer in 3D Gaussian splatting at Giraffe360, Riga. I find why 3D reconstructions look wrong, and I ship the fix.",
+    "address": { "@type": "PostalAddress", "addressLocality": "Riga", "addressCountry": "LV" },
+    "alumniOf": { "@type": "CollegeOrUniversity", "name": "Riga Technical University" },
+    "worksFor": { "@type": "Organization", "name": "Giraffe360", "url": "https://www.giraffe360.com/" },
+    "knowsAbout": ["3D Gaussian Splatting", "3D Reconstruction", "Computer Vision", "PyTorch", "CUDA", "gsplat", "Python", "C++", "WebAssembly", "Monte Carlo methods", "GARCH", "Value at Risk", "Load balancing", "Neuroevolution", "Model Context Protocol", "AI agents"],
+    "sameAs": ["https://www.linkedin.com/in/i%C4%BCja-safronovs-eis", "https://github.com/ilyaeis"]
+}
+</script>
 
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-            "@sparkjsdev/spark": "https://cdn.jsdelivr.net/npm/@sparkjsdev/spark@2.4.0/dist/spark.module.min.js"
-        }
-    }
-    </script>
-    <!-- Start the imports at once, not one level after the other (each
-         level costs a round trip on a phone network). A module missing here
-         only loads later; keep the list in sync with the start-up imports. -->
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.core.min.js">
-    <link rel="modulepreload" href="js/orchestrator.js">
-    <link rel="modulepreload" href="js/world.js">
-    <link rel="modulepreload" href="js/projectViz.js">
-    <link rel="modulepreload" href="js/strokeFont.js">
-    <link rel="modulepreload" href="js/tunnel.js">
-    <link rel="modulepreload" href="js/attractors.js">
-    <link rel="modulepreload" href="js/camera.js">
-    <link rel="modulepreload" href="js/intro3d.js">
-    <link rel="modulepreload" href="js/portal.js">
-    <link rel="modulepreload" href="js/explore.js">
-    <link rel="modulepreload" href="js/input.js">
-    <link rel="modulepreload" href="js/walk.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/EffectComposer.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/RenderPass.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/UnrealBloomPass.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/Pass.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/ShaderPass.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/postprocessing/MaskPass.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/shaders/CopyShader.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/shaders/LuminosityHighPassShader.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/FontLoader.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/SVGLoader.js">
-    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/geometries/TextGeometry.js">
-    <!-- The intro's font and icons (intro3d.js loads them after the scripts run) -->
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/three@0.162.0/examples/fonts/helvetiker_regular.typeface.json" as="fetch" crossorigin>
-    <link rel="preload" href="svg/linkedin.svg" as="fetch" crossorigin>
-    <link rel="preload" href="svg/github.svg" as="fetch" crossorigin>
-    <!-- The flat's splat and Spark start downloading now (the site starts in the flat) -->
-    <script type="module" src="js/roomFetch.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<!-- No script, no viewer: the poster stays, and the drag hint goes. -->
+<noscript><style>.flat-status { display: none; }</style></noscript>
+<!-- js/flat.js (loaded only near the flat card) needs all three: Spark imports three/addons/. -->
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+    "@sparkjsdev/spark": "https://cdn.jsdelivr.net/npm/@sparkjsdev/spark@2.4.0/dist/spark.module.min.js"
+} }
+</script>
 </head>
 <body>
-    <canvas id="attractor" tabindex="-1"></canvas>
 
-    <!-- The visible experience is rendered in 3D; this mirror of its
-         content is for crawlers, link previews and screen readers (its links
-         are out of the Tab order: Tab reaches the visible controls) -->
-    <header class="visually-hidden">
-        <h1>Ilja Safronovs — R&amp;D Engineer / 3D reconstruction · Giraffe360 · Riga</h1>
-        <p>I find why 3D reconstructions look wrong, and I ship the fix.</p>
-        <p>This portfolio is an interactive
-           WebGL journey. It starts inside a 3D Gaussian splat of a real
-           apartment that I trained with gsplat from the public Zip-NeRF
-           "london" scene (Barron et al. 2023, CC BY 4.0): my name floats in
-           front of the bay windows while the flat loads. Tap or press Enter,
-           and you walk through the flat to four splat objects that stand for
-           my Giraffe360 R&amp;D work, in this order: the windows and mirrors
-           fix, meshes and viewers, the 3DGS pipeline, and benchmarking. The
-           walk to the first one starts by itself; each opens a short panel,
-           and you can collect it. "Next object" (or Enter) walks to the
-           next one; a tap on the way skips the walk; tap the floor to walk,
-           drag to look. A "depth" switch
-           shows the whole flat as depth (colour = distance from your eye).
-           Two more stops are reached by link only: the team task board (my
-           MCP server) and a bedroom drawn as depth. "Skip the flat" (or
-           "Continue" once all four are found) lets a glowing comet lift
-           through the cut ceiling, fly out over the window wall and warp
-           into a glowing tunnel where my projects run as live
-           visualizations (sorting algorithms, with the visualizer itself
-           behind a portal, and a graphing calculator; a NEAT network flies
-           past), warps out, dives back through the apartment roof and lands
-           at my contact details in the living room.</p>
-        <h2>Work</h2>
-        <ul>
-            <li>2025 — Giraffe360, R&amp;D Engineer in Riga: 3D reconstruction
-                (3DGS reconstruction from sparse panorama views, PyTorch and
-                CUDA) and AI automation (an experiment runner driven by AI
-                agents, an MCP server, a coding-agent harness)</li>
-        </ul>
-        <h2>R&amp;D at Giraffe360 (the apartment stops)</h2>
-        <ul>
-            <li>Windows, outdoor views and mirrors: fixed blurry windows, outdoor
-                views and mirrors in Giraffe360's 3D videos for PRO camera
-                projects; in production since June 2026. I found the root cause
-                and tested fixes in controlled training runs
-                (<a tabindex="-1" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post (before / after renders)</a>).
-                Built the toolkit behind the exterior orbital videos.</li>
-            <li>3DGS reconstruction pipeline: I work on our custom pipeline for 3D
-                Gaussian Splatting reconstruction from sparse panorama views, with
-                splat quality much improved over the year
-                (<a tabindex="-1" href="https://www.instagram.com/p/DZsNRB8o772/">Giraffe360 post (before / after renders)</a>);
-                my Gaussian pruning and relocation rules (influence-based, built on
-                Taming 3DGS, Mallick et al., 2024) are production defaults;
-                Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA
-                forward and backward passes (June 2026); led the pipeline
-                restructuring into one 3DGS monorepo; led a team of three engineers
-                on a new 3D reconstruction feature, now in production</li>
-            <li>Meshes and viewers: mesh generation from splats; a point-count
-                reduction stage; an embeddable Rust/wgpu splat viewer; a multi-view
-                comparison tool</li>
-            <li>Benchmarking and evaluation: validation tools and ground-truth
-                datasets; an agent-driven experiment runner for local GPUs;
-                diffusion-based artifact fixing (Difix, then NVIDIA Fixer) on shared GPUs</li>
-            <li>MCP server and ideas: an MCP server for the team task board
-                (Node.js); the looped drone video, my hackathon idea (awarded a
-                special mention), launched by Giraffe360 in Oct 2026
-                (<a tabindex="-1" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">reel</a>)</li>
-            <li>Depth: one bedroom of the flat is drawn as depth (colour =
-                distance from your eye, the public scene's own depth). Mentored one
-                junior engineer on a new depth method (mostly his work, on denser
-                LiDAR depth), now in production</li>
-        </ul>
-        <h2>Education</h2>
-        <ul>
-            <li>Riga State Classical Gymnasium (Rīgas Valsts klasiskā ģimnāzija), Programming and Mathematics track
-                Latvian state mathematics olympiads;
-                Small Mathematics University (Mazā matemātikas universitāte) at the University of Latvia</li>
-            <li>Nov 2024 – Jan 2025 — AI Talent Program (Ponder, Mākslīgā intelekta talantu
-                programma): selective program with training in C++, Python,
-                maths and AI development; theory of AI: its history, neural
-                network architectures (CNNs, transformers, GANs, VAEs),
-                computer vision and reinforcement learning; it led to the
-                Giraffe360 role</li>
-            <li>2024 — Riga Technical University, professional bachelor in Financial
-                Engineering, expected 2028</li>
-        </ul>
-        <h2>Project milestones</h2>
-        <ul>
-            <li>2025–26 — this site: a Gaussian splat of a real flat that I trained
-                with gsplat (public Zip-NeRF "london" scene; 730k splats, 350k on phones)</li>
-            <li>2026 — load-balancing-experiments (RTU networks project, Python)</li>
-            <li>2026 — flow, offline workout tracker (Dart, Flutter)</li>
-            <li>2026 — monte-carlo-finance, Monte Carlo Methods in Finance: option pricing, GARCH volatility, VaR backtests (Python)</li>
-            <li>2025 — projects_with_NEAT, neuroevolution agents that learn games (Python)</li>
-            <li>2023 — Offline Graphing Calculator, 4th place in the Riga Business
-                School (RTU) programming competition for secondary school
-                students, built with Iļja Volinskis</li>
-            <li>2022 — sort_visualization, sorting algorithm visualizer (C++, SFML)</li>
-        </ul>
-        <h2>Projects</h2>
-        <ul>
-            <li><a tabindex="-1" href="https://github.com/ilyaeis/load-balancing-experiments">load-balancing-experiments</a> — reproducible load-balancing experiments (Python)</li>
-            <li>flow — offline workout tracker (Dart, Flutter)</li>
-            <li><a tabindex="-1" href="https://github.com/ilyaeis/monte-carlo-finance">monte-carlo-finance</a> — Monte Carlo option pricing, GARCH volatility, VaR backtests, efficient frontier (Python)</li>
-            <li><a tabindex="-1" href="https://github.com/ilyaeis/crypto-quant-lab">crypto-quant-lab</a> — 59 backtested drift and volatility-targeting rules on 6 coins (Python)</li>
-            <li><a tabindex="-1" href="https://github.com/ilyaeis/projects_with_NEAT">projects_with_NEAT</a> — neuroevolution agents that learn games (Python)</li>
-            <li>Offline Graphing Calculator — offline graphing calculator; 4th place in the Riga Business School (RTU) programming competition (2023)</li>
-            <li><a tabindex="-1" href="https://github.com/ilyaeis/RTU_program_parser">RTU_program_parser</a> — timetable scraper (Python, Selenium, pandas)</li>
-            <li><a tabindex="-1" href="https://github.com/ilyaeis/Snake_plus_Maze_Path_algorithm_gen_2">Snake_plus_Maze_Path_algorithm_gen_2</a> — maze generation and path-finding (Python, Pygame)</li>
-            <li><a tabindex="-1" href="https://github.com/ilyaeis/bezier-curve-js">bezier-curve-js</a> — interactive Bezier-curve tool (JavaScript)</li>
-            <li><a tabindex="-1" href="https://github.com/ilyaeis/sort_visualization">sort_visualization</a> — sorting algorithm visualizer (C++, SFML);
-                <a tabindex="-1" href="apps/sorting/">run it in the browser</a> (the original algorithms compiled to WebAssembly)</li>
-        </ul>
-        <h2>Get in touch</h2>
-        <p>
-            <a tabindex="-1" href="resume.html">Resume</a>
-            <a tabindex="-1" href="https://github.com/ilyaeis">GitHub</a>
-            <a tabindex="-1" href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis">LinkedIn</a>
-            <a tabindex="-1" href="mailto:ilya.safronos@gmail.com">ilya.safronos@gmail.com</a>
-        </p>
-    </header>
+<main>
 
-    <nav class="site-nav" aria-label="Links">
-        <a class="nav-skip" href="?go=sorting" hidden>skip<span class="nav-long"> the walk</span></a>
-        <a href="resume.html">resume</a>
-        <a href="https://github.com/ilyaeis" rel="me">github</a>
-        <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me">linkedin</a>
-    </nav>
-    <noscript><p class="fallback">This page needs JavaScript/WebGL. <a href="resume.html">Open the plain resume.</a></p></noscript>
+<section class="hero">
+  <div class="who">
+    <p><strong>Ilja Safronovs</strong><br><span class="kicker">R&amp;D Engineer &middot; 3D Gaussian splatting &middot; Giraffe360, Riga</span></p>
+  </div>
+  <h1>I find why 3D reconstructions look wrong, and I&nbsp;ship the&nbsp;fix.</h1>
+  <p class="actions">
+    <a class="btn btn-primary" href="resume.pdf">Resume (PDF)</a>
+    <a class="btn" href="mailto:ilya.safronos@gmail.com">Email</a>
+  </p>
+</section>
 
-    <div class="tap-prompt">tap<span class="key-hint"> or press Enter</span></div>
-    <p class="intro-links" hidden><a class="intro-skip" href="?go=sorting">skip the walk</a> · <a href="resume.html">resume</a></p>
+<section class="sec" id="proof">
+  <h2>Proof</h2>
+  <div class="sec-body">
+  <ol class="proof">
+    <li>
+      <p>Fixed blurry windows, outdoor views and mirrors in Giraffe360's 3D videos for PRO camera projects. In production since June 2026.</p>
+      <div class="embed">
+        <div class="embed-box" data-src="https://www.instagram.com/p/DZsNRB8o772/embed/" data-title="Giraffe360 post: before and after" aria-label="Giraffe360 post: before and after (loads when near)"></div>
+        <a class="small-link" href="https://www.instagram.com/p/DZsNRB8o772/">Open on Instagram &nearr;</a>
+      </div>
+    </li>
+    <li>
+      <p>My Gaussian pruning and relocation rules, built on Taming 3DGS, are production defaults.</p>
+    </li>
+    <li>
+      <p>My hackathon idea, a looped drone flight per room, is now a shipped video product.</p>
+      <p class="detail"><a class="small-link" href="https://www.instagram.com/reel/Dd9ODBVIHhE/">Watch the reel &nearr;</a></p>
+    </li>
+  </ol>
+  </div>
+</section>
 
-    <p class="room-loading" role="status"></p>
-    <p class="room-credit" hidden>Apartment: public Zip-NeRF "london" scene (Barron et al. 2023), CC BY 4.0; trained by me with gsplat · 730k splats (350k on phones)</p>
+<section class="sec" id="leading">
+  <h2>Leading</h2>
+  <div class="sec-body">
+  <p class="lead">I mentored a junior engineer, then led a team of three on a new 3D reconstruction feature; both are in production. I want to grow toward leading a team.</p>
+  </div>
+</section>
 
-    <aside class="stop-panel" aria-live="polite" hidden>
-        <p class="stop-panel-dates"></p>
-        <h2 class="stop-panel-title"></h2>
-        <p class="stop-panel-subtitle"></p>
-        <ul class="stop-panel-items"></ul>
-        <a class="stop-panel-more" href="resume.html"></a>
-        <a class="stop-panel-portal" href="apps/sorting/" hidden></a>
-        <div class="stop-panel-actions">
-            <button type="button" class="walk-btn walk-explore" hidden>Explore the flat</button>
-        </div>
-    </aside>
-
-    <!-- A project app opened through a portal (js/dimension.js) -->
-    <div class="dimension" role="dialog" aria-modal="true" aria-labelledby="dimension-title" hidden>
-        <div class="dimension-bar">
-            <button class="dimension-back" type="button">&larr; back to the journey</button>
-            <span class="dimension-title" id="dimension-title"></span>
-            <a class="dimension-tab" href="apps/sorting/" target="_blank" rel="noopener">new tab</a>
-        </div>
-        <p class="dimension-status">loading&hellip;</p>
+<section class="sec sec-flat" id="flat">
+  <h2>Flat</h2>
+  <div class="sec-body">
+  <p class="display">I trained this flat. Drag it.</p>
+  <p class="lead-sm">Gaussian splatting with gsplat: 18 minutes on one RTX 3090.</p>
+  </div>
+  <figure class="flat">
+    <div class="flat-stage" id="flat-stage" aria-label="3D view of the flat. Drag to look around." role="img">
+      <img class="flat-poster" src="assets/room/poster.jpg" width="1200" height="675" alt="A living room with bay windows, rendered from the Gaussian splat" decoding="async" loading="lazy">
+      <p class="flat-status" aria-live="polite">Drag to look around</p>
     </div>
+    <figcaption>Zip-NeRF &ldquo;london&rdquo; scene (Barron et al., 2023, CC BY 4.0). Rendered with Spark.</figcaption>
+  </figure>
+</section>
 
-    <!-- Walk mode (js/walk.js): the landing's explore button, the HUD while walking,
-         and the bottom bar: the tour's task line (the site starts with it), then
-         Collect (any walk), Next object and Skip the flat (the tour) -->
-    <button type="button" class="walk-ui walk-btn walk-explore walk-explore-float" hidden>Explore the flat</button>
-    <div class="walk-ui walk-hud" hidden>
-        <button type="button" class="walk-btn walk-back" aria-label="Back to the journey">&larr; Back<span class="walk-back-long"> to the journey</span></button>
-        <span class="walk-count" aria-live="polite" title="objects collected"><span aria-hidden="true">0 / 4</span><span class="visually-hidden">0 of 4 objects collected</span></span>
-        <button type="button" class="walk-btn walk-depth" aria-pressed="false" title="Show the flat as depth: colour = distance from your eye">depth</button>
-    </div>
-    <div class="walk-ui walk-tour" hidden>
-        <div class="walk-task">
-            <p class="walk-task-title">Find my 4 R&amp;D objects</p>
-            <p class="walk-task-sub">This flat is a Gaussian splat; four objects in it are my work at Giraffe360.</p>
-        </div>
-        <p class="depth-legend" aria-hidden="true" hidden><span>0.5 m</span><i></i><span>6 m</span></p>
-        <div class="walk-actions">
-            <button type="button" class="walk-btn walk-collect" hidden>Collect</button>
-            <button type="button" class="walk-btn walk-next">Next object</button>
-            <button type="button" class="walk-btn walk-link walk-skip">Skip the flat &rarr;</button>
-        </div>
-    </div>
-    <p class="walk-hint" role="status" hidden>Tap<span class="walk-hint-keys"> or press Enter</span> to skip · drag to look</p>
-    <div class="walk-arrow" hidden aria-hidden="true"></div>
-    <div class="walk-fade" hidden aria-hidden="true"></div>
+<section class="sec" id="tools">
+  <h2>Tools</h2>
+  <div class="sec-body">
+  <p class="lead">AI tools my team uses: an agent-driven experiment runner and an MCP server for the task board.</p>
+  <p class="detail skills">PyTorch &middot; CUDA &middot; gsplat &middot; Python &middot; C++</p>
+  </div>
+</section>
 
-    <script type="module" src="js/stopPanel.js"></script>
-    <script type="module" src="js/room.js"></script>
-    <script type="module" src="js/depthRoom.js"></script>
-    <script type="module" src="js/dimension.js"></script>
-    <script type="module" src="js/agentApi.js"></script>
-    <script type="module" src="js/main.js"></script>
+<section class="sec" id="projects">
+  <h2>Projects</h2>
+  <div class="sec-body">
+  <ul class="plain projects">
+    <li><a href="apps/sorting/">Sorting visualizer</a> <span>16 algorithms, C++ to WebAssembly</span></li>
+    <li><a href="https://github.com/ilyaeis/monte-carlo-finance">monte-carlo-finance</a> <span>Option pricing, GARCH, VaR</span></li>
+    <li><a href="https://github.com/ilyaeis/load-balancing-experiments">load-balancing-experiments</a> <span>DNS, queueing, load balancing</span></li>
+    <li><a href="https://github.com/ilyaeis/projects_with_NEAT">projects_with_NEAT</a> <span>Neuroevolution: Flappy Bird, Pong</span></li>
+  </ul>
+  </div>
+</section>
+
+<section class="sec" id="contact">
+  <h2>Contact</h2>
+  <div class="sec-body">
+  <p class="contact-mail"><a href="mailto:ilya.safronos@gmail.com">ilya.safronos@gmail.com</a></p>
+  <p class="actions">
+    <a class="btn btn-primary" href="resume.pdf">Resume (PDF)</a>
+    <a class="btn" href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me">LinkedIn</a>
+    <a class="btn" href="https://github.com/ilyaeis" rel="me">GitHub</a>
+  </p>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p>With the R&amp;D team at Giraffe360. Methods build on Taming 3DGS (Mallick et al., 2024) and Analytic-Splatting (Liang et al., 2024).</p>
+</footer>
+
+<script type="module" src="js/page.js"></script>
 </body>
 </html>

@@ -12,44 +12,17 @@
 
 ## Portfolio
 
-- [Portfolio](https://ilyaeis.github.io/): an interactive WebGL journey. It starts inside a Gaussian splat of a real flat that I trained with gsplat (public Zip-NeRF "london" scene): the visitor walks it to four objects (my R&D work at Giraffe360: the windows and mirrors fix first), or skips the flat; then the comet warps into a tunnel of projects. It has no readable text for fetch tools. Use the resume files for the text.
+- [Portfolio](https://ilyaeis.github.io/): one page of plain text with one live 3D card. Each section has an anchor:
+  - [#proof](https://ilyaeis.github.io/#proof): three results in production (the windows and mirrors fix, the pruning and relocation rules, the looped drone video).
+  - [#leading](https://ilyaeis.github.io/#leading): mentoring, leading a team of three.
+  - [#flat](https://ilyaeis.github.io/#flat): a live Gaussian splat of a real flat that he trained with gsplat (public Zip-NeRF "london" scene, CC BY 4.0); drag to look around.
+  - [#tools](https://ilyaeis.github.io/#tools): AI tools for his team, and his stack.
+  - [#projects](https://ilyaeis.github.io/#projects): four side projects.
+  - [#contact](https://ilyaeis.github.io/#contact): email, resume PDF, LinkedIn, GitHub.
 
 ## Apps
 
-- [Sorting visualizer](https://ilyaeis.github.io/apps/sorting/): sort_visualization in the browser, 16 algorithms in five layouts. The algorithms are the original C++ compiled to WebAssembly; the drawing is a JavaScript port. In the journey it opens through a portal at the `sorting` stop.
-
-## Journey (WebGL page)
-
-Each link below opens the page and lands at that stop. Ids are stable names; the order is not part of the contract. The page starts in the flat (universe `rnd`), in walk mode after the intro; a link to an `rnd` object starts walk mode at that object, its panel open.
-
-Universe `rnd` (Giraffe360 R&D, inside a Gaussian splat of a real apartment). The walk (the tour) visits the first four in this order; "Next object" walks to the next one not collected yet:
-- [Windows, outdoor views and mirrors](https://ilyaeis.github.io/?go=windows-mirrors): fixed blurry windows, outdoor views and mirrors in 3D videos for PRO camera projects (in production since June 2026); the exterior orbital videos.
-- [Meshes and viewers](https://ilyaeis.github.io/?go=mesh-generation): mesh generation, point-count reduction, an embeddable Rust/wgpu splat viewer and a comparison tool.
-- [3DGS reconstruction pipeline](https://ilyaeis.github.io/?go=splatting): Our custom 3DGS reconstruction pipeline from sparse panorama views; his Gaussian pruning and relocation rules (production defaults, built on Taming 3DGS, Mallick et al., 2024), Analytic-Splatting, the pipeline restructuring. (`?go=giraffe360` lands here too.)
-- [Benchmarking and evaluation](https://ilyaeis.github.io/?go=benchmarking): validation tools with ground-truth datasets, an experiment runner, artifact fixing on shared GPUs.
-
-Two more `rnd` stops, out of the tour (reached only by these links or the agent API):
-- [MCP server and ideas](https://ilyaeis.github.io/?go=task-board-mcp): MCP server for the team task board; the looped drone video.
-- [Depth room](https://ilyaeis.github.io/?go=depth-room): a bedroom drawn as depth (colour = distance from your eye); mentoring a junior on a new depth method, now in production.
-
-Universe `projects` (the tunnel):
-- [Sorting visualizer](https://ilyaeis.github.io/?go=sorting): sorting algorithm visualizer (C++/SFML). Has a portal: the app at /apps/sorting/.
-- [Graphing calculator](https://ilyaeis.github.io/?go=calculator): offline graphing calculator; 4th place in a programming competition.
-- Seen between stops, not navigable: `neat` (NEAT neuroevolution, before the sorting visualizer).
-
-Education and the other projects are in the resume files above. Old links with ids that are gone (`traits`, `rvkg`, `ai-talent`, `rtu`, `flow`, `balancer`, `monte-carlo`) open the normal start of the page.
-
-Universe `contact`:
-- [Contact](https://ilyaeis.github.io/?go=contact): email, LinkedIn and GitHub.
-
-In a browser, `window.journey` (version 1) controls the page. All navigation calls return Promises.
-- `listUniverses()`, `listStops()`, `getStop(id)` (with the panel text), `current()`
-- `goTo(id, { mode: 'fly' | 'jump' })`, `next()`, `previous()`, `whenIdle()`, `resumeLinks()`
-- `goTo` returns `{ ok: true, stop, mode }` or `{ ok: false, reason }`. Reasons: `unknown-stop`, `not-navigable`, `travelling` (await `whenIdle()` and retry), `in-portal` (a project app is open; the visitor closes it).
-- The flat (universe `rnd`): `goTo(<object id>)` starts walk mode at that object (`mode: 'walk'`); while walking it is a guided walk there (the promise does not wait for the arrival). While walking, `next()` is "Next object" (the next tour object not collected yet), and once all four are found it leaves the flat for the tunnel; `goTo` to any other id leaves the flat too.
-- `listStops()` gives `app` (the standalone page) for stops with a portal. `current().phase` is `portal-in`, `dimension` or `portal-out` while an app opens, is open, or closes, and `explore` while the visitor walks in the flat.
-- `?go=<id>` lands at a stop at once. Add `&mode=fly` to arrive by flight (needs a real browser).
-- Browsers with WebMCP also expose the same as tools: `list_stops`, `get_current_stop`, `get_panel`, `go_to_stop`, `next_stop`, `previous_stop`, `get_resume_links`.
+- [Sorting visualizer](https://ilyaeis.github.io/apps/sorting/): sort_visualization in the browser, 16 algorithms in five layouts. The algorithms are the original C++ compiled to WebAssembly; the drawing is a JavaScript port.
 
 ## Optional
 

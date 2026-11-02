@@ -29,7 +29,7 @@
     <meta name="twitter:image" content="https://ilyaeis.github.io/assets/og-image.png?v=3">
 
     <!-- Dates are year-only where the month is unknown. They appear here, in the
-         JSON-LD, resume.md, resume.json and js/world.js. Add months in all of them. -->
+         JSON-LD, resume.md and resume.json. Add months in all of them. -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -90,7 +90,7 @@
 <body>
 <main>
     <div class="topbar">
-        <a class="back" href="./">← journey</a>
+        <a class="back" href="./">← portfolio</a>
         <div class="actions">
             <button type="button" id="toggle-all" aria-pressed="false">Expand all</button>
             <a class="button" id="pdf" href="resume.pdf">PDF</a>
@@ -213,8 +213,8 @@
         <h2>Projects</h2>
         <div class="items print-brief">
             <details id="portfolio-site" class="item">
-                <summary><span class="hl">Portfolio site: a walkable Gaussian splat of a real flat that I trained (gsplat, 730k splats).</span></summary>
-                <div class="why">I trained the public Zip-NeRF “london” scene (Barron et al., 2023, CC BY 4.0) with gsplat MCMC: 30k steps in about 18 min on one RTX 3090, 28.3 dB PSNR on held-out views. The web gets 730k splats, and phones get a 350k lite model. The visitor walks the flat to four objects that stand for my R&amp;D work, then a tunnel where two projects run as live visualizations. The page exposes a small agent API (window.journey, WebMCP tools) and llms.txt. <span class="meta">(2025–26, three.js, Spark, no build step)</span> <a href="./">This site ↗</a></div>
+                <summary><span class="hl">Portfolio site: a live Gaussian splat of a real flat that I trained (gsplat).</span></summary>
+                <div class="why">I trained the public Zip-NeRF “london” scene (Barron et al., 2023, CC BY 4.0) with gsplat MCMC: 30k steps in about 18 min on one RTX 3090, 28.3 dB PSNR on held-out views. The page is plain text with one live card: a 1 MB preview loads first, then a 350k-splat model, and the visitor drags to look around. Nothing 3D loads until the card is near. The site also has llms.txt. <span class="meta">(2025–26, three.js, Spark, no build step)</span> <a href="./">This site ↗</a></div>
             </details>
             <details class="item">
                 <summary><span class="hl">sort_visualization — 16 sorting algorithms in C++/SFML; runs in the browser (WebAssembly).</span></summary>
