@@ -1,6 +1,6 @@
 # Ilja Safronovs
 
-> R&D engineer at Giraffe360 in Riga, Latvia. Works on 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA). In production: a fix for blurry windows, outdoor views and mirrors in the 3D videos of PRO camera projects (since June 2026), his Gaussian pruning and relocation rules (the training defaults), the looped drone video and the exterior orbital videos. He mentored a junior engineer, then led three engineers on a new 3D reconstruction feature, now in production. He also built an experiment runner driven by an AI agent and an MCP server for the team task board. Studies Financial Engineering at Riga Technical University. resume.md below is the full text.
+> R&D engineer at Giraffe360 in Riga, Latvia. Works on 3D Gaussian splatting from sparse panoramas (PyTorch, CUDA). In production: a fix for blurry windows, outdoor views and mirrors in all Giraffe360 Gaussian splat videos since June 2026, his Gaussian pruning and relocation rules (the training defaults) and the looped drone video. He mentored a junior engineer, then led three engineers on a new 3D reconstruction feature, now in production. He also built an experiment runner driven by an AI agent and an MCP server for the team task board. Studies Financial Engineering at Riga Technical University. resume.md below is the full text.
 
 ## Resume
 

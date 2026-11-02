@@ -14,11 +14,11 @@ The design came from `~/Desktop/brain/reports/portfolio-site/design/` (`notes.md
 - `css/style.css` — the page style. Colour tokens on `:root` (`--bg #121110`, `--fg`, `--fg-2`, `--line`, `--bg-2`, `--accent #f2b85a` amber, from the lamps of the splat). One font: Inter from Google Fonts.
 - `js/page.js` — the only script the page loads. It inserts the Instagram embed and loads `js/flat.js` when each comes near the view.
 - `js/flat.js` — the flat viewer: three.js + Spark, drag to look round from a fixed spot by the sofa.
-- `resume.html` (+ `css/resume.css`) — the HTML resume. Closed `<details>` hold the extra detail. Its JSON-LD (`ProfilePage`) shares the Person `@id` with `index.html`.
+- `resume.html` (+ `css/resume.css`) — the HTML resume: one column, plain text, no photo. Its JSON-LD (`ProfilePage`) shares the Person `@id` with `index.html`.
 - `resume.md`, `resume.json` (JSON Resume), `resume.pdf`, `resume-dark.pdf` — machine and print copies of the resume.
 - `llms.txt` — index for agents: the resume files, the page anchors, the apps.
 - `apps/sorting/` — the sorting visualizer (C++ algorithms compiled to WebAssembly, JS drawing). Standalone; the page links it.
-- `assets/room/apartment-preview.sog` (1.1 MB, 80k splats), `apartment-lite.sog` (6.5 MB, 350k), `poster.jpg` (the card's poster, shot from the viewer). `assets/photo/headshot.jpg`, `headshot-alt.jpg` (resume only), `assets/og-image.png`, `favicon.ico`, `favicon-32.png`, `robots.txt`, `sitemap.xml`.
+- `assets/room/apartment-preview.sog` (1.1 MB, 80k splats), `apartment-lite.sog` (6.5 MB, 350k), `poster.jpg` (the card's poster, shot from the viewer). `assets/og-image.png`, `favicon.ico`, `favicon-32.png`, `robots.txt`, `sitemap.xml`.
 
 ## Keep the content in sync
 
@@ -28,10 +28,10 @@ The same facts appear in several places. When one changes, update all of them:
 - `llms.txt` (its summary paragraph and the anchor list).
 
 Rules:
-- The windows fix says "for PRO camera projects" (never "every").
+- The windows fix says "in all Giraffe360 Gaussian splat videos since June 2026" (say splat videos, never "every tour").
 - The page gives no splat count. The resume may name the 350k lite model.
 - Dates are year-only where the month is unknown. Add months in `resume.html`, its JSON-LD, `resume.md` and `resume.json`.
-- Regenerate both PDFs after any `resume.html` change: serve the site, then `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume.pdf "http://localhost:PORT/resume.html?expand=1"` and `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume-dark.pdf "http://localhost:PORT/resume.html?expand=1&print=dark"`. Each must stay 2 pages (`pdfinfo`). The resume page offers the PDF that matches the visitor's colour scheme; Ctrl+P keeps the white print style.
+- Regenerate both PDFs after any `resume.html` change: serve the site, then `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume.pdf "http://localhost:PORT/resume.html"` and `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume-dark.pdf "http://localhost:PORT/resume.html?print=dark"`. Each must stay 2 pages at most (`pdfinfo`). Ctrl+P keeps the white print style.
 
 ## Loading rules (the page must stay light)
 
