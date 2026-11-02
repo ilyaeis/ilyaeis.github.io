@@ -2,11 +2,10 @@
   "$schema": "https://raw.githubusercontent.com/jsonresume/jsonresume.org/master/packages/schema/schema.json",
   "basics": {
     "name": "Ilja Safronovs",
-    "label": "R&D engineer, 3D reconstruction · Giraffe360 · Riga, Latvia",
+    "label": "R&D engineer, 3D reconstruction. Giraffe360, Riga, Latvia.",
     "email": "ilya.safronos@gmail.com",
     "url": "https://ilyaeis.github.io/",
-    "image": "https://ilyaeis.github.io/assets/photo/headshot.jpg",
-    "summary": "I fix what looks wrong in 3D reconstructions. I work on 3D Gaussian splatting from sparse panoramas at Giraffe360 (PyTorch, CUDA). Most of my work: a reconstruction looks wrong, I find out why, then I test fixes in training runs until one is good enough for production. I mentored a junior engineer, then led three engineers on a new 3D reconstruction feature; both are in production. Next, I want to grow into leading a team.",
+    "summary": "I work on 3D Gaussian splatting at Giraffe360: training from sparse panoramas, in PyTorch and CUDA. Most of my work starts with a reconstruction that looks wrong. I find out why, then I test fixes in training runs until one is good enough for production. I mentored a junior engineer and led three engineers on a new 3D reconstruction feature. Next, I want to grow into leading a team.",
     "location": {
       "city": "Riga",
       "countryCode": "LV"
@@ -30,18 +29,19 @@
       "url": "https://www.giraffe360.com/",
       "location": "Riga",
       "startDate": "2025",
-      "summary": "Giraffe360 makes cameras and software for real-estate virtual tours.",
+      "summary": "Giraffe360 makes cameras and software for real-estate virtual tours. The R&D team builds the 3D reconstruction pipeline behind the 3D videos.",
       "highlights": [
-        "Fixed the blurry windows, outdoor views and mirrors in Giraffe360’s 3D videos (PRO camera projects). In production since June 2026. I found the cause, then tested fixes in controlled training runs until the haze, floaters and flicker were gone. The best setup became the default in June 2026. It builds on the team’s earlier window masks. Giraffe360 showed the result in a public post. (https://www.instagram.com/p/DZsNRB8o772/)",
-        "Our training defaults use my Gaussian pruning and relocation rules (built on Taming 3DGS). Jan–Jul 2026, in our sparse-panorama 3DGS pipeline: influence-based pruning and relocation, building on Taming 3DGS (Mallick et al., 2024) and the team’s influence tracking. It measures how much each Gaussian adds to the rendered images, then removes or moves the least useful ones. June 2026: Analytic-Splatting (Liang et al., 2024) in gsplat, with my CUDA forward and backward passes, used in a downsampling step. I also cut GPU idle time in training.",
-        "The looped drone video (one flight per room) started as my hackathon idea; it is a product now. I also built the exterior orbital videos (Oct 2026). Looped drone: a special mention at the Feb 2026 hackathon (3 of my ideas were recognised out of 51); I built its camera-path algorithm. Exterior orbital videos: I built the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline. For the drone, I restructured the video pipeline and agreed the look with designers. I also fixed the camera height in rooms on a half floor, for all video types. (https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/)",
-        "Led three engineers on a new 3D reconstruction feature, now in production (Oct 2026). I wrote most of the code, reviewed and merged the others’ work, and cut the release. Since September 2026 I also cut our 3D pipeline’s releases. Next, I want to grow into leading a team.",
-        "Mentored a junior engineer on a new depth method; it is now in production. Mostly his work, on denser LiDAR depth; our splat training has used it since October 2026. Over time, teammates came to me with their pipeline questions.",
-        "Built an experiment runner driven by an AI agent, an MCP server for the team task board, and a harness for coding agents. March 2026: an experiment runner, so every teammate can run and track training on a local GPU through an AI agent. June 2026: an MCP server (Node.js), so AI agents can read and write the team task board, with authentication; colleagues use it. In my own time: a harness for coding agents; a master session plans and checks the work, and worker sessions run in their own git worktrees (private repo).",
-        "Built an embeddable Rust/wgpu splat viewer and a comparison tool. A Rust/wgpu viewer (May 2026) that any app can embed and control, and a multi-view comparison tool (Jan 2026). The viewer also swaps and combines PLY scenes live, and renders point clouds. The comparison tool opens each reconstruction in its own window, with optional camera sync.",
-        "Prototypes: mirror reflections, meshes from splats, lighter splats. Working prototypes: correct reflections in mirrors (June 2026), mesh generation from splats, a stage that cuts the splat count for viewers (May 2026), and a fly-in video intro. Feb 2026: I made Difix and NVIDIA’s fixer run on the shared GPUs, so the team could evaluate them.",
-        "Team tooling: ground-truth validation for splat quality, and one 3DGS monorepo. July 2026: ground-truth datasets and validation tools, so every teammate can check splat quality against known ground truth. July 2026: I led the restructuring into one 3DGS monorepo, with a code-size check.",
-        "Jul–Oct 2025: a small LLM service that wrote tour narration. It used the OpenAI API and AWS S3."
+        "Windows, outdoor views and mirrors were blurry in our 3D videos. I found the cause and tested fixes in controlled training runs until the haze, floaters and flicker were gone. The fix builds on the team's earlier window masks. It has been the default for PRO camera projects since June 2026. Before and after: https://www.instagram.com/p/DZsNRB8o772/",
+        "Wrote the Gaussian pruning and relocation rules in our training defaults (Jan to Jul 2026). They build on Taming 3DGS (Mallick et al., 2024) and the team's influence tracking: each Gaussian is scored by how much it adds to the rendered images, and the least useful ones are removed or moved.",
+        "Implemented Analytic-Splatting (Liang et al., 2024) in gsplat, with CUDA forward and backward passes. We use it in a downsampling step (June 2026). I also cut GPU idle time in training.",
+        "Looped drone video, one flight per room. It was my idea at the Feb 2026 hackathon, where 3 of my ideas were recognised out of 51. I wrote the camera path, restructured the video pipeline and agreed the look with the designers. It is a product now: https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/",
+        "Exterior orbital videos (Oct 2026): the toolkit that orients, selects and crops the outdoor scene, and the per-frame video pipeline. Earlier I fixed the camera height in rooms on a half floor, for all video types.",
+        "Led three engineers on a new 3D reconstruction feature (Oct 2026). I wrote most of the code, reviewed and merged their work, and cut the release. It runs in production. Since September 2026 I cut the releases of our 3D pipeline.",
+        "Mentored a junior engineer on a new depth method (denser LiDAR depth). The work is mostly his. Our splat training has used it since October 2026.",
+        "Tools the team uses: an experiment runner, so anyone can start and track a training on a local GPU through an AI agent (March 2026); an MCP server in Node.js for the team task board, with authentication (June 2026); ground-truth datasets and checks for splat quality (July 2026). I led the move of our 3DGS code into one monorepo, with a code-size check (July 2026).",
+        "A Rust/wgpu splat viewer that other apps can embed and control. It swaps and combines PLY scenes live and renders point clouds (May 2026). A side-by-side comparison tool with optional camera sync (Jan 2026).",
+        "Prototypes: correct reflections in mirrors, meshes from splats, a stage that cuts the splat count for viewers, a fly-in video intro. I also got Difix and NVIDIA's fixer running on our GPUs so the team could evaluate them (Feb 2026).",
+        "Jul to Oct 2025: a small service that wrote tour narration with the OpenAI API and AWS S3."
       ]
     }
   ],
@@ -56,13 +56,13 @@
         "Probability and statistics",
         "Stochastic analysis",
         "Monte Carlo methods",
-        "Data structures and algorithms",
-        "Databases/SQL"
+        "Algorithms",
+        "Databases"
       ]
     },
     {
       "institution": "AI Talent Program (Ponder)",
-      "area": "C++, Python, maths and AI with industry mentors",
+      "area": "C++, Python, maths and AI, with mentors from industry. It led to the Giraffe360 job.",
       "studyType": "Program",
       "startDate": "2024-11",
       "endDate": "2025-01",
@@ -70,7 +70,7 @@
     },
     {
       "institution": "Riga State Classical Gymnasium",
-      "area": "Programming and Mathematics track",
+      "area": "Programming and mathematics track",
       "courses": [
         "State mathematics olympiads",
         "Small Mathematics University (University of Latvia)"
@@ -79,192 +79,111 @@
   ],
   "awards": [
     {
-      "title": "4th place, Riga Business School (RTU) programming competition for secondary school students (27 entries)",
+      "title": "4th of 27 entries, Riga Business School programming competition for school students",
       "date": "2023-06-10",
       "awarder": "Riga Business School",
-      "summary": "Offline Graphing Calculator, built with Iļja Volinskis."
+      "summary": "Offline Graphing Calculator, with Iļja Volinskis."
     }
   ],
   "projects": [
     {
       "name": "Portfolio site",
       "startDate": "2025",
-      "description": "A live Gaussian splat of a real flat that I trained. I trained the public Zip-NeRF “london” scene (Barron et al., 2023, CC BY 4.0) with gsplat MCMC: 30k steps in about 18 min on one RTX 3090, 28.3 dB PSNR on held-out views. The page is plain text with one live card: a 1 MB preview loads first, then a 350k-splat model, and the visitor drags to look around. Nothing 3D loads until the card is near. The site also has llms.txt. No build step.",
+      "endDate": "2026",
+      "description": "A splat of a real flat that I trained with gsplat MCMC on the public Zip-NeRF \"london\" scene (Barron et al., 2023, CC BY 4.0). 30k steps, about 18 minutes on one RTX 3090, 28.3 dB PSNR on held-out views. A 1 MB preview loads first, then a 350k-splat model. three.js and Spark, no build step.",
       "url": "https://ilyaeis.github.io/",
-      "keywords": [
-        "Gaussian splatting",
-        "gsplat",
-        "three.js",
-        "Spark",
-        "WebGL"
-      ]
+      "keywords": ["Gaussian splatting", "gsplat", "three.js", "Spark", "WebGL"]
     },
     {
       "name": "sort_visualization",
       "startDate": "2022",
-      "description": "16 sorting algorithms animated as columns, points, circles, spirals and pyramids, with shuffle patterns and speed control. Runs in the browser: the original algorithms, compiled to WebAssembly (https://ilyaeis.github.io/apps/sorting/).",
+      "description": "16 sorting algorithms animated as columns, points, circles, spirals and pyramids. The same C++ runs in the browser, compiled to WebAssembly (https://ilyaeis.github.io/apps/sorting/).",
       "url": "https://github.com/ilyaeis/sort_visualization",
-      "keywords": [
-        "C++",
-        "SFML",
-        "WebAssembly"
-      ]
-    },
-    {
-      "name": "Offline Graphing Calculator",
-      "startDate": "2023",
-      "description": "Graphing calculator that works offline; 4th place of 27 entries in the Riga Business School (RTU) programming competition. With Iļja Volinskis."
+      "keywords": ["C++", "SFML", "WebAssembly"]
     },
     {
       "name": "monte-carlo-finance",
       "startDate": "2026",
-      "description": "Monte Carlo option pricing with variance reduction (up to 1,900x), GARCH volatility, VaR backtests with the Kupiec test, efficient frontier from 30,000 portfolios and CAPM.",
+      "description": "Option pricing with variance reduction, GARCH volatility, VaR backtests with the Kupiec test, efficient frontier, CAPM. From RTU coursework.",
       "url": "https://github.com/ilyaeis/monte-carlo-finance",
-      "keywords": [
-        "Python",
-        "NumPy",
-        "SciPy",
-        "pandas"
-      ]
+      "keywords": ["Python", "NumPy", "SciPy", "pandas"]
     },
     {
       "name": "load-balancing-experiments",
       "startDate": "2026",
-      "description": "Seven reproducible experiments for an RTU networks project: DNS round robin and anycast measured from Riga, a queueing simulation of load-balancing policies, consistent / rendezvous / Maglev hashing, a mini load balancer with health checks, packet capture.",
+      "description": "DNS round robin and anycast measured from Riga, a queueing simulation of balancing policies, consistent, rendezvous and Maglev hashing, a small load balancer with health checks, packet capture. An RTU networks project.",
       "url": "https://github.com/ilyaeis/load-balancing-experiments",
-      "keywords": [
-        "Python"
-      ]
-    },
-    {
-      "name": "flow",
-      "startDate": "2026",
-      "description": "Offline workout tracker (private). Log sets with live timers; analysis of volume, load (ACWR), records and body measurements; custom formulas, JSON/CSV/PDF export, CI with golden-image tests.",
-      "keywords": [
-        "Dart",
-        "Flutter"
-      ]
+      "keywords": ["Python"]
     },
     {
       "name": "crypto-quant-lab",
       "startDate": "2026",
-      "description": "59 backtested versions of drift and volatility-targeting rules on 6 coins with a 1% fee. Source recovered from Python 3.12 bytecode; all 153 functions verified.",
+      "description": "Backtests of drift and volatility-targeting rules on 6 coins with a 1% fee.",
       "url": "https://github.com/ilyaeis/crypto-quant-lab",
-      "keywords": [
-        "Python"
-      ]
+      "keywords": ["Python"]
+    },
+    {
+      "name": "flow",
+      "startDate": "2026",
+      "description": "Offline workout tracker (private). Live rest timers, volume and load (ACWR) analysis, JSON/CSV/PDF export, CI with golden-image tests.",
+      "keywords": ["Dart", "Flutter"]
+    },
+    {
+      "name": "Coding-agent harness",
+      "description": "Private, own time. A master session plans and checks the work, worker sessions run in their own git worktrees."
     },
     {
       "name": "projects_with_NEAT",
       "startDate": "2025",
-      "description": "Neuroevolution (NEAT) agents that learn Flappy Bird and Pong; a documented attempt at multi-snake survival.",
+      "description": "NEAT agents that learn Flappy Bird and Pong.",
       "url": "https://github.com/ilyaeis/projects_with_NEAT",
-      "keywords": [
-        "Python"
-      ]
+      "keywords": ["Python"]
     },
     {
       "name": "RTU_program_parser",
       "startDate": "2025",
-      "description": "Scrapes the RTU timetable and finds extra lectures that fit a student's own schedule; exports to Excel. With Aleksejs Peņkovs.",
+      "description": "Scrapes the RTU timetable and finds extra lectures that fit your schedule. With Aleksejs Peņkovs.",
       "url": "https://github.com/ilyaeis/RTU_program_parser",
-      "keywords": [
-        "Python",
-        "Selenium",
-        "pandas"
-      ]
+      "keywords": ["Python", "Selenium", "pandas"]
     },
     {
-      "name": "Snake + maze generator",
+      "name": "Offline Graphing Calculator",
+      "startDate": "2023",
+      "description": "4th of 27 entries in the Riga Business School programming competition for school students. With Iļja Volinskis."
+    },
+    {
+      "name": "Snake with a maze generator",
       "startDate": "2024",
-      "endDate": "2025",
-      "description": "DFS maze generation, dynamic terrain (lava, forest, rivers), BFS path-finding.",
+      "description": "Maze generation, terrain and path-finding in Pygame.",
       "url": "https://github.com/ilyaeis/Snake_plus_Maze_Path_algorithm_gen_2",
-      "keywords": [
-        "Python",
-        "Pygame"
-      ]
+      "keywords": ["Python", "Pygame"]
     },
     {
       "name": "bezier-curve-js",
       "startDate": "2023",
-      "description": "Interactive Bezier-curve drawing tool.",
+      "description": "Bezier-curve drawing tool.",
       "url": "https://github.com/ilyaeis/bezier-curve-js",
-      "keywords": [
-        "JavaScript"
-      ]
+      "keywords": ["JavaScript"]
     }
   ],
   "skills": [
     {
-      "name": "3D & vision",
-      "keywords": [
-        "3D Gaussian splatting (gsplat, CUDA kernels)",
-        "3D reconstruction from sparse views",
-        "computer vision",
-        "depth densification",
-        "mesh generation",
-        "3D camera paths",
-        "splat viewers (Rust/wgpu, three.js/Spark)",
-        "PyTorch"
-      ]
-    },
-    {
-      "name": "Research",
-      "keywords": [
-        "implementing papers",
-        "controlled experiments",
-        "ground-truth evaluation"
-      ]
-    },
-    {
-      "name": "Languages",
-      "keywords": [
-        "Python",
-        "C++",
-        "Dart/Flutter",
-        "JavaScript",
-        "Java",
-        "SQL"
-      ]
-    },
-    {
-      "name": "AI automation",
-      "keywords": [
-        "LLM APIs (OpenAI)",
-        "MCP servers (Node.js)",
-        "experiment runners for agents",
-        "coding-agent harnesses"
-      ]
+      "name": "Programming",
+      "keywords": ["Python", "C++", "CUDA", "PyTorch", "gsplat", "Rust/wgpu", "Dart/Flutter", "JavaScript/three.js", "Java", "SQL"]
     },
     {
       "name": "Tools",
-      "keywords": [
-        "Linux",
-        "Docker",
-        "Git/GitLab CI",
-        "AWS S3",
-        "three.js/WebGL",
-        "Pygame",
-        "Selenium",
-        "pandas"
-      ]
+      "keywords": ["Linux", "Docker", "Git and GitLab CI", "AWS S3", "Node.js (MCP servers)", "OpenAI API"]
     }
   ],
   "languages": [
-    {
-      "language": "Latvian"
-    },
-    {
-      "language": "English"
-    },
-    {
-      "language": "Russian"
-    }
+    { "language": "Latvian" },
+    { "language": "English" },
+    { "language": "Russian" }
   ],
   "meta": {
     "canonical": "https://ilyaeis.github.io/resume.html",
-    "version": "v1.0.0",
+    "version": "v1.1.0",
     "lastModified": "2026-11-02"
   }
 }
