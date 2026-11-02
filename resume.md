@@ -38,13 +38,13 @@ State mathematics olympiads. Small Mathematics University (University of Latvia)
 
 ## Projects
 
-- [**Portfolio site**](https://ilyaeis.github.io/) (2025 to 2026): a splat of a real flat, trained with gsplat MCMC on the public Zip-NeRF "london" scene (Barron et al., 2023, CC BY 4.0). 30k steps, about 18 minutes on one RTX 3090, 28.3 dB PSNR on held-out views. A 1 MB preview loads first, then the 350k-splat model. three.js and Spark, no build step.
+- **Portfolio site** (2026): [ilyaeis.github.io](https://ilyaeis.github.io/#flat). A live Gaussian splat of a flat that I trained with gsplat on public Zip-NeRF photos, 18 minutes on one RTX 3090.
 - [**sort_visualization**](https://github.com/ilyaeis/sort_visualization) (2022, C++/SFML): 16 sorting algorithms animated as columns, points, circles, spirals and pyramids. The same C++ runs [in the browser](https://ilyaeis.github.io/apps/sorting/), compiled to WebAssembly.
 - [**monte-carlo-finance**](https://github.com/ilyaeis/monte-carlo-finance) (2026, Python): option pricing with variance reduction, GARCH volatility, VaR backtests with the Kupiec test, efficient frontier, CAPM. From RTU coursework.
 - [**load-balancing-experiments**](https://github.com/ilyaeis/load-balancing-experiments) (2026, Python), for an RTU networks course: DNS round robin and anycast measured from Riga, a queueing simulation of balancing policies, consistent, rendezvous and Maglev hashing, a small load balancer with health checks, packet capture.
 - [**crypto-quant-lab**](https://github.com/ilyaeis/crypto-quant-lab) (2026, Python): backtests of drift and volatility-targeting rules on 6 coins with a 1% fee.
 - **flow** (2026, Dart/Flutter, private): offline workout tracker. Live rest timers, volume and load (ACWR) analysis, JSON/CSV/PDF export, CI with golden-image tests.
-- **Coding-agent harness** (private, own time): one master session plans and checks the work; workers run in their own git worktrees.
+- [**Coding-agent harness**](https://github.com/ilyaeis/claude-harness) (own time): one master session plans and checks the work; workers run in their own git worktrees.
 - [**projects_with_NEAT**](https://github.com/ilyaeis/projects_with_NEAT) (2025, Python): NEAT agents that learn Flappy Bird and Pong.
 - [**RTU_program_parser**](https://github.com/ilyaeis/RTU_program_parser) (2025, Python, with Aleksejs Peņkovs): scrapes the RTU timetable and finds extra lectures that fit your schedule.
 - **Offline Graphing Calculator** (2023, with Iļja Volinskis): 4th of 27 entries in the Riga Business School programming competition for school students.

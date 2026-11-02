@@ -89,10 +89,9 @@
   "projects": [
     {
       "name": "Portfolio site",
-      "startDate": "2025",
-      "endDate": "2026",
-      "description": "A splat of a real flat, trained with gsplat MCMC on the public Zip-NeRF \"london\" scene (Barron et al., 2023, CC BY 4.0). 30k steps, about 18 minutes on one RTX 3090, 28.3 dB PSNR on held-out views. A 1 MB preview loads first, then the 350k-splat model. three.js and Spark, no build step.",
-      "url": "https://ilyaeis.github.io/",
+      "startDate": "2026",
+      "description": "ilyaeis.github.io. A live Gaussian splat of a flat that I trained with gsplat on public Zip-NeRF photos, 18 minutes on one RTX 3090.",
+      "url": "https://ilyaeis.github.io/#flat",
       "keywords": ["Gaussian splatting", "gsplat", "three.js", "Spark", "WebGL"]
     },
     {
@@ -131,7 +130,8 @@
     },
     {
       "name": "Coding-agent harness",
-      "description": "Private, own time. One master session plans and checks the work; workers run in their own git worktrees."
+      "description": "Own time. One master session plans and checks the work; workers run in their own git worktrees.",
+      "url": "https://github.com/ilyaeis/claude-harness"
     },
     {
       "name": "projects_with_NEAT",
