@@ -28,7 +28,7 @@ The same facts appear in several places. When one changes, update all of them:
 - `llms.txt` (its summary paragraph and the anchor list).
 
 Rules:
-- The windows fix says "for PRO camera projects" (never "every").
+- The windows fix says "in all Giraffe360 Gaussian splat videos since June 2026" (say splat videos, never "every tour").
 - The page gives no splat count. The resume may name the 350k lite model.
 - Dates are year-only where the month is unknown. Add months in `resume.html`, its JSON-LD, `resume.md` and `resume.json`.
 - Regenerate both PDFs after any `resume.html` change: serve the site, then `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume.pdf "http://localhost:PORT/resume.html"` and `google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=resume-dark.pdf "http://localhost:PORT/resume.html?print=dark"`. Each must stay 2 pages at most (`pdfinfo`). Ctrl+P keeps the white print style.
