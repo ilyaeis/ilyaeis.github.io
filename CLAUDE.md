@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Personal portfolio site (GitHub Pages, `ilyaeis.github.io`). The home page is one column of plain text that sells Ilja as an R&D engineer in 3D Gaussian splatting. Order: name and role line, the claim (h1), Resume (PDF) and Email, Work (four items: three results and the mentoring/leading line), the flat card (a live Gaussian splat of a flat he trained: the only image and the only 3D on the page), Tools, four side projects, Contact, a credits line. Dark theme only. No framework, no build step, no tests. three.js (0.180.0) and Spark (`@sparkjsdev/spark` 2.4.0, the splat renderer) load from a CDN through the import map in `index.html`, and only when the flat card is near.
+Personal portfolio site (GitHub Pages, `ilyaeis.github.io`). The home page is one column of plain text that sells Ilja as an R&D engineer in 3D Gaussian splatting. Order: name and role line, the claim (h1), Resume (PDF) and Email, Work (four items: three results and the mentoring/leading line), the flat card (a live Gaussian splat of a flat he trained: the only image and the only 3D on the page), Tools, five side projects, Contact, a credits line. Dark theme only. No framework, no build step, no tests. three.js (0.180.0) and Spark (`@sparkjsdev/spark` 2.4.0, the splat renderer) load from a CDN through the import map in `index.html`, and only when the flat card is near.
 
 The design came from `~/Desktop/brain/reports/portfolio-site/design/` (`notes.md`: design rules and decisions; `proto/`: the approved prototype).
 

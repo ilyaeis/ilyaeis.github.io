@@ -16,7 +16,7 @@
   - [#work](https://ilyaeis.github.io/#work): the windows and mirrors fix, the pruning and relocation rules, the looped drone video, mentoring and leading three engineers.
   - [#flat](https://ilyaeis.github.io/#flat): a Gaussian splat of a flat he trained with gsplat (the public Zip-NeRF "london" scene, CC BY 4.0); drag to look around.
   - [#tools](https://ilyaeis.github.io/#tools): the two tools his team uses, and his stack.
-  - [#projects](https://ilyaeis.github.io/#projects): four side projects.
+  - [#projects](https://ilyaeis.github.io/#projects): five side projects.
   - [#contact](https://ilyaeis.github.io/#contact): email, resume PDF, LinkedIn, GitHub.
 
 ## Apps
