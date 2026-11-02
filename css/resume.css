@@ -101,6 +101,10 @@ h2 {
     .head .dates { white-space: nowrap; }
 }
 
+/* Body text is 0.9 of the base size; <strong> keeps the base size. */
+.summary, li, .note, .line { font-size: 0.9em; }
+.summary strong, li strong, .note strong, .line strong { font-size: calc(1em / 0.9); font-weight: 600; }
+
 .note { color: var(--fg-2); margin-top: 2px; }
 .line { margin-top: 2px; }
 
