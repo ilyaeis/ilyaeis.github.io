@@ -97,7 +97,7 @@
         <p class="contact">
             <a href="mailto:ilya.safronos@gmail.com">ilya.safronos@gmail.com</a>
             <a href="https://github.com/ilyaeis" rel="me">github.com/ilyaeis</a>
-            <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me">linkedin.com/in/i%C4%BCja-safronovs-eis</a>
+            <a href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me">linkedin.com/in/iļja-safronovs-eis</a>
             <span class="print">ilyaeis.github.io</span>
         </p>
         <p class="summary">I work on 3D Gaussian splatting at Giraffe360: a pipeline that turns sparse 360° panoramas and LiDAR scans into splats, in PyTorch and CUDA. Most of my work starts with a reconstruction that looks wrong. <strong>I find the cause and fix it in our training code.</strong> I pick each fix in controlled training runs against the old default. Two papers went from PDF to my code: Taming 3DGS in PyTorch and Analytic-Splatting in CUDA. I mentored a junior engineer and led three engineers on a new 3D reconstruction feature. <strong>Next, I want to grow into leading a team.</strong></p>
@@ -110,7 +110,7 @@
             <p class="note">Giraffe360 makes cameras and software for real-estate virtual tours. I am in the R&amp;D team, on the 3D reconstruction pipeline: camera poses from structure from motion and bundle adjustment (COLMAP), Gaussian splat training with gsplat, and the camera paths of the videos.</p>
             <ul>
                 <li><strong>Blurry windows, outdoor views and mirrors in our 3D videos.</strong> I found the cause and tested fixes in training runs until the haze and floaters were gone. Builds on the team's earlier window masks. <strong>Default in all Giraffe360 Gaussian splat videos since June 2026.</strong> Before and after: <a href="https://www.instagram.com/p/DZsNRB8o772/">instagram.com/p/DZsNRB8o772</a></li>
-                <li><strong>Our training defaults use my Gaussian pruning and relocation rules</strong> (Jan to Jul 2026), inside an MCMC training strategy. They build on Taming 3DGS (Mallick et al., 2024), which I had implemented from the paper, and on the team's influence tracking: a Gaussian that adds little to the renders gets pruned or relocated. Together, the Jul 2026 default set (my relocation rule with a new optimizer and a depth mask) trains 13 to 16 % fewer Gaussians at equal or better quality.</li>
+                <li><strong>Our training defaults use my Gaussian pruning and relocation rules</strong> (Jan to Jul 2026), inside an MCMC training strategy. They build on Taming 3DGS (Mallick et al., 2024), which I had implemented from the paper, and on the team's influence tracking: a Gaussian that adds little to the renders gets pruned or relocated. Together, the Jul 2026 default set, which includes my relocation rule, trains 13 to 16 % fewer Gaussians at equal or better quality.</li>
                 <li><strong>Implemented Analytic-Splatting (Liang et al., 2024) in gsplat</strong>: CUDA forward and backward kernels, written from the paper. We use it for downsampling.</li>
                 <li>Made training faster: 8.6 % on an RTX 3090 at the same quality, by dropping a per-step opacity cull; on one large scene a step went from 117.6 to 68.1 ms (42 % less) with PSNR unchanged.</li>
                 <li><strong>Mentored a junior engineer on a new depth method</strong> (denser LiDAR depth). Mostly his work. Our splat training has used it as its depth prior since October 2026.</li>
