@@ -82,7 +82,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
-    <link rel="stylesheet" href="css/resume.css">
+    <link rel="stylesheet" href="css/resume.css?v=2">
     <script type="importmap">
     { "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js",
@@ -103,7 +103,7 @@
             <div class="me-stage" id="me-stage" role="img" aria-label="Ilja's head as a 3D Gaussian splat. Drag to turn it.">
                 <img src="assets/head/poster.webp" alt="" width="160" height="160" decoding="async" fetchpriority="low">
             </div>
-            <figcaption>Me, as a Gaussian splat. Drag to turn.</figcaption>
+            <figcaption>Me, as a Gaussian splat.<span class="me-hint"></span></figcaption>
         </figure>
         <h1>Ilja Safronovs</h1>
         <p class="role">R&amp;D engineer, 3D reconstruction. Giraffe360, Riga, Latvia.</p>
@@ -176,21 +176,7 @@
 <script>
     // ?print=dark: dark print palette, used to build resume-dark.pdf.
     if (/[?&]print=dark/.test(location.search)) document.documentElement.classList.add('print-dark');
-
-    // The head: no three.js and no splat bytes until after load, when the
-    // browser is idle and the stage is in view (js/head.js).
-    const meStage = document.getElementById('me-stage');
-    if (meStage && window.WebGLRenderingContext) addEventListener('load', () => {
-        (window.requestIdleCallback || setTimeout)(() => {
-            const io = new IntersectionObserver(entries => {
-                if (!entries.some(e => e.isIntersecting)) return;
-                io.disconnect();
-                import('./js/head.js').then(m => m.mountHead(meStage))
-                    .catch(err => console.error('head: load failed', err));
-            });
-            io.observe(meStage);
-        });
-    });
 </script>
+<script type="module" src="js/page.js?v=2"></script>
 </body>
 </html>

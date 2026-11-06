@@ -43,21 +43,25 @@ for (const box of document.querySelectorAll('.embed-box[data-src]')) {
     else addEventListener('load', () => io.observe(box), { once: true });
 }
 
-// The head: after load, when idle and in view (poster until then).
-// headDone settles when its splat is in, so the flat never loads at the same time.
+// The head: after load, when idle (or 1.5 s at most) and in view; the poster
+// until then. headDone settles when its splat is in, so the flat never loads
+// at the same time. The caption hint says what state the head is in.
 let headDone = Promise.resolve();
 const me = document.getElementById('me-stage');
+const hint = t => { const h = document.querySelector('.me-hint'); if (h) h.textContent = t; };
 if (me && window.WebGLRenderingContext) {
     let release = () => {};
     headDone = new Promise(r => { release = r; });
     const io = new IntersectionObserver(entries => {
         if (!entries.some(e => e.isIntersecting)) { release(); return; }   // scrolled past: do not hold the flat
         io.disconnect();
-        import('./head.js').then(m => m.mountHead(me))
-            .catch(err => console.error('head: load failed', err))
+        hint(' Loading 3D…');
+        import('./head.js').then(m => m.mountHead(me, { onLive: () => hint(' Drag to turn.') }))
+            .catch(err => { hint(''); console.error('head: load failed', err); })
             .finally(release);
     });
-    const go = () => (window.requestIdleCallback || setTimeout)(() => io.observe(me));
+    const watch = () => io.observe(me);
+    const go = () => window.requestIdleCallback ? requestIdleCallback(watch, { timeout: 1500 }) : setTimeout(watch, 100);
     if (document.readyState === 'complete') go();
     else addEventListener('load', go, { once: true });
 }

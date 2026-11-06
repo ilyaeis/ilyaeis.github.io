@@ -39,17 +39,19 @@ main { max-width: var(--wide); margin: 0 auto; padding: 0 var(--gutter); }
 .kicker { color: var(--fg-2); font-weight: 500; }
 h1 { font-size: clamp(2.375rem, 3.2vw + 1.4rem, 4.5rem); line-height: 1.04; letter-spacing: -0.03em;
   font-weight: 600; margin: 0 0 8px; max-width: 16ch; text-wrap: balance; }
-/* the head (js/head.js over a poster still), floats right of the hero text */
-.me { float: right; width: 120px; margin: 0 0 16px 16px; }
-@media (min-width: 700px) { .me { width: 220px; margin-left: 32px; } }
-.me-stage { position: relative; aspect-ratio: 1; background: var(--bg); border-radius: 8px; overflow: hidden;
-  cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+/* the head (js/head.js over a poster still), floats right of the hero text.
+   A soft oval mask fades the shoulders, so no splat edge meets the box edge. */
+.me { float: right; width: 120px; margin: 0 0 16px 16px; text-align: center; }
+@media (min-width: 700px) { .me { width: clamp(140px, 20vw, 220px); margin-left: 32px; } }
+.me-stage { position: relative; aspect-ratio: 1; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  -webkit-mask-image: radial-gradient(ellipse 50% 56% at 50% 42%, #000 72%, transparent 100%); mask-image: radial-gradient(ellipse 50% 56% at 50% 42%, #000 72%, transparent 100%); }
+.me-stage.live { cursor: grab; }
 .me-stage.dragging { cursor: grabbing; }
 .me-stage img, .me-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; transition: opacity 0.4s; }
 .me-stage canvas { opacity: 0; }
 .me-stage.live canvas { opacity: 1; }
 .me-stage.live img { opacity: 0; }
-.me figcaption { margin-top: 6px; font-size: 0.75rem; line-height: 1.35; color: var(--fg-2); }
+.me figcaption { margin-top: 4px; font-size: 0.75rem; line-height: 1.35; color: var(--fg-2); }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 32px; }
 
 .btn { display: inline-flex; align-items: center; min-height: 48px; padding: 0 18px; border-radius: 4px;

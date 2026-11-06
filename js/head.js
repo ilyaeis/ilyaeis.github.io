@@ -16,7 +16,7 @@ const DAMP = 10;                         // 1/s
 const DPR_MAX = 2;
 const LIVE_AFTER = 10;                   // frames before the canvas replaces the poster
 
-export async function mountHead(stage) {
+export async function mountHead(stage, { onLive } = {}) {
     const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, DPR_MAX));
     renderer.setClearColor(0x000000, 0);
@@ -44,7 +44,7 @@ export async function mountHead(stage) {
     // drag (vertical touch scroll stays with the page: touch-action: pan-y)
     let drag = null;
     stage.addEventListener('pointerdown', e => {
-        if (e.button !== 0) return;
+        if (e.button !== 0 || !stage.classList.contains('live')) return;
         drag = { x: e.clientX, y: e.clientY };
         spin = false;
         stage.setPointerCapture(e.pointerId);
@@ -79,7 +79,7 @@ export async function mountHead(stage) {
         pitch += (tPitch - pitch) * k;
         aim();
         renderer.render(scene, camera);
-        if (++frames === LIVE_AFTER) stage.classList.add('live');
+        if (++frames === LIVE_AFTER) { stage.classList.add('live'); onLive?.(); }
     };
     requestAnimationFrame(tick);
 }

@@ -83,25 +83,25 @@ h1 {
 .summary { margin-top: 24px; max-width: 40rem; }
 
 /* The head: a splat viewer (js/head.js) over a poster still. It floats
-   right of the name; text wraps round it. Hidden in print. */
+   right of the name; text wraps round it. Hidden in print. A soft oval
+   mask fades the shoulders, so no splat edge meets the box edge. */
 .me {
     float: right;
     width: 104px;
     margin: 0 0 12px 16px;
+    text-align: center;
 }
 
 .me-stage {
     position: relative;
     aspect-ratio: 1;
-    cursor: grab;
     touch-action: pan-y;               /* a vertical swipe still scrolls the page */
     user-select: none;
     -webkit-user-select: none;
-    /* dark in both themes: the shirt's thin edge splats need a dark ground */
-    background: #121110;
-    border-radius: 8px;
-    overflow: hidden;
+    -webkit-mask-image: radial-gradient(ellipse 50% 56% at 50% 42%, #000 72%, transparent 100%);
+    mask-image: radial-gradient(ellipse 50% 56% at 50% 42%, #000 72%, transparent 100%);
 }
+.me-stage.live { cursor: grab; }
 .me-stage.dragging { cursor: grabbing; }
 .me-stage img, .me-stage canvas {
     position: absolute;
