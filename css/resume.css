@@ -41,6 +41,7 @@ a {
     color: inherit;
     text-decoration-color: color-mix(in srgb, var(--fg-2) 60%, transparent);
     text-underline-offset: 0.18em;
+    overflow-wrap: anywhere;
 }
 
 a:hover { text-decoration-color: var(--accent); }

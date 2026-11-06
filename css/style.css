@@ -39,6 +39,7 @@ main { max-width: var(--wide); margin: 0 auto; padding: 0 var(--gutter); }
 .kicker { color: var(--fg-2); font-weight: 500; }
 h1 { font-size: clamp(2.375rem, 3.2vw + 1.4rem, 4.5rem); line-height: 1.04; letter-spacing: -0.03em;
   font-weight: 600; margin: 0 0 8px; max-width: 16ch; text-wrap: balance; }
+@media (max-width: 359px) { h1 { font-size: 2rem; } }
 /* the head (js/head.js over a poster still), floats right of the hero text.
    A soft oval mask fades the shoulders, so no splat edge meets the box edge. */
 .me { float: right; width: 120px; margin: 0 0 16px 16px; text-align: center; }
