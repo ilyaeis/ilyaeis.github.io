@@ -1,5 +1,5 @@
-// The resume head: a small three.js + Spark splat viewer. Loaded by
-// resume.html after load, when the page is idle and the stage is visible.
+// The head: a small three.js + Spark splat viewer, on index.html and resume.html.
+// Loaded after load, when the page is idle and the stage is visible.
 // Drag = orbit round the head. A slow turn runs until the first drag.
 import * as THREE from 'three';
 import { SplatMesh, SparkRenderer } from '@sparkjsdev/spark';

@@ -1,5 +1,5 @@
-// Lazy loads: the Instagram embed and the flat viewer (flat.js), each when
-// its box is within NEAR px of the viewport.
+// Lazy loads: the head viewer (head.js), the Instagram embed and the flat
+// viewer (flat.js), each when its box is near or in the viewport.
 
 // Instagram: the placeholder gets the embed's size up front (measured:
 // height = 1.25 * width + 210 for a plain /embed/ of a 4:5 post), so nothing
@@ -43,13 +43,32 @@ for (const box of document.querySelectorAll('.embed-box[data-src]')) {
     else addEventListener('load', () => io.observe(box), { once: true });
 }
 
-// The flat: no three.js and no splat bytes until the card is near.
+// The head: after load, when idle and in view (poster until then).
+// headDone settles when its splat is in, so the flat never loads at the same time.
+let headDone = Promise.resolve();
+const me = document.getElementById('me-stage');
+if (me && window.WebGLRenderingContext) {
+    let release = () => {};
+    headDone = new Promise(r => { release = r; });
+    const io = new IntersectionObserver(entries => {
+        if (!entries.some(e => e.isIntersecting)) { release(); return; }   // scrolled past: do not hold the flat
+        io.disconnect();
+        import('./head.js').then(m => m.mountHead(me))
+            .catch(err => console.error('head: load failed', err))
+            .finally(release);
+    });
+    const go = () => (window.requestIdleCallback || setTimeout)(() => io.observe(me));
+    if (document.readyState === 'complete') go();
+    else addEventListener('load', go, { once: true });
+}
+
+// The flat: no three.js and no splat bytes until the card is near (and the head is in).
 const stage = document.getElementById('flat-stage');
 if (stage && window.WebGLRenderingContext) {
     const io = new IntersectionObserver(entries => {
         if (!entries.some(e => e.isIntersecting)) return;
         io.disconnect();
-        import('./flat.js').then(m => m.mountFlat(stage, { status: stage.querySelector('.flat-status') }))
+        headDone.then(() => import('./flat.js')).then(m => m.mountFlat(stage, { status: stage.querySelector('.flat-status') }))
             .catch(err => console.error('flat: module failed', err));
     }, { rootMargin: NEAR });
     io.observe(stage);
