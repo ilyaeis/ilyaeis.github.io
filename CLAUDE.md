@@ -14,11 +14,12 @@ The design came from `~/Desktop/brain/reports/portfolio-site/design/` (`notes.md
 - `css/style.css` — the page style. Colour tokens on `:root` (`--bg #121110`, `--fg`, `--fg-2`, `--line`, `--bg-2`, `--accent #f2b85a` amber, from the lamps of the splat). One font: Inter from Google Fonts.
 - `js/page.js` — the only script the page loads. It inserts the Instagram embed and loads `js/flat.js` when each comes near the view.
 - `js/flat.js` — the flat viewer: three.js + Spark, drag to look round from a fixed spot by the sofa.
-- `resume.html` (+ `css/resume.css`) — the HTML resume: one column, plain text, no photo. Its JSON-LD (`ProfilePage`) shares the Person `@id` with `index.html`.
+- `js/head.js` — the resume head viewer: three.js + Spark, drag to orbit round the head (pitch ±0.35 rad, no zoom), a slow idle turn until the first drag (none with `prefers-reduced-motion`). Transparent canvas on a dark tile (`#121110` in both themes: the shirt's thin edge splats need a dark ground).
+- `resume.html` (+ `css/resume.css`) — the HTML resume: one column, plain text. Next to the name floats a small 3D head (`.me`, 160 px, 104 px on phones): his head as a Gaussian splat, shown by `js/head.js`. Hidden in print, so the PDFs stay text-only with no photo. Its JSON-LD (`ProfilePage`) shares the Person `@id` with `index.html`.
 - `resume.md`, `resume.json` (JSON Resume), `resume.pdf`, `resume-dark.pdf` — machine and print copies of the resume.
 - `llms.txt` — index for agents: the resume files, the page anchors, the apps.
 - `apps/sorting/` — the sorting visualizer (C++ algorithms compiled to WebAssembly, JS drawing). Standalone; the page links it.
-- `assets/room/apartment-preview.sog` (1.1 MB, 80k splats), `apartment-lite.sog` (6.5 MB, 350k), `poster.jpg` (the card's poster, shot from the viewer). `assets/og-image.png`, `favicon.ico`, `favicon-32.png`, `robots.txt`, `sitemap.xml`.
+- `assets/room/apartment-preview.sog` (1.1 MB, 80k splats), `apartment-lite.sog` (6.5 MB, 350k), `poster.jpg` (the card's poster, shot from the viewer). `assets/head/head-lite.sog` (1 MB, 78k splats; metres, head centre at the origin, +Y up, face toward +Z) and `poster.webp` (15 KB, 320 px with alpha, the front view shot from `head.js`). The 4.7 MB full head is not shipped. `assets/og-image.png`, `favicon.ico`, `favicon-32.png`, `robots.txt`, `sitemap.xml`.
 
 ## Keep the content in sync
 
@@ -38,6 +39,7 @@ Rules:
 - First paint needs only `index.html`, `css/style.css` and the font. No three.js, no splat bytes, no Instagram bytes before they are near.
 - Instagram: `page.js` inserts the plain `/embed/` iframe of the before/after post when its box is within 600 px of the view, after `load`. The placeholder `.embed-box` has the final size from the start (height = 1.25 × width + 210 px), then the height that the iframe reports (`MEASURE` postMessage). Only `https://www.instagram.com/` sources, and the message must come from that origin and that iframe. The reel stays a text link (its embed does not play inline).
 - The flat card: the poster shows at once (`loading="lazy"`). An IntersectionObserver (`rootMargin: 600px`) imports `js/flat.js` only when the card is near. `flat.js` fetches `apartment-preview.sog`, shows it, then `apartment-lite.sog` replaces it. The lite splat on every device; never the old 730k model. Rendering stops when the stage is offscreen.
+- The resume head: the poster shows at once (`fetchpriority="low"`). After `load`, at idle, an IntersectionObserver imports `js/head.js`, which loads `head-lite.sog` on every device. The canvas replaces the poster after a few frames. `resume.html` has its own import map (same CDN URLs as `index.html`). `touch-action: pan-y` on the stage.
 - Viewer: camera at room units `(0, -0.11, 0.25)`, looking at `(0, -0.22, -0.78)`, FOV 54. Yaw ±1.3 rad, pitch down 0.5, pitch up only 0.12 (the splat ceiling is cut; a free look up shows black smears). Critically damped follow (`DAMP`). Arrow keys work when the stage has focus. `touch-action: pan-y` on the stage: a horizontal drag looks round, a vertical touch still scrolls the page. The "Drag to look around" pill goes on the first drag. `recolor` 0.9; Spark `minAlpha 1/255`, `maxStdDev 3`.
 - Paths in `flat.js` are relative to the page (`assets/room/...`). The page lives at the site root.
 
