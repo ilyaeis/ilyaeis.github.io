@@ -123,6 +123,26 @@ h1 {
     color: var(--fg-2);
 }
 
+/* splat or mesh: inline words in the caption, 44 px hit box from padding */
+.me-switch button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    display: inline-block;
+    min-width: 44px;
+    padding: 14px 0;
+    margin: -14px -8px;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--fg-2) 60%, transparent);
+    text-underline-offset: 0.18em;
+}
+.me-switch button:hover { text-decoration-color: var(--accent); }
+.me-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.me-switch button[aria-pressed="true"] { color: var(--fg); text-decoration-color: var(--accent); cursor: default; }
+.me-switch button[aria-busy="true"] { opacity: 0.6; }
+
 @media (min-width: 40rem) {
     .me { width: 160px; margin-left: 24px; }
 }

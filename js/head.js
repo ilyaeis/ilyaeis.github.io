@@ -1,12 +1,15 @@
 // The head: a small three.js + Spark splat viewer, on index.html and resume.html.
 // Loaded after load, when the page is idle and the stage is visible.
 // Drag = orbit round the head. A slow turn runs until the first drag.
+// setMode('mesh') swaps in the textured mesh of the same capture, for a
+// comparison; the GLB loads only on the first switch.
 import * as THREE from 'three';
 import { SplatMesh, SparkRenderer } from '@sparkjsdev/spark';
 
 // Relative to the page (resume.html at the site root).
 const SPLAT_URL = 'assets/head/head-lite.sog';
-// Splat frame: metres, head centre at the origin, +Y up, face toward +Z.
+const MESH_URL = 'assets/head/head-mesh.glb';
+// Splat and mesh frame: metres, head centre at the origin, +Y up, face toward +Z.
 const TARGET = new THREE.Vector3(0, -0.03, 0);
 const DIST = 0.85, FOV = 30;
 const PITCH_LIMIT = 0.35;                // rad, up and down
@@ -17,7 +20,7 @@ const DPR_MAX = 2;
 const LIVE_AFTER = 10;                   // frames before the canvas replaces the poster
 
 export async function mountHead(stage, { onLive } = {}) {
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, DPR_MAX));
     renderer.setClearColor(0x000000, 0);
     const scene = new THREE.Scene();
@@ -60,9 +63,9 @@ export async function mountHead(stage, { onLive } = {}) {
     stage.addEventListener('pointerup', end);
     stage.addEventListener('pointercancel', end);
 
-    const mesh = new SplatMesh({ url: SPLAT_URL });
-    await mesh.initialized;
-    scene.add(mesh);
+    const splat = new SplatMesh({ url: SPLAT_URL });
+    await splat.initialized;
+    scene.add(splat);
     stage.appendChild(renderer.domElement);
 
     // the canvas fades in over the poster once the splat has sorted (a few frames)
@@ -82,4 +85,31 @@ export async function mountHead(stage, { onLive } = {}) {
         if (++frames === LIVE_AFTER) { stage.classList.add('live'); onLive?.(); }
     };
     requestAnimationFrame(tick);
+
+    // The mesh: baked colour, unlit, alpha fade at the bottom (vertex colour).
+    let meshLoad = null, mode = 'splat';
+    const loadMesh = async () => {
+        const [{ GLTFLoader }, { MeshoptDecoder }] = await Promise.all([
+            import('three/addons/loaders/GLTFLoader.js'),
+            import('three/addons/libs/meshopt_decoder.module.js'),
+        ]);
+        const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+        const gltf = await loader.loadAsync(MESH_URL);
+        // the loader turns depth writes off for transparent materials
+        gltf.scene.traverse(o => { if (o.material) o.material.depthWrite = true; });
+        gltf.scene.visible = false;
+        scene.add(gltf.scene);
+        return gltf.scene;
+    };
+    return {
+        // 'splat' or 'mesh'. The splat stays until the mesh is in. The last
+        // call wins, also when an older one resolves later.
+        async setMode(want) {
+            mode = want;
+            if (want === 'mesh') meshLoad ??= loadMesh().catch(err => { meshLoad = null; throw err; });
+            const m = meshLoad && await meshLoad;
+            if (m) m.visible = mode === 'mesh';
+            splat.visible = !(m && mode === 'mesh');
+        },
+    };
 }
