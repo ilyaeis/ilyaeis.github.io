@@ -82,7 +82,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
-    <link rel="stylesheet" href="css/resume.css?v=3">
+    <link rel="stylesheet" href="css/resume.css?v=4">
     <script type="importmap">
     { "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.min.js",
@@ -103,7 +103,7 @@
             <div class="me-stage" id="me-stage" role="img" aria-label="Ilja's head as a 3D Gaussian splat. Drag to turn it.">
                 <img src="assets/head/poster.webp" alt="" width="160" height="160" decoding="async" fetchpriority="low">
             </div>
-            <figcaption>Me, as a Gaussian splat.<span class="me-hint"></span></figcaption>
+            <figcaption>Me in 3D<span class="me-switch" role="group" aria-label="Show the head as" hidden>: <button type="button" data-mode="splat" aria-pressed="true">splat</button> or <button type="button" data-mode="mesh" aria-pressed="false">mesh</button></span>.<span class="me-hint"></span></figcaption>
         </figure>
         <h1>Ilja Safronovs</h1>
         <p class="role">R&amp;D engineer, 3D reconstruction. Giraffe360, Riga, Latvia.</p>
@@ -177,6 +177,6 @@
     // ?print=dark: dark print palette, used to build resume-dark.pdf.
     if (/[?&]print=dark/.test(location.search)) document.documentElement.classList.add('print-dark');
 </script>
-<script type="module" src="js/page.js?v=2"></script>
+<script type="module" src="js/page.js?v=3"></script>
 </body>
 </html>
