@@ -2,10 +2,10 @@
   "$schema": "https://raw.githubusercontent.com/jsonresume/jsonresume.org/master/packages/schema/schema.json",
   "basics": {
     "name": "Ilja Safronovs",
-    "label": "R&D engineer, 3D reconstruction. Giraffe360, Riga, Latvia.",
+    "label": "R&D engineer, 3D reconstruction. Giraffe360, Riga, Latvia, since July 2025. Bachelor's student at Riga Technical University until 2028.",
     "email": "ilya.safronos@gmail.com",
     "url": "https://ilyaeis.github.io/",
-    "summary": "I work on 3D Gaussian splatting at Giraffe360: a pipeline that turns sparse 360° panoramas and LiDAR scans into splats, in PyTorch and CUDA. Most of my work starts with a reconstruction that looks wrong. I find the cause and fix it in our training code. I mentored a junior engineer and led three engineers on a new 3D reconstruction feature. Next, I want to grow into leading a team.",
+    "summary": "I work on 3D Gaussian splatting at Giraffe360: a pipeline that turns sparse 360° panoramas and LiDAR scans into splats, in PyTorch and CUDA. Most of my work starts with a reconstruction that looks wrong. I find the cause and fix it in our training code. I led three engineers on a new 3D reconstruction feature (Oct 2026).",
     "location": {
       "city": "Riga",
       "countryCode": "LV"
@@ -31,18 +31,12 @@
       "startDate": "2025-07-01",
       "summary": "Giraffe360 makes cameras and software for real-estate virtual tours. I am in the R&D team, on the 3D reconstruction pipeline: camera poses from structure from motion and bundle adjustment (COLMAP), Gaussian splat training with gsplat, and the camera paths of the videos.",
       "highlights": [
-        "Blurry windows, outdoor views and mirrors in our 3D videos. I found the cause and tested fixes in training runs until the haze and floaters were gone. Builds on the team's earlier window masks. Default in all Giraffe360 Gaussian splat videos since June 2026. Before and after: https://www.instagram.com/p/DZsNRB8o772/",
-        "Our training defaults use my Gaussian pruning and relocation rules (Jan to Jul 2026), inside an MCMC training strategy. They build on Taming 3DGS (Mallick et al., 2024), which I had implemented from the paper, and on the team's influence tracking: a Gaussian that adds little to the renders gets pruned or relocated. Together, the Jul 2026 default set, which includes my relocation rule, trains 13 to 16 % fewer Gaussians at equal or better quality.",
-        "Implemented Analytic-Splatting (Liang et al., 2024) in gsplat: CUDA forward and backward kernels, written from the paper. We use it for downsampling.",
-        "Made training faster: 8.6 % on an RTX 3090 at the same quality, by dropping a per-step opacity cull; on one large scene a step went from 117.6 to 68.1 ms (42 % less) with PSNR unchanged.",
-        "Mentored a junior engineer on a new depth method (denser LiDAR depth). Mostly his work. Our splat training has used it as its depth prior since October 2026.",
-        "Led three engineers on a new 3D reconstruction feature (Oct 2026). Most of the code is mine, from the camera poses (SfM and bundle adjustment) to the training recipe; I reviewed and merged theirs and cut the release. In production. I have cut the releases of our 3D pipeline since September 2026.",
-        "Looped drone video, one flight per room. My idea from the Feb 2026 hackathon (I submitted 6 ideas; 3 of them were among the 51 recognised). I wrote the camera path and reworked the video pipeline. The look was worked out with the designers. It is a product now: https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/",
-        "Fixed the camera height in rooms on a half floor, for all video types. A long-standing bug.",
-        "Team tools. An experiment runner: an AI agent starts and tracks trainings on a local GPU. An MCP server (Node.js) for our task board. Ground-truth datasets and checks for splat quality. I also led the move of our 3DGS code into one monorepo, with a code-size check (2026).",
-        "A Rust/wgpu splat viewer that other apps can embed and control (May 2026). It swaps and combines PLY scenes live, and shows point clouds. Before that, a side-by-side comparison tool with camera sync.",
-        "Prototypes: mirror reflections done right, meshes from splats, a stage that cuts the splat count for viewers, a fly-in video intro. Got Difix and NVIDIA's fixer running on our GPUs for the team to try (Feb 2026).",
-        "Jul to Oct 2025: a small service that wrote tour narration with the OpenAI API and AWS S3."
+        "Blurry windows, outdoor views and mirrors in our 3D videos. I found the cause and changed our training code until the haze and floaters were gone. Builds on the team's earlier window masks. Default in all Giraffe360 Gaussian splat videos since June 2026. Before and after: https://www.instagram.com/p/DZsNRB8o772/",
+        "Our training defaults use my Gaussian pruning and relocation rules (Jan to Jul 2026), inside an MCMC training strategy. They build on Taming 3DGS (Mallick et al., 2024), which I had implemented from the paper, and on the team's influence tracking: a Gaussian that adds little to the renders gets pruned or relocated. Together, the Jul 2026 default set, which includes my relocation rule, trains 13 to 16 % fewer Gaussians at equal or better quality. I also made training 8.6 % faster on an RTX 3090 at the same quality, by dropping a per-step opacity cull.",
+        "Implemented Analytic-Splatting (Liang et al., 2024) in our gsplat fork: CUDA forward and backward kernels, written from the paper. We use it for downsampling.",
+        "Led three engineers on a new 3D reconstruction feature (Oct 2026). Most of the code is mine, from the camera poses (SfM and bundle adjustment) to the training recipe; I reviewed and merged theirs and cut the release. In production. Before that, I mentored a junior engineer on his new depth method (denser LiDAR depth); since October 2026 our splat training uses it as its depth prior. I have cut the releases of our 3D pipeline since September 2026. Next, I want to grow into leading a team.",
+        "Looped drone video, one flight per room. My idea from the Feb 2026 hackathon. I wrote the camera path and reworked the video pipeline. The look was worked out with the designers. It is a product now: https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/",
+        "A Rust/wgpu splat viewer that other apps can embed and control (May 2026). It swaps and combines PLY scenes live. Team tools: an experiment runner where an AI agent starts and tracks trainings on a local GPU, and an MCP server (Node.js) for our task board."
       ]
     }
   ],
@@ -78,15 +72,13 @@
       ]
     }
   ],
-  "awards": [
-    {
-      "title": "4th of 27 entries, Riga Business School programming competition for school students",
-      "date": "2023-06-10",
-      "awarder": "Riga Business School",
-      "summary": "Offline Graphing Calculator, with Iļja Volinskis."
-    }
-  ],
   "projects": [
+    {
+      "name": "Room splats from few photos",
+      "startDate": "2026",
+      "url": "https://ilyaeis.github.io/few-photo/",
+      "description": "Splats of public Zip-NeRF rooms from 6 to 12 photos: six pose models compared under one gsplat recipe; generated views from Stable Virtual Camera add 1.3 to 1.7 dB at 6 photos."
+    },
     {
       "name": "Portfolio site",
       "startDate": "2026",
@@ -136,11 +128,6 @@
       "keywords": [
         "Python"
       ]
-    },
-    {
-      "name": "Offline Graphing Calculator",
-      "startDate": "2023",
-      "description": "4th of 27 entries in the Riga Business School programming competition for school students. With Iļja Volinskis."
     },
     {
       "name": "load-balancing-experiments",

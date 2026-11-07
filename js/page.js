@@ -83,7 +83,7 @@ if (me && window.WebGLRenderingContext) {
         hint(' Loading 3D…');
         if (sw) sw.hidden = false;
         show();
-        import('./head.js?v=2').then(m => m.mountHead(me, { onLive: () => { live = true; hint(' Drag to turn.'); } }))
+        import('./head.js?v=4').then(m => m.mountHead(me, { onLive: () => { live = true; hint(' Drag to turn.'); } }))
             .then(v => { viewer = v; if (want !== 'splat') show(); })
             .catch(err => { hint(''); if (sw) sw.hidden = true; console.error('head: load failed', err); })
             .finally(release);
@@ -100,7 +100,7 @@ if (stage && window.WebGLRenderingContext) {
     const io = new IntersectionObserver(entries => {
         if (!entries.some(e => e.isIntersecting)) return;
         io.disconnect();
-        headDone.then(() => import('./flat.js')).then(m => m.mountFlat(stage, { status: stage.querySelector('.flat-status') }))
+        headDone.then(() => import('./flat.js?v=2')).then(m => m.mountFlat(stage, { status: stage.querySelector('.flat-status') }))
             .catch(err => console.error('flat: module failed', err));
     }, { rootMargin: NEAR });
     io.observe(stage);

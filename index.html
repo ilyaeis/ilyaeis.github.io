@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ilja Safronovs, R&amp;D engineer, 3D Gaussian splatting (Riga)</title>
-<meta name="description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting from 360° panoramas and LiDAR (PyTorch, CUDA, COLMAP) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained.">
+<meta name="description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting from 360° panoramas and LiDAR (PyTorch, CUDA, COLMAP) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained and a study of room splats from few photos.">
 <meta name="author" content="Ilja Safronovs">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#121110">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ilyaeis.github.io/">
 <meta property="og:title" content="Ilja Safronovs, R&amp;D engineer, 3D Gaussian splatting (Riga)">
-<meta property="og:description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting from 360° panoramas and LiDAR (PyTorch, CUDA, COLMAP) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained.">
+<meta property="og:description" content="R&amp;D engineer at Giraffe360 in Riga. I work on 3D Gaussian splatting from 360° panoramas and LiDAR (PyTorch, CUDA, COLMAP) and fix what looks wrong in our 3D videos. The page has a splat of a flat I trained and a study of room splats from few photos.">
 <meta property="og:image" content="https://ilyaeis.github.io/assets/og-image.png?v=4">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -44,7 +44,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=6">
 <noscript><style>.flat-status { display: none; }</style></noscript>
 <!-- import map for js/flat.js; Spark needs three/addons/ too -->
 <script type="importmap">
@@ -64,14 +64,15 @@
     <div class="me-stage" id="me-stage" role="img" aria-label="Ilja's head as a 3D Gaussian splat. Drag to turn it.">
       <img src="assets/head/poster.webp" alt="" width="220" height="220" decoding="async" fetchpriority="low">
     </div>
-    <figcaption>Me in 3D<span class="me-switch" role="group" aria-label="Show the head as" hidden>: <button type="button" data-mode="splat" aria-pressed="true">splat</button> or <button type="button" data-mode="mesh" aria-pressed="false">mesh</button></span>.<span class="me-hint"></span></figcaption>
+    <figcaption>Me in 3D<span class="me-switch" role="group" aria-label="Show the head as" hidden>: <button type="button" data-mode="splat" aria-pressed="true">splat</button> or <button type="button" data-mode="mesh" aria-pressed="false">mesh</button></span>.<span class="me-how"> Phone video, COLMAP, gsplat. Mesh: PGSR.</span><span class="me-hint"></span></figcaption>
   </figure>
   <div class="who">
-    <p><strong>Ilja Safronovs</strong><br><span class="kicker">R&amp;D engineer at Giraffe360, Riga. 3D Gaussian splatting.</span></p>
+    <p><strong>Ilja Safronovs</strong><br><span class="kicker">R&amp;D engineer at Giraffe360, Riga, since July 2025.</span><br><span class="kicker">Bachelor&rsquo;s student at Riga Technical University, until 2028.</span></p>
   </div>
-  <h1>I fix what looks wrong in 3D&nbsp;reconstructions.</h1>
+  <h1>I change how Gaussian splats are trained, so they look&nbsp;right.</h1>
   <p class="actions">
-    <a class="btn" href="resume.pdf">Resume (PDF)</a>
+    <a class="btn" href="resume.html">Resume</a>
+    <a class="btn" href="resume.pdf">PDF</a>
     <a class="btn" href="mailto:ilya.safronos@gmail.com">Email</a>
   </p>
 </section>
@@ -81,21 +82,22 @@
   <div class="sec-body">
   <ul class="proof">
     <li>
-      <p>Giraffe360's 3D videos had blurry windows, outdoor views and mirrors. I found the cause and fixed it. In production in all Giraffe360 Gaussian splat videos since June 2026.</p>
+      <p>Giraffe360's 3D videos had blurry windows, outdoor views and mirrors. I found the cause and fixed it in our training code. The default in all Giraffe360 Gaussian splat videos since June 2026.</p>
       <div class="embed">
         <div class="embed-box" data-src="https://www.instagram.com/p/DZsNRB8o772/embed/" data-title="Giraffe360 post: before and after" aria-label="Giraffe360 post: before and after (loads when near)"></div>
         <a class="small-link" href="https://www.instagram.com/p/DZsNRB8o772/">Open on Instagram &nearr;</a>
       </div>
     </li>
     <li>
-      <p>Our training defaults use my Gaussian pruning and relocation rules (MCMC training, built on Taming 3DGS). I also wrote the CUDA kernels for Analytic-Splatting in gsplat.</p>
+      <p>Our training defaults use my Gaussian pruning and relocation rules (MCMC training, built on Taming 3DGS). I also wrote the CUDA kernels for Analytic-Splatting in our gsplat fork.</p>
     </li>
     <li>
       <p>The looped drone video started as my hackathon idea. Now it is a product.</p>
       <p class="detail"><a class="small-link" href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">Reel &nearr;</a></p>
     </li>
     <li>
-      <p>I mentored a junior engineer, then led three engineers on a new 3D reconstruction feature. Both are in production. Next, I want to grow into leading a team.</p>
+      <p>I mentored a junior engineer, then led three engineers on a new 3D reconstruction feature. Both are in production.</p>
+      <p class="detail">Next, I want to grow into leading a team.</p>
     </li>
   </ul>
   </div>
@@ -105,7 +107,8 @@
   <h2>Splat</h2>
   <div class="sec-body">
   <p class="display">A flat I trained.</p>
-  <p class="lead-sm">gsplat, 18 minutes on one RTX 3090.</p>
+  <p class="lead-sm">From the public Zip-NeRF photos. gsplat, 18 minutes on one RTX 3090.</p>
+  <p class="detail"><a class="small-link" href="few-photo/">The same room from 6 photos &rarr;</a></p>
   </div>
   <figure class="flat">
     <div class="flat-stage" id="flat-stage" aria-label="The flat, as a 3D splat. Drag to look around." role="img">
@@ -120,7 +123,6 @@
   <h2>Tools</h2>
   <div class="sec-body">
   <p class="lead">My team uses two tools I built: an experiment runner driven by an AI agent, and an MCP server for our task board.</p>
-  <p class="detail skills">PyTorch, CUDA, gsplat, COLMAP, Python, C++.</p>
   </div>
 </section>
 
@@ -128,9 +130,9 @@
   <h2>Side projects</h2>
   <div class="sec-body">
   <ul class="plain projects">
+    <li><a href="few-photo/">Room splats from few photos</a> <span>pose models compared, generated views</span></li>
     <li><a href="apps/sorting/">Sorting visualizer</a> <span>16 algorithms, C++ to WebAssembly</span></li>
     <li><a href="https://github.com/ilyaeis/monte-carlo-finance">monte-carlo-finance</a> <span>option pricing, GARCH, VaR backtests</span></li>
-    <li><a href="https://github.com/ilyaeis/load-balancing-experiments">load-balancing-experiments</a> <span>seven experiments on DNS and load balancing</span></li>
     <li><a href="https://github.com/ilyaeis/projects_with_NEAT">projects_with_NEAT</a> <span>NEAT agents learn Flappy Bird and Pong</span></li>
     <li><a href="https://github.com/ilyaeis/claude-harness">claude-harness</a> <span>how I run many Claude Code agents with checks</span></li>
   </ul>
@@ -142,7 +144,7 @@
   <div class="sec-body">
   <p class="contact-mail"><a href="mailto:ilya.safronos@gmail.com">ilya.safronos@gmail.com</a></p>
   <p class="actions">
-    <a class="btn" href="resume.pdf">Resume (PDF)</a>
+    <a class="btn" href="resume.html">Resume</a>
     <a class="btn" href="https://www.linkedin.com/in/i%C4%BCja-safronovs-eis" rel="me">LinkedIn</a>
     <a class="btn" href="https://github.com/ilyaeis" rel="me">GitHub</a>
   </p>
@@ -152,9 +154,9 @@
 </main>
 
 <footer class="foot">
-  <p>With the R&amp;D team at Giraffe360. Methods build on Taming 3DGS (Mallick et al., 2024) and Analytic-Splatting (Liang et al., 2024).</p>
+  <p>With the R&amp;D team at Giraffe360.</p>
 </footer>
 
-<script type="module" src="js/page.js?v=3"></script>
+<script type="module" src="js/page.js?v=5"></script>
 </body>
 </html>

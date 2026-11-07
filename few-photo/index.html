@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Room splats from few photos, Ilja Safronovs</title>
+<meta name="description" content="A small study on public data: Gaussian splats of a room from 6 to 12 photos. Six pose models compared under one gsplat recipe; generated views add 1.3 to 1.7 dB at 6 photos.">
+<meta name="author" content="Ilja Safronovs">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#121110">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="canonical" href="https://ilyaeis.github.io/few-photo/">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ilyaeis.github.io/few-photo/">
+<meta property="og:title" content="Room splats from few photos">
+<meta property="og:description" content="Gaussian splats of a room from 6 to 12 photos: pose models compared, generated views.">
+<meta property="og:image" content="https://ilyaeis.github.io/assets/few-photo/gen.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap">
+<link rel="stylesheet" href="../css/style.css?v=6">
+</head>
+<body>
+
+<main class="study">
+
+<p class="back"><a href="../">&larr; ilyaeis.github.io</a></p>
+
+<h1>A room from six photos</h1>
+<p class="lead-sm">A small study on public data. How good is a Gaussian splat of a room when you have only 6 to 12 photos and no camera poses?</p>
+
+<section class="sec">
+  <h2>Input</h2>
+  <div class="sec-body">
+  <p>Two rooms of the Zip-NeRF set, &ldquo;london&rdquo; and &ldquo;berlin&rdquo;. From each, 6, 9 or 12 photos go in. 24 other photos are held out for the score.</p>
+  <figure class="still">
+    <img src="../assets/few-photo/photos.webp" width="960" height="364" alt="Six photos of a living room with a bay window, a sofa and a fireplace" loading="lazy" decoding="async">
+    <figcaption>The 6 input photos of the london room.</figcaption>
+  </figure>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>Pose models</h2>
+  <div class="sec-body">
+  <p>A pose model gives the camera poses and a point cloud. Then gsplat trains the splat with the same recipe for all (MCMC, 2,000 steps). I compared six pose models in seven setups, and one baseline.</p>
+  <div class="table-wrap">
+  <table>
+    <caption>Held-out photos, mean of 6 photo sets (2 rooms, 6, 9 and 12 photos).</caption>
+    <thead><tr><th scope="col">Poses from</th><th scope="col">PSNR (dB)</th><th scope="col">SSIM</th><th scope="col">LPIPS</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">MASt3R-SfM</th><td><strong>18.80</strong></td><td><strong>0.688</strong></td><td>0.514</td></tr>
+      <tr><th scope="row">InstantSplat (baseline)</th><td>18.42</td><td>0.645</td><td><strong>0.499</strong></td></tr>
+      <tr><th scope="row">VGGT</th><td>17.51</td><td>0.644</td><td>0.547</td></tr>
+      <tr><th scope="row">YoNoSplat, end to end</th><td>16.65</td><td>0.605</td><td>0.570</td></tr>
+      <tr><th scope="row">MapAnything</th><td>16.54</td><td>0.610</td><td>0.586</td></tr>
+      <tr><th scope="row">AnySplat, end to end</th><td>15.96</td><td>0.570</td><td>0.590</td></tr>
+      <tr><th scope="row">MapAnything, AnySplat start</th><td>15.83</td><td>0.568</td><td>0.597</td></tr>
+      <tr><th scope="row">Depth Anything 3</th><td>15.03</td><td>0.577</td><td>0.631</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="detail">On the same photo sets, MASt3R beats VGGT by 1.2 dB and MapAnything by 2.4 dB. MASt3R and InstantSplat are level: the gap is inside the noise.</p>
+  <figure class="still">
+    <img src="../assets/few-photo/poses.webp" width="640" height="408" alt="One held-out photo of a cabinet wall, then the splat renders from MASt3R, VGGT and MapAnything poses. MASt3R is sharp; the others smear the wall." loading="lazy" decoding="async">
+    <figcaption>Berlin room, 12 photos, one held-out view. Top: the photo, then the splat from MASt3R poses. Bottom: from VGGT and MapAnything poses.</figcaption>
+  </figure>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>Camera path</h2>
+  <div class="sec-body">
+  <p>Most floaters in a fly-through came from the path, not from the splat. A loop path looks at the ceiling and corners, where no photo looked. In its worst frame, 0&nbsp;% of the pixels showed surface that a photo saw.</p>
+  <p class="detail">The fix: a path planner that stays inside the photo cameras and turns toward what the photos saw. Its worst frame in the london room: about 60&nbsp;%.</p>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>Generated views</h2>
+  <div class="sec-body">
+  <p>A diffusion model (Stable Virtual Camera) makes 126 extra views from the photos, also of the ceiling and the floor. gsplat then trains on real and generated views.</p>
+  <figure class="still">
+    <video src="../assets/few-photo/gen.mp4" poster="../assets/few-photo/gen.webp" width="720" height="696" controls loop muted playsinline preload="none" aria-label="Fly-through of the london room. Top: photos only. Bottom: photos and generated views."></video>
+    <figcaption>London room, 6 photos. Top: photos only. Bottom: photos and generated views. Powered by Stability AI.</figcaption>
+  </figure>
+  <p class="detail">At 6 photos, the held-out score goes up by 1.7 dB in london (20.1 to 21.8) and 1.3 dB in berlin (14.8 to 16.1), against the same recipe without generated views. At 12 photos there is no gain. What no photo saw is invented, not measured, so the ceiling looks clean but is not true to the room.</p>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>Credits</h2>
+  <div class="sec-body">
+  <p class="detail">Data: Zip-NeRF (Barron et al.), CC BY 4.0. Poses: MASt3R-SfM, CC BY-NC-SA 4.0. Training: gsplat, Apache 2.0.</p>
+  <p class="detail">Generated views: Stable Virtual Camera. This Stability AI Model is licensed under the <a href="https://huggingface.co/stabilityai/stable-virtual-camera/blob/main/LICENSE">Stability AI Non-Commercial License</a>, Copyright &copy; Stability AI Ltd. All Rights Reserved. Powered by Stability AI.</p>
+  <p class="detail">A personal, non-commercial study.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p><a href="../">ilyaeis.github.io</a></p>
+</footer>
+</body>
+</html>

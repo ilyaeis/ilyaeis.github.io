@@ -2,7 +2,8 @@
 // Loaded after load, when the page is idle and the stage is visible.
 // Drag = orbit round the head. A slow turn runs until the first drag.
 // setMode('mesh') swaps in the textured mesh of the same capture, for a
-// comparison; the GLB loads only on the first switch.
+// comparison; the GLB loads only on the first switch. The mesh is lit with
+// flat shading, so its facets show and it does not look like the splat.
 import * as THREE from 'three';
 import { SplatMesh, SparkRenderer } from '@sparkjsdev/spark';
 
@@ -86,7 +87,9 @@ export async function mountHead(stage, { onLive } = {}) {
     };
     requestAnimationFrame(tick);
 
-    // The mesh: baked colour, unlit, alpha fade at the bottom (vertex colour).
+    // The mesh: baked colour, alpha fade at the bottom (vertex colour). The GLB
+    // is unlit; here it gets a lit, flat-shaded material and a light that
+    // follows the camera.
     let meshLoad = null, mode = 'splat';
     const loadMesh = async () => {
         const [{ GLTFLoader }, { MeshoptDecoder }] = await Promise.all([
@@ -95,8 +98,18 @@ export async function mountHead(stage, { onLive } = {}) {
         ]);
         const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
         const gltf = await loader.loadAsync(MESH_URL);
-        // the loader turns depth writes off for transparent materials
-        gltf.scene.traverse(o => { if (o.material) o.material.depthWrite = true; });
+        // depthWrite: the loader turns it off for transparent materials
+        gltf.scene.traverse(o => {
+            if (!o.material) return;
+            const { map, vertexColors, transparent } = o.material;
+            o.material.dispose();
+            o.material = new THREE.MeshLambertMaterial({ map, vertexColors, transparent, flatShading: true, depthWrite: true });
+        });
+        gltf.scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+        const key = new THREE.DirectionalLight(0xffffff, 2.2);
+        key.position.set(-1, 0.6, 0.6);
+        camera.add(key);
+        scene.add(camera);
         gltf.scene.visible = false;
         scene.add(gltf.scene);
         return gltf.scene;

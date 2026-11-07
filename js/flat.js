@@ -1,11 +1,10 @@
 // The flat card: a minimal three.js + Spark splat viewer. Loaded only when the
 // card scrolls near (page.js). Drag = look around from a fixed spot by the sofa.
-// Preview (1.1 MB, 80k splats) first, then the lite splat (6.5 MB) replaces it.
+// The poster stays until the lite splat (6.5 MB) is in, so the first view is sharp.
 import * as THREE from 'three';
 import { SplatMesh, SparkRenderer } from '@sparkjsdev/spark';
 
 // Relative to the page (index.html at the site root).
-const PREVIEW_URL = 'assets/room/apartment-preview.sog';
 const FULL_URL = 'assets/room/apartment-lite.sog';
 // Room units (the .sog frame): +Y up, bay windows on -Z, camera by the sofa.
 const CAM = new THREE.Vector3(0, -0.11, 0.25);
@@ -18,7 +17,7 @@ const DPR_MAX = 1.5;
 
 export async function mountFlat(stage, { status } = {}) {
     const say = t => { if (status) status.textContent = t; };
-    say('Loading the flat (1 MB)…');
+    say('Loading the flat (6.5 MB)…');
     const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(devicePixelRatio, DPR_MAX));
     const scene = new THREE.Scene();
@@ -101,19 +100,12 @@ export async function mountFlat(stage, { status } = {}) {
         return m;
     };
     try {
-        const preview = await make(await fetchBytes(PREVIEW_URL));
-        scene.add(preview);
-        mesh = preview;
+        mesh = await make(await fetchBytes(FULL_URL));
+        scene.add(mesh);
         aim();
         renderer.render(scene, camera);
         stage.classList.add('live');
-        say('Drag to look around · sharper version loading');
-        const full = await make(await fetchBytes(FULL_URL));
-        scene.add(full);
-        scene.remove(preview);
-        preview.dispose();
-        mesh = full;
-        if (status?.textContent) say('Drag to look around');
+        say('Drag to look around');
     } catch (err) {
         console.error('flat: load failed', err);
         say(mesh ? '' : 'The flat did not load. Try again later.');

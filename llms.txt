@@ -1,6 +1,6 @@
 # Ilja Safronovs
 
-> R&D engineer at Giraffe360 in Riga, Latvia. Works on 3D Gaussian splatting from sparse 360° panoramas and LiDAR depth: camera poses with COLMAP (structure from motion, bundle adjustment), training with gsplat (MCMC), PyTorch and CUDA. In production: a fix for blurry windows, outdoor views and mirrors in all Giraffe360 Gaussian splat videos since June 2026, his Gaussian pruning and relocation rules (the training defaults) and the looped drone video. He mentored a junior engineer, then led three engineers on a new 3D reconstruction feature, now in production. He also built an experiment runner driven by an AI agent and an MCP server for the team task board. Studies Financial Engineering at Riga Technical University. resume.md below is the full text.
+> R&D engineer at Giraffe360 in Riga, Latvia. Works on 3D Gaussian splatting from sparse 360° panoramas and LiDAR depth: camera poses with COLMAP (structure from motion, bundle adjustment), training with gsplat (MCMC), PyTorch and CUDA. In production: a fix for blurry windows, outdoor views and mirrors in all Giraffe360 Gaussian splat videos since June 2026, his Gaussian pruning and relocation rules (the training defaults) and the looped drone video. He mentored a junior engineer, then led three engineers on a new 3D reconstruction feature, now in production. He also built an experiment runner driven by an AI agent and an MCP server for the team task board. At Giraffe360 since July 2025; studies Financial Engineering at Riga Technical University (bachelor's, until 2028). A public study on the site compares pose models for room splats from 6 to 12 photos. resume.md below is the full text.
 
 ## Resume
 
@@ -14,10 +14,11 @@
 
 - [Portfolio](https://ilyaeis.github.io/): one page of text with one live 3D card. Section anchors:
   - [#work](https://ilyaeis.github.io/#work): the windows and mirrors fix, the pruning and relocation rules, the looped drone video, mentoring and leading three engineers.
-  - [#flat](https://ilyaeis.github.io/#flat): a Gaussian splat of a flat he trained with gsplat (the public Zip-NeRF "london" scene, CC BY 4.0); drag to look around.
-  - [#tools](https://ilyaeis.github.io/#tools): the two tools his team uses, and his stack.
+  - [#flat](https://ilyaeis.github.io/#flat): a Gaussian splat of a flat he trained with gsplat (the public Zip-NeRF "london" scene, CC BY 4.0); drag to look around. It links the few-photo study.
+  - [#tools](https://ilyaeis.github.io/#tools): the two tools his team uses.
   - [#projects](https://ilyaeis.github.io/#projects): five side projects.
-  - [#contact](https://ilyaeis.github.io/#contact): email, resume PDF, LinkedIn, GitHub.
+  - [#contact](https://ilyaeis.github.io/#contact): email, resume, LinkedIn, GitHub.
+- [Room splats from few photos](https://ilyaeis.github.io/few-photo/): a study on public Zip-NeRF rooms (CC BY 4.0). Splats from 6 to 12 photos: six pose models compared under one gsplat recipe (one table), a coverage-aware camera path, and generated views from Stable Virtual Camera (+1.3 to +1.7 dB at 6 photos, no gain at 12).
 
 ## Apps
 

@@ -82,7 +82,6 @@ h3 { font-size: 1.125rem; font-weight: 600; margin: 40px 0 12px; }
 .display { font-size: clamp(1.75rem, 1.6vw + 1.2rem, 2.5rem); line-height: 1.1; letter-spacing: -0.025em; font-weight: 600; margin: 0 0 16px; }
 .detail { color: var(--fg-2); font-size: 1rem; line-height: 1.5; margin-top: 10px; text-wrap: pretty; }
 @media (min-width: 700px) { .detail { font-size: 1.0625rem; } }
-.skills { margin-top: 20px; }
 
 /* work list */
 .proof { list-style: none; margin: 0; padding: 0; }
@@ -130,3 +129,24 @@ figcaption { margin-top: 12px; font-size: 0.9375rem; color: var(--fg-2); }
 .foot p { border-top: 1px solid var(--line); padding: 32px 0 48px; }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .flat-poster { transition: none; } }
+
+/* head caption: how it was made */
+.me-how { display: block; }
+
+/* few-photo study page */
+.study { padding-top: 24px; padding-bottom: 32px; }
+.study h1 { font-size: clamp(2rem, 2.4vw + 1.2rem, 3.25rem); margin: 32px 0 16px; }
+.study .lead-sm { margin-bottom: 40px; }
+.study .sec-body > p + p, .study .sec-body > p + figure, .study .sec-body > figure + p,
+.study .table-wrap + p { margin-top: 16px; }
+.back a { display: inline-block; padding: 12px 0; margin: -12px 0; color: var(--fg-2); }
+.still { margin: 20px 0 0; }
+.still img, .still video { display: block; width: 100%; height: auto; border-radius: 4px; background: var(--bg-2); }
+.table-wrap { overflow-x: auto; margin-top: 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 1rem; font-variant-numeric: tabular-nums; }
+caption { caption-side: bottom; text-align: left; color: var(--fg-2); font-size: 0.9375rem; padding-top: 10px; }
+th, td { padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th[scope="row"], thead th:first-child { text-align: left; font-weight: 400; white-space: normal; }
+thead th { color: var(--fg-2); font-weight: 500; }
+td strong { font-weight: 600; color: var(--accent); }
+.study .detail a, .foot a { display: inline-block; padding: 12px 0; margin: -12px 0; }
