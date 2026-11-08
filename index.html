@@ -44,7 +44,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap">
-<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/style.css?v=9">
 <noscript><style>.flat-status { display: none; }</style></noscript>
 <!-- import map for js/flat.js; Spark needs three/addons/ too -->
 <script type="importmap">
@@ -68,6 +68,7 @@
   </figure>
   <div class="who">
     <p><strong>Ilja Safronovs</strong><br><span class="kicker">R&amp;D engineer at Giraffe360, Riga, since July 2025.</span><br><span class="kicker">Bachelor&rsquo;s student at Riga Technical University, until 2028.</span></p>
+    <p class="hero-study"><a class="small-link" href="few-photo/">Public study: room splats from few photos &rarr;</a></p>
   </div>
   <h1>I change how Gaussian splats are trained, so they look&nbsp;right.</h1>
   <p class="actions">
@@ -83,13 +84,13 @@
   <ul class="proof">
     <li>
       <p>Giraffe360's 3D videos had blurry windows, outdoor views and mirrors. I found the cause and fixed it in our training code. The default in all Giraffe360 Gaussian splat videos since June 2026.</p>
-      <div class="embed">
-        <div class="embed-box" data-src="https://www.instagram.com/p/DZsNRB8o772/embed/" data-title="Giraffe360 post: before and after" aria-label="Giraffe360 post: before and after (loads when near)"></div>
-        <a class="small-link" href="https://www.instagram.com/p/DZsNRB8o772/">Open on Instagram &nearr;</a>
-      </div>
+      <p class="detail"><a class="small-link" href="https://www.instagram.com/p/DZsNRB8o772/">Before and after: Giraffe360&rsquo;s post &nearr;</a></p>
     </li>
     <li>
       <p>Our training defaults use my Gaussian pruning and relocation rules (MCMC training, built on Taming 3DGS). I also wrote the CUDA kernels for Analytic-Splatting in our gsplat fork.</p>
+    </li>
+    <li>
+      <p>I made our full 3D pipeline faster: from 2&nbsp;h 30&nbsp;min to 1&nbsp;h 30&nbsp;min, even after new steps were added.</p>
     </li>
     <li>
       <p>The looped drone video started as my hackathon idea. Now it is a product.</p>
@@ -119,13 +120,6 @@
   </figure>
 </section>
 
-<section class="sec" id="tools">
-  <h2>Tools</h2>
-  <div class="sec-body">
-  <p class="lead">My team uses two tools I built: an experiment runner driven by an AI agent, and an MCP server for our task board.</p>
-  </div>
-</section>
-
 <section class="sec" id="projects">
   <h2>Side projects</h2>
   <div class="sec-body">
@@ -134,7 +128,6 @@
     <li><a href="apps/sorting/">Sorting visualizer</a> <span>16 algorithms, C++ to WebAssembly</span></li>
     <li><a href="https://github.com/ilyaeis/monte-carlo-finance">monte-carlo-finance</a> <span>option pricing, GARCH, VaR backtests</span></li>
     <li><a href="https://github.com/ilyaeis/projects_with_NEAT">projects_with_NEAT</a> <span>NEAT agents learn Flappy Bird and Pong</span></li>
-    <li><a href="https://github.com/ilyaeis/claude-harness">claude-harness</a> <span>how I run many Claude Code agents with checks</span></li>
   </ul>
   </div>
 </section>
@@ -157,6 +150,6 @@
   <p>With the R&amp;D team at Giraffe360.</p>
 </footer>
 
-<script type="module" src="js/page.js?v=5"></script>
+<script type="module" src="js/page.js?v=6"></script>
 </body>
 </html>

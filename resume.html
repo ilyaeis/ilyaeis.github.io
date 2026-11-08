@@ -122,10 +122,11 @@
             <p class="note">Giraffe360 makes cameras and software for real-estate virtual tours. I am in the R&amp;D team, on the 3D reconstruction pipeline: camera poses from structure from motion and bundle adjustment (COLMAP), Gaussian splat training with gsplat, and the camera paths of the videos.</p>
             <ul>
                 <li><strong>Blurry windows, outdoor views and mirrors in our 3D videos.</strong> I found the cause and changed our training code until the haze and floaters were gone. Builds on the team's earlier window masks. <strong>Default in all Giraffe360 Gaussian splat videos since June 2026.</strong> Before and after: <a href="https://www.instagram.com/p/DZsNRB8o772/">instagram.com/p/DZsNRB8o772</a></li>
-                <li><strong>Our training defaults use my Gaussian pruning and relocation rules</strong> (Jan to Jul 2026), inside an MCMC training strategy. They build on Taming 3DGS (Mallick et al., 2024), which I had implemented from the paper, and on the team's influence tracking: a Gaussian that adds little to the renders gets pruned or relocated. Together, the Jul 2026 default set, which includes my relocation rule, trains 13 to 16 % fewer Gaussians at equal or better quality. I also made training 8.6 % faster on an RTX 3090 at the same quality, by dropping a per-step opacity cull.</li>
+                <li><strong>Our training defaults use my Gaussian pruning and relocation rules</strong> (Jan to Jul 2026), inside an MCMC training strategy. They build on Taming 3DGS (Mallick et al., 2024), which I had implemented from the paper, and on the team's influence tracking: a Gaussian that adds little to the renders gets pruned or relocated. My relocation rule is part of the Jul 2026 default set; together they train 13 to 16 % fewer Gaussians at equal or better quality.</li>
+                <li><strong>Made our full 3D pipeline faster: from 2&nbsp;h 30&nbsp;min to 1&nbsp;h 30&nbsp;min</strong>, even after new steps were added. Training alone got 8.6 % faster on an RTX 3090 at the same quality, by dropping a per-step opacity cull. I have cut the pipeline&rsquo;s releases since September 2026.</li>
                 <li><strong>Implemented Analytic-Splatting (Liang et al., 2024) in our gsplat fork</strong>: CUDA forward and backward kernels, written from the paper. We use it for downsampling.</li>
-                <li><strong>Led three engineers on a new 3D reconstruction feature</strong> (Oct 2026). Most of the code is mine, from the camera poses (SfM and bundle adjustment) to the training recipe; I reviewed and merged theirs and cut the release. In production. Before that, I mentored a junior engineer on his new depth method (denser LiDAR depth); since October 2026 our splat training uses it as its depth prior. I have cut the releases of our 3D pipeline since September 2026. Next, I want to grow into leading a team.</li>
-                <li><strong>Looped drone video</strong>, one flight per room. My idea from the Feb 2026 hackathon. I wrote the camera path and reworked the video pipeline. The look was worked out with the designers. <strong>It is a product now</strong>: <a href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">instagram.com/giraffe360/reel/Dd9ODBVIHhE</a></li>
+                <li><strong>Led three engineers on a new 3D reconstruction feature</strong> (Oct 2026). Most of the code is mine, from the camera poses (SfM and bundle adjustment) to the training recipe; I reviewed and merged theirs and cut the release. In production. Before that, I mentored a junior engineer; his denser LiDAR depth has been our depth prior since October 2026.</li>
+                <li><strong>Looped drone video</strong>: a virtual camera flight, one loop per room. My idea from the Feb 2026 hackathon. I wrote the camera path and reworked the video pipeline. The look was worked out with the designers. <strong>It is a product now</strong>: <a href="https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/">instagram.com/giraffe360/reel/Dd9ODBVIHhE</a></li>
                 <li><strong>A Rust/wgpu splat viewer that other apps can embed and control</strong> (May 2026). It swaps and combines PLY scenes live. <strong>Team tools</strong>: an experiment runner where an AI agent starts and tracks trainings on a local GPU, and an MCP server (Node.js) for our task board.</li>
             </ul>
         </div>
@@ -159,7 +160,7 @@
         <h2>Skills</h2>
         <p class="line">3D: Gaussian splatting with gsplat (MCMC, pruning and relocation, custom CUDA kernels), SfM and bundle adjustment with COLMAP, equirectangular and fisheye camera models, LiDAR depth priors.</p>
         <p class="line">Python, C++, CUDA, PyTorch, gsplat, Rust/wgpu, Dart/Flutter, JavaScript/three.js, Java, SQL.</p>
-        <p class="line">Linux, Docker, Git and GitLab CI, AWS S3, Node.js (MCP servers), OpenAI API.</p>
+        <p class="line">Linux, Docker, Git and GitLab CI, AWS S3, Node.js (MCP servers).</p>
         <p class="line">Latvian, English, Russian.</p>
     </section>
 
@@ -170,6 +171,6 @@
     // ?print=dark: dark print palette, used to build resume-dark.pdf.
     if (/[?&]print=dark/.test(location.search)) document.documentElement.classList.add('print-dark');
 </script>
-<script type="module" src="js/page.js?v=5"></script>
+<script type="module" src="js/page.js?v=6"></script>
 </body>
 </html>

@@ -32,10 +32,11 @@
       "summary": "Giraffe360 makes cameras and software for real-estate virtual tours. I am in the R&D team, on the 3D reconstruction pipeline: camera poses from structure from motion and bundle adjustment (COLMAP), Gaussian splat training with gsplat, and the camera paths of the videos.",
       "highlights": [
         "Blurry windows, outdoor views and mirrors in our 3D videos. I found the cause and changed our training code until the haze and floaters were gone. Builds on the team's earlier window masks. Default in all Giraffe360 Gaussian splat videos since June 2026. Before and after: https://www.instagram.com/p/DZsNRB8o772/",
-        "Our training defaults use my Gaussian pruning and relocation rules (Jan to Jul 2026), inside an MCMC training strategy. They build on Taming 3DGS (Mallick et al., 2024), which I had implemented from the paper, and on the team's influence tracking: a Gaussian that adds little to the renders gets pruned or relocated. Together, the Jul 2026 default set, which includes my relocation rule, trains 13 to 16 % fewer Gaussians at equal or better quality. I also made training 8.6 % faster on an RTX 3090 at the same quality, by dropping a per-step opacity cull.",
+        "Our training defaults use my Gaussian pruning and relocation rules (Jan to Jul 2026), inside an MCMC training strategy. They build on Taming 3DGS (Mallick et al., 2024), which I had implemented from the paper, and on the team's influence tracking: a Gaussian that adds little to the renders gets pruned or relocated. My relocation rule is part of the Jul 2026 default set; together they train 13 to 16 % fewer Gaussians at equal or better quality.",
+        "Made our full 3D pipeline faster: from 2 h 30 min to 1 h 30 min, even after new steps were added. Training alone got 8.6 % faster on an RTX 3090 at the same quality, by dropping a per-step opacity cull. I have cut the pipeline's releases since September 2026.",
         "Implemented Analytic-Splatting (Liang et al., 2024) in our gsplat fork: CUDA forward and backward kernels, written from the paper. We use it for downsampling.",
-        "Led three engineers on a new 3D reconstruction feature (Oct 2026). Most of the code is mine, from the camera poses (SfM and bundle adjustment) to the training recipe; I reviewed and merged theirs and cut the release. In production. Before that, I mentored a junior engineer on his new depth method (denser LiDAR depth); since October 2026 our splat training uses it as its depth prior. I have cut the releases of our 3D pipeline since September 2026. Next, I want to grow into leading a team.",
-        "Looped drone video, one flight per room. My idea from the Feb 2026 hackathon. I wrote the camera path and reworked the video pipeline. The look was worked out with the designers. It is a product now: https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/",
+        "Led three engineers on a new 3D reconstruction feature (Oct 2026). Most of the code is mine, from the camera poses (SfM and bundle adjustment) to the training recipe; I reviewed and merged theirs and cut the release. In production. Before that, I mentored a junior engineer; his denser LiDAR depth has been our depth prior since October 2026.",
+        "Looped drone video: a virtual camera flight, one loop per room. My idea from the Feb 2026 hackathon. I wrote the camera path and reworked the video pipeline. The look was worked out with the designers. It is a product now: https://www.instagram.com/giraffe360/reel/Dd9ODBVIHhE/",
         "A Rust/wgpu splat viewer that other apps can embed and control (May 2026). It swaps and combines PLY scenes live. Team tools: an experiment runner where an AI agent starts and tracks trainings on a local GPU, and an MCP server (Node.js) for our task board."
       ]
     }
@@ -221,8 +222,7 @@
         "Docker",
         "Git and GitLab CI",
         "AWS S3",
-        "Node.js (MCP servers)",
-        "OpenAI API"
+        "Node.js (MCP servers)"
       ]
     }
   ],
