@@ -82,7 +82,6 @@ h3 { font-size: 1.125rem; font-weight: 600; margin: 40px 0 12px; }
 .display { font-size: clamp(1.75rem, 1.6vw + 1.2rem, 2.5rem); line-height: 1.1; letter-spacing: -0.025em; font-weight: 600; margin: 0 0 16px; }
 .detail { color: var(--fg-2); font-size: 1rem; line-height: 1.5; margin-top: 10px; text-wrap: pretty; }
 @media (min-width: 700px) { .detail { font-size: 1.0625rem; } }
-.skills { margin-top: 20px; }
 
 /* work list */
 .proof { list-style: none; margin: 0; padding: 0; }
@@ -91,13 +90,6 @@ h3 { font-size: 1.125rem; font-weight: 600; margin: 40px 0 12px; }
 .proof li > p:first-child { font-size: 1.375rem; line-height: 1.38; letter-spacing: -0.012em; text-wrap: pretty; }
 @media (min-width: 700px) { .proof li > p:first-child { font-size: 1.625rem; } }
 .small-link { color: var(--fg-2); white-space: nowrap; display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px; margin: -12px 0; }
-
-/* Instagram embed: placeholder at the final size, iframe when near (page.js) */
-.embed { margin-top: 20px; }
-.embed-box { width: 100%; max-width: 400px; border-radius: 6px; overflow: hidden; background: var(--bg-2);
-  border: 1px solid var(--line); box-sizing: content-box; }
-.embed-box iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
-.embed .small-link { margin-top: 2px; }
 
 /* plain lists */
 .plain { list-style: none; margin: 0; padding: 0; }
@@ -130,3 +122,49 @@ figcaption { margin-top: 12px; font-size: 0.9375rem; color: var(--fg-2); }
 .foot p { border-top: 1px solid var(--line); padding: 32px 0 48px; }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .flat-poster { transition: none; } }
+
+/* head caption: how it was made */
+.me-how { display: block; }
+
+/* few-photo study page */
+.study { padding-top: 24px; padding-bottom: 32px; }
+.study h1 { font-size: clamp(2rem, 2.4vw + 1.2rem, 3.25rem); margin: 32px 0 16px; }
+.study .lead-sm { margin-bottom: 40px; }
+.study .sec-body > p + p, .study .sec-body > p + figure, .study .sec-body > figure + p,
+.study .table-wrap + p { margin-top: 16px; }
+.back a { display: inline-block; padding: 12px 0; margin: -12px 0; color: var(--fg-2); }
+.still { margin: 20px 0 0; }
+.still img, .still video { display: block; width: 100%; height: auto; border-radius: 4px; background: var(--bg-2); }
+.table-wrap { overflow-x: auto; margin-top: 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 1rem; font-variant-numeric: tabular-nums; }
+caption { caption-side: bottom; text-align: left; color: var(--fg-2); font-size: 0.9375rem; padding-top: 10px; }
+th, td { padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th[scope="row"], thead th:first-child { text-align: left; font-weight: 400; white-space: normal; }
+thead th { color: var(--fg-2); font-weight: 500; }
+td strong { font-weight: 600; color: var(--accent); }
+.study .detail a, .foot a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+.byline { color: var(--fg-2); font-size: 1rem; margin: -4px 0 20px; }
+.byline a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+.study > p { max-width: var(--measure); }
+.study > p + p { margin-top: 16px; }
+.study .lead-sm strong { color: var(--fg); font-weight: 600; }
+.study .lead-sm { margin-bottom: 16px; }
+.method li { color: var(--fg-2); font-size: 1rem; }
+.credits { max-width: var(--measure); color: var(--fg-2); font-size: 0.9375rem; padding: 32px 0 0; border-top: 1px solid var(--line); }
+.credits a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+/* coverage charts: 2 small multiples; blue = loop path, amber = planner path (validated pair) */
+.cov-pair { display: grid; gap: 12px; }
+svg.cov { width: 100%; max-width: 34rem; height: auto; display: block; touch-action: pan-y; }
+svg.cov .grid { stroke: var(--line); stroke-width: 1; }
+svg.cov .tick, svg.cov .name { fill: var(--fg-2); font-size: 14.5px; font-family: var(--font); }
+svg.cov .name { fill: var(--fg); font-weight: 500; }
+svg.cov polyline { fill: none; stroke-width: 2; stroke-linejoin: round; }
+svg.cov .loop { stroke: #4f8be0; }
+svg.cov .plan { stroke: #c08328; }
+svg.cov .cross { stroke: var(--fg-2); stroke-width: 1; opacity: 0; }
+.cov-key { margin-top: 8px; font-size: 0.9375rem; color: var(--fg-2); display: flex; gap: 8px 20px; flex-wrap: wrap; align-items: center; }
+.cov-key .k { display: inline-block; width: 16px; height: 2px; margin-right: 6px; vertical-align: middle; }
+.cov-key .k.loop { background: #4f8be0; }
+.cov-key .k.plan { background: #c08328; }
+.cov-read { min-height: 1.5em; font-size: 0.9375rem; color: var(--fg); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.hero-study { margin-top: 10px; }

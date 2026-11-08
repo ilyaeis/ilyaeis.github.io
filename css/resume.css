@@ -123,6 +123,8 @@ h1 {
     color: var(--fg-2);
 }
 
+.me-how { display: block; }
+
 /* splat or mesh: inline words in the caption, 44 px hit box from padding */
 .me-switch button {
     font: inherit;
